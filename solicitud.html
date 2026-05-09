@@ -3,73 +3,490 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Solicitud de insumos</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <title>Solicitud de Insumos</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
+    :root {
+      --bg:        #f0f4f8;
+      --surface:   #ffffff;
+      --border:    #d1dce8;
+      --accent:    #0F6E56;
+      --accent-dk: #085041;
+      --accent-lt: #E1F5EE;
+      --success:   #16a34a;
+      --error:     #dc2626;
+      --warn:      #d97706;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --radius:    10px;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'DM Sans', sans-serif;
-      background: #f0f4f8;
+      background: var(--bg);
       min-height: 100vh;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       padding: 32px 16px;
     }
     .card {
-      background: #fff;
-      border: 1px solid #d1dce8;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 48px 36px;
+      padding: 36px 32px;
       width: 100%;
-      max-width: 420px;
+      max-width: 640px;
       box-shadow: 0 4px 24px rgba(0,0,0,.07);
-      text-align: center;
     }
-    .icon-wrap {
-      width: 72px; height: 72px;
-      background: #E1F5EE;
-      border-radius: 20px;
-      display: grid; place-items: center;
-      margin: 0 auto 24px;
+    .header { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+    .header-icon {
+      width:42px; height:42px; background:var(--accent); border-radius:10px;
+      display:grid; place-items:center; flex-shrink:0;
     }
-    .icon-wrap i { font-size: 36px; color: #0F6E56; }
-    h1 { font-size: 1.15rem; font-weight: 600; color: #1e293b; margin-bottom: 10px; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #fef3c7; color: #92400e;
-      font-size: .75rem; font-weight: 600;
-      padding: 5px 12px; border-radius: 99px;
-      margin-bottom: 20px;
+    .header-icon svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .header-text h1 { font-size:1.1rem; font-weight:600; color:var(--text); }
+    .header-text p  { font-size:.78rem; color:var(--muted); margin-top:2px; }
+    .back-link { display:inline-flex; align-items:center; gap:5px; font-size:.75rem; color:var(--muted); text-decoration:none; margin-bottom:20px; }
+    .back-link svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .back-link:hover { color:var(--accent); }
+    .section-label { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+    .badge-session {
+      display:flex; align-items:center; justify-content:space-between;
+      border-radius:8px; padding:9px 14px; margin-bottom:14px;
     }
-    .badge i { font-size: 14px; }
-    p {
-      font-size: .88rem; color: #64748b;
-      line-height: 1.6; margin-bottom: 28px;
+    .badge-green { background:#E1F5EE; border:1.5px solid #9FE1CB; }
+    .badge-green span { font-size:.92rem; font-weight:600; color:#085041; }
+    .badge-blue  { background:#eff6ff; border:1.5px solid #bfdbfe; }
+    .badge-blue  span { font-size:.92rem; font-weight:600; color:#1e40af; }
+    .badge-session button { font-size:.72rem; color:var(--muted); background:none; border:none; cursor:pointer; text-decoration:underline dotted; }
+    .session-select { display:flex; gap:10px; align-items:flex-end; margin-bottom:14px; }
+    .field { display:flex; flex-direction:column; gap:5px; flex:1; }
+    label { font-size:.72rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); }
+    select, input[type="number"] {
+      font-family:'DM Sans',sans-serif; font-size:.92rem; color:var(--text);
+      background:var(--bg); border:1.5px solid var(--border);
+      border-radius:var(--radius); padding:9px 12px; outline:none;
+      transition:border-color .15s; width:100%;
+      appearance:none; -webkit-appearance:none;
     }
-    .btn-back {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: #1a6fbd; color: #fff;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .9rem; font-weight: 600;
-      padding: 11px 22px; border-radius: 10px;
-      text-decoration: none;
-      transition: background .15s;
+    select:focus, input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(15,110,86,.1); background:#fff; }
+    .btn-confirm {
+      width:44px; height:44px; background:var(--accent); color:#fff;
+      border:none; border-radius:var(--radius); cursor:pointer; font-size:1.1rem;
+      display:grid; place-items:center; flex-shrink:0;
     }
-    .btn-back:hover { background: #134f8a; }
-    .btn-back i { font-size: 18px; }
+    .btn-confirm:hover { background:var(--accent-dk); }
+    .input-row { display:grid; grid-template-columns:1fr 90px 44px; gap:10px; align-items:end; }
+    .btn-add {
+      width:44px; height:44px; background:var(--accent); color:#fff;
+      border:none; border-radius:var(--radius); cursor:pointer; font-size:1.5rem;
+      display:grid; place-items:center; line-height:1;
+    }
+    .btn-add:hover { background:var(--accent-dk); }
+    .btn-add:active { transform:scale(.93); }
+    .divider { border:none; border-top:1px dashed var(--border); margin:22px 0; }
+    #listaWrap { display:none; }
+    .lista-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .lista-count { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+    .btn-limpiar { font-size:.75rem; color:var(--error); background:none; border:none; cursor:pointer; padding:2px 6px; border-radius:4px; }
+    .btn-limpiar:hover { background:#fee2e2; }
+    #lista { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+    .item-row {
+      display:grid; grid-template-columns:1fr 1fr 70px 32px;
+      gap:8px; align-items:center;
+      background:#f8fafc; border:1px solid var(--border);
+      border-radius:8px; padding:9px 12px;
+      animation:fadeIn .18s ease;
+    }
+    .lugar-txt { font-size:.88rem; color:var(--muted); }
+    .item-txt  { font-size:.88rem; color:var(--text); font-weight:500; }
+    .cant-txt  { font-family:'DM Mono',monospace; font-size:.85rem; color:var(--accent); font-weight:600; text-align:right; }
+    .btn-del { width:28px; height:28px; background:none; border:none; color:var(--muted); cursor:pointer; border-radius:6px; display:grid; place-items:center; }
+    .btn-del:hover { background:#fee2e2; color:var(--error); }
+    .btn-del svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+    .bottom-row { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; }
+    .id-solicitud {
+      background:var(--accent-lt); border:1px dashed #9FE1CB;
+      border-radius:var(--radius); padding:9px 14px;
+      font-size:.78rem; color:#085041; font-family:'DM Mono',monospace;
+    }
+    .btn-submit {
+      padding:11px 22px; background:var(--accent); color:#fff;
+      font-family:'DM Sans',sans-serif; font-size:.95rem; font-weight:600;
+      border:none; border-radius:var(--radius); cursor:pointer; white-space:nowrap;
+      display:flex; align-items:center; gap:7px; transition:background .15s;
+    }
+    .btn-submit:hover:not(:disabled) { background:var(--accent-dk); }
+    .btn-submit:disabled { opacity:.55; cursor:not-allowed; }
+    .btn-submit svg { width:16px; height:16px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .spinner { width:16px; height:16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    #toast { margin-top:14px; padding:11px 16px; border-radius:var(--radius); font-size:.87rem; font-weight:500; text-align:center; opacity:0; transform:translateY(-5px); transition:opacity .22s,transform .22s; pointer-events:none; }
+    #toast.show { opacity:1; transform:translateY(0); }
+    #toast.ok   { background:#dcfce7; color:var(--success); border:1px solid #bbf7d0; }
+    #toast.fail { background:#fee2e2; color:var(--error);   border:1px solid #fecaca; }
+    #toast.warn { background:#fef3c7; color:var(--warn);    border:1px solid #fde68a; }
+    .estado-ok {
+      text-align:center; padding:24px; background:var(--accent-lt);
+      border:1px solid #9FE1CB; border-radius:12px; display:none;
+    }
+    .estado-ok .icon { font-size:2rem; margin-bottom:10px; }
+    .estado-ok h2 { font-size:1rem; font-weight:600; color:#085041; margin-bottom:6px; }
+    .estado-ok p  { font-size:.82rem; color:#0F6E56; margin-bottom:14px; }
+    .estado-ok code { font-family:'DM Mono',monospace; background:#fff; padding:3px 8px; border-radius:4px; font-size:.8rem; color:#085041; border:1px solid #9FE1CB; }
+    .btn-nueva { display:inline-flex; align-items:center; gap:6px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.88rem; font-weight:600; padding:9px 18px; border-radius:8px; border:none; cursor:pointer; margin-top:12px; }
+    .config-link { text-align:center; margin-top:18px; font-size:.73rem; color:var(--muted); }
+    .config-link a { color:var(--accent); cursor:pointer; text-decoration:underline dotted; }
+    .url-box { margin-top:8px; background:#f8fafc; border:1px dashed var(--border); border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; }
+    .url-txt { font-family:monospace; font-size:.68rem; color:#475569; word-break:break-all; flex:1; }
+    .btn-copy { flex-shrink:0; background:var(--accent); border:none; border-radius:6px; padding:4px 10px; cursor:pointer; color:#fff; font-size:.72rem; font-weight:600; }
   </style>
 </head>
 <body>
 <div class="card">
-  <div class="icon-wrap"><i class="ti ti-shopping-cart"></i></div>
-  <h1>Solicitud de insumos</h1>
-  <div class="badge"><i class="ti ti-tools"></i> En construcción</div>
-  <p>Este módulo se encuentra en desarrollo.<br>Pronto estará disponible.</p>
-  <a class="btn-back" href="index.html">
-    <i class="ti ti-arrow-left"></i> Volver al portal
+
+  <a class="back-link" href="index.html">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Volver al portal
   </a>
+
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>Solicitud de Insumos</h1>
+      <p>Dermatología · Hospital del Salvador</p>
+    </div>
+  </div>
+
+  <!-- PASO 1: Responsable -->
+  <div id="responsableSesionWrap">
+    <p class="section-label">Paso 1 — Responsable</p>
+    <div class="session-select">
+      <div class="field">
+        <label>Responsable</label>
+        <select id="responsable"><option value="" disabled selected>Cargando…</option></select>
+      </div>
+      <button class="btn-confirm" onclick="confirmarResponsable()">✓</button>
+    </div>
+  </div>
+  <div id="responsableBadgeWrap" style="display:none">
+    <p class="section-label">Responsable</p>
+    <div class="badge-session badge-green">
+      <span id="responsableBadgeTxt"></span>
+      <button onclick="cambiarResponsable()">Cambiar</button>
+    </div>
+  </div>
+
+  <!-- PASO 2: Lugar -->
+  <div id="lugarSesionWrap" style="display:none">
+    <p class="section-label">Paso 2 — Lugar de trabajo</p>
+    <div class="session-select">
+      <div class="field">
+        <label>Lugar</label>
+        <select id="lugar"><option value="" disabled selected>Cargando…</option></select>
+      </div>
+      <button class="btn-confirm" onclick="confirmarLugar()">✓</button>
+    </div>
+  </div>
+  <div id="lugarBadgeWrap" style="display:none">
+    <p class="section-label">Lugar de trabajo</p>
+    <div class="badge-session badge-blue">
+      <span id="lugarBadgeTxt"></span>
+      <button onclick="cambiarLugar()">Cambiar</button>
+    </div>
+  </div>
+
+  <!-- PASO 3: Items -->
+  <div id="inputItemWrap" style="display:none">
+    <p class="section-label">Paso 3 — Agregar insumo</p>
+    <div class="input-row">
+      <div class="field">
+        <label>Insumo</label>
+        <select id="item"><option value="" disabled selected>Cargando…</option></select>
+      </div>
+      <div class="field">
+        <label>Cantidad</label>
+        <input id="cantidad" type="number" min="1" placeholder="0" />
+      </div>
+      <button class="btn-add" onclick="agregarALista()" title="Agregar">+</button>
+    </div>
+  </div>
+
+  <hr class="divider" id="divider" style="display:none" />
+
+  <!-- Lista acumulada -->
+  <div id="listaWrap">
+    <div class="lista-header">
+      <span class="lista-count" id="listaCount">0 insumos</span>
+      <button class="btn-limpiar" onclick="limpiarLista()">✕ Limpiar</button>
+    </div>
+    <div id="lista"></div>
+
+    <div class="bottom-row">
+      <div class="id-solicitud">ID: <strong id="idSolicitudTxt"></strong></div>
+      <button class="btn-submit" id="btnEnviar" onclick="enviarTodo()">
+        <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        Enviar solicitud
+      </button>
+    </div>
+  </div>
+
+  <!-- Confirmación enviado -->
+  <div class="estado-ok" id="estadoOk">
+    <div class="icon">✅</div>
+    <h2>Solicitud enviada correctamente</h2>
+    <p>Tu solicitud está <strong>PENDIENTE</strong> de aprobación por el supervisor.<br>
+    Guarda este ID para hacer seguimiento:</p>
+    <code id="idConfirmado"></code>
+    <br>
+    <button class="btn-nueva" onclick="nuevaSolicitud()">
+      <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round"><path d="M12 5v14M5 12l7-7 7 7"/></svg>
+      Nueva solicitud
+    </button>
+  </div>
+
+  <div id="toast"></div>
+
+  <div class="config-link">
+    <a onclick="pedirURL()">⚙ Configurar URL del script</a>
+    <div class="url-box">
+      <span class="url-txt">https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec</span>
+      <button class="btn-copy" onclick="copiarURL()">Copiar</button>
+    </div>
+  </div>
+
 </div>
+
+<script>
+  let SCRIPT_URL = localStorage.getItem("inv_script_url") || "";
+  let responsableSesion = "", responsableIdSesion = "", lugarSesion = "";
+  let colaboradoresData = [], listaItems = [];
+  let idSolicitud = "";
+
+  window.onload = () => {
+    if (!SCRIPT_URL) pedirURL();
+    else { cargarColaboradores(); cargarLugares(); cargarItems(); }
+  };
+
+  function pedirURL() {
+    const url = prompt("Pega la URL del Apps Script:", SCRIPT_URL);
+    if (url && url.startsWith("https://")) {
+      SCRIPT_URL = url.trim();
+      localStorage.setItem("inv_script_url", SCRIPT_URL);
+      cargarColaboradores(); cargarLugares(); cargarItems();
+    }
+  }
+
+  function generarId() {
+    const ahora = new Date();
+    return "SOL-" + ahora.getFullYear().toString().slice(-2)
+      + String(ahora.getMonth()+1).padStart(2,"0")
+      + String(ahora.getDate()).padStart(2,"0") + "-"
+      + String(ahora.getHours()).padStart(2,"0")
+      + String(ahora.getMinutes()).padStart(2,"0")
+      + String(ahora.getSeconds()).padStart(2,"0");
+  }
+
+  async function cargarColaboradores() {
+    const sel = document.getElementById("responsable");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=colaboradores");
+      const data = await res.json();
+      if (data.status === "ok" && data.colaboradores.length > 0) {
+        colaboradoresData = data.colaboradores;
+        sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+        data.colaboradores.forEach(c => {
+          const o = document.createElement("option");
+          o.value = c.nombre;
+          o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
+          sel.appendChild(o);
+        });
+      } else { sel.innerHTML = '<option value="" disabled selected>Sin datos</option>'; }
+    } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
+  }
+
+  async function cargarLugares() {
+    const sel = document.getElementById("lugar");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=lugares");
+      const data = await res.json();
+      if (data.status === "ok" && data.lugares.length > 0) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+        data.lugares.forEach(l => {
+          const o = document.createElement("option");
+          o.value = l; o.textContent = l; sel.appendChild(o);
+        });
+      } else { sel.innerHTML = '<option value="" disabled selected>Sin lugares</option>'; }
+    } catch { sel.innerHTML = '<option value="" disabled selected>Error</option>'; }
+  }
+
+  async function cargarItems() {
+    const sel = document.getElementById("item");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=items");
+      const data = await res.json();
+      if (data.status === "ok" && data.items.length > 0) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+        data.items.forEach(i => {
+          const o = document.createElement("option");
+          o.value = i; o.textContent = i; sel.appendChild(o);
+        });
+      } else { sel.innerHTML = '<option value="" disabled selected>Sin insumos</option>'; }
+    } catch { sel.innerHTML = '<option value="" disabled selected>Error</option>'; }
+  }
+
+  function confirmarResponsable() {
+    const nombre = document.getElementById("responsable").value;
+    if (!nombre) { mostrarToast("Selecciona un responsable.", "warn"); return; }
+    responsableSesion = nombre;
+    const colab = colaboradoresData.find(c => c.nombre === nombre);
+    responsableIdSesion = colab ? colab.id : "";
+    const txt = responsableIdSesion ? nombre + " — " + responsableIdSesion : nombre;
+    document.getElementById("responsableBadgeTxt").textContent = txt;
+    document.getElementById("responsableSesionWrap").style.display = "none";
+    document.getElementById("responsableBadgeWrap").style.display  = "block";
+    document.getElementById("lugarSesionWrap").style.display       = "block";
+  }
+
+  function cambiarResponsable() {
+    responsableSesion = ""; responsableIdSesion = ""; lugarSesion = "";
+    document.getElementById("responsableBadgeWrap").style.display = "none";
+    document.getElementById("lugarBadgeWrap").style.display       = "none";
+    document.getElementById("inputItemWrap").style.display        = "none";
+    document.getElementById("divider").style.display              = "none";
+    document.getElementById("lugarSesionWrap").style.display      = "none";
+    document.getElementById("responsableSesionWrap").style.display = "block";
+    limpiarLista();
+  }
+
+  function confirmarLugar() {
+    const sel = document.getElementById("lugar").value;
+    if (!sel) { mostrarToast("Selecciona un lugar.", "warn"); return; }
+    lugarSesion = sel;
+    idSolicitud = generarId();
+    document.getElementById("lugarBadgeTxt").textContent = sel;
+    document.getElementById("idSolicitudTxt").textContent = idSolicitud;
+    document.getElementById("lugarSesionWrap").style.display  = "none";
+    document.getElementById("lugarBadgeWrap").style.display   = "block";
+    document.getElementById("inputItemWrap").style.display    = "block";
+    document.getElementById("divider").style.display          = "block";
+    document.getElementById("item").focus();
+  }
+
+  function cambiarLugar() {
+    lugarSesion = "";
+    document.getElementById("lugarBadgeWrap").style.display  = "none";
+    document.getElementById("inputItemWrap").style.display   = "none";
+    document.getElementById("divider").style.display         = "none";
+    document.getElementById("lugarSesionWrap").style.display = "block";
+    limpiarLista();
+  }
+
+  function agregarALista() {
+    const item     = document.getElementById("item").value;
+    const cantidad = document.getElementById("cantidad").value.trim();
+    if (!item || !cantidad || Number(cantidad) < 1) {
+      mostrarToast("Selecciona insumo y cantidad mayor a 0.", "warn"); return;
+    }
+    listaItems.push({ lugar: lugarSesion, item, cantidad });
+    renderLista();
+    document.getElementById("cantidad").value = "";
+    document.getElementById("item").focus();
+  }
+
+  function renderLista() {
+    const cont  = document.getElementById("lista");
+    const wrap  = document.getElementById("listaWrap");
+    const count = document.getElementById("listaCount");
+    count.textContent = listaItems.length + (listaItems.length === 1 ? " insumo" : " insumos");
+    wrap.style.display = listaItems.length ? "block" : "none";
+    cont.innerHTML = "";
+    listaItems.forEach((e, i) => {
+      const d = document.createElement("div");
+      d.className = "item-row";
+      d.innerHTML =
+        `<span class="lugar-txt">${e.lugar}</span>` +
+        `<span class="item-txt">${e.item}</span>` +
+        `<span class="cant-txt">${e.cantidad}</span>` +
+        `<button class="btn-del" onclick="eliminarItem(${i})">` +
+          `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>` +
+        `</button>`;
+      cont.appendChild(d);
+    });
+  }
+
+  function eliminarItem(i) { listaItems.splice(i, 1); renderLista(); }
+  function limpiarLista()  { listaItems = []; renderLista(); }
+
+  async function enviarTodo() {
+    if (!listaItems.length) { mostrarToast("Agrega al menos un insumo.", "warn"); return; }
+    if (!SCRIPT_URL) { pedirURL(); return; }
+
+    const btn = document.getElementById("btnEnviar");
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Enviando…';
+
+    let errores = 0;
+    for (const entry of listaItems) {
+      try {
+        const params = new URLSearchParams({
+          accion: "solicitud",
+          ...entry,
+          usuario:      responsableSesion,
+          usuarioId:    responsableIdSesion,
+          idSolicitud:  idSolicitud
+        });
+        await fetch(SCRIPT_URL + "?" + params.toString(), { method:"GET", mode:"no-cors" });
+      } catch { errores++; }
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
+
+    if (errores === 0) {
+      document.getElementById("idConfirmado").textContent = idSolicitud;
+      document.getElementById("listaWrap").style.display     = "none";
+      document.getElementById("inputItemWrap").style.display = "none";
+      document.getElementById("divider").style.display       = "none";
+      document.getElementById("estadoOk").style.display      = "block";
+    } else {
+      mostrarToast("Error al enviar. Intenta nuevamente.", "fail");
+    }
+  }
+
+  function nuevaSolicitud() {
+    listaItems = []; idSolicitud = "";
+    document.getElementById("estadoOk").style.display         = "none";
+    document.getElementById("responsableBadgeWrap").style.display = "none";
+    document.getElementById("lugarBadgeWrap").style.display   = "none";
+    document.getElementById("responsableSesionWrap").style.display = "block";
+    document.getElementById("lugarSesionWrap").style.display  = "none";
+    document.getElementById("inputItemWrap").style.display    = "none";
+    document.getElementById("divider").style.display          = "none";
+    renderLista();
+    responsableSesion = ""; responsableIdSesion = ""; lugarSesion = "";
+  }
+
+  function mostrarToast(msg, tipo) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.className = "show " + tipo;
+    setTimeout(() => { t.className = ""; }, 3500);
+  }
+
+  function copiarURL() {
+    const url = "https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec";
+    navigator.clipboard.writeText(url)
+      .then(() => mostrarToast("URL copiada.", "ok"))
+      .catch(() => mostrarToast("Copia la URL manualmente.", "warn"));
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && document.activeElement.id === "cantidad") agregarALista();
+  });
+</script>
 </body>
 </html>

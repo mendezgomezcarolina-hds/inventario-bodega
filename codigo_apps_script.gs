@@ -8,6 +8,7 @@ const SHEET_DATOS         = "PEDIDOS";
 const SHEET_LUGARES       = "LUGAR";
 const SHEET_ITEMS         = "INSUMOS";
 const SHEET_COLABORADORES = "COLABORADORES";
+const SHEET_SOLICITUDES   = "SOLICITUDES";
 
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
@@ -16,6 +17,8 @@ function doGet(e) {
   if (accion === "lugares")       return responder(leerColumnaA(SHEET_LUGARES,       "lugares",       1), callback);
   if (accion === "items")         return responder(leerColumnaA(SHEET_ITEMS,         "items",         2), callback);
   if (accion === "colaboradores") return responder(leerColaboradores(), callback);
+
+  if (accion === "solicitud") return escribirSolicitud(e, callback);
 
   return escribir(e, callback);
 }
@@ -94,6 +97,35 @@ function escribir(e, callback) {
       new Date().toLocaleString("es-CL"),
       p.usuario     || "Anónimo",
       p.usuarioId   || ""
+    ]);
+
+    return responder({ status: "ok" }, callback);
+  } catch(err) {
+    return responder({ status: "error", mensaje: err.toString() }, callback);
+  }
+}
+
+// ── Escribir solicitud de insumo ─────────────────────────────
+function escribirSolicitud(e, callback) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_SOLICITUDES) || ss.getActiveSpreadsheet().insertSheet(SHEET_SOLICITUDES);
+    const p     = e.parameter || {};
+
+    if (!p.lugar && !p.item && !p.cantidad) throw new Error("Sin datos.");
+
+    if (sheet.getLastRow() === 0)
+      sheet.appendRow(["ID Solicitud","Lugar","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado"]);
+
+    sheet.appendRow([
+      p.idSolicitud  || "",
+      p.lugar        || "",
+      p.item         || "",
+      p.cantidad     || "",
+      p.usuario      || "Anónimo",
+      p.usuarioId    || "",
+      new Date().toLocaleString("es-CL"),
+      "PENDIENTE"
     ]);
 
     return responder({ status: "ok" }, callback);
