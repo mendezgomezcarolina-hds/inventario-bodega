@@ -60,7 +60,7 @@
     /* ── Fila de entrada ── */
     .input-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 90px 44px;
+      grid-template-columns: 1fr 90px 44px;
       gap: 10px;
       align-items: end;
     }
@@ -210,22 +210,41 @@
     </div>
   </div>
 
-  <!-- Fila de entrada -->
-  <p class="section-label">Agregar ítem</p>
-  <div class="input-row">
-    <div class="field">
-      <label>Lugar</label>
-      <select id="lugar"><option value="" disabled selected>Cargando…</option></select>
+  <!-- Lugar de sesión -->
+  <div id="lugarSesionWrap" style="margin-bottom:20px;">
+    <p class="section-label">Lugar de trabajo</p>
+    <div style="display:flex; gap:10px; align-items:flex-end;">
+      <div class="field" style="flex:1">
+        <label>Lugar</label>
+        <select id="lugar"><option value="" disabled selected>Cargando…</option></select>
+      </div>
+      <button class="btn-add" onclick="confirmarLugar()" title="Confirmar lugar" style="background:var(--accent)">✓</button>
     </div>
-    <div class="field">
-      <label>Ítem</label>
-      <select id="item"><option value="" disabled selected>Cargando…</option></select>
+  </div>
+
+  <!-- Lugar confirmado (badge) -->
+  <div id="lugarBadgeWrap" style="display:none; margin-bottom:20px;">
+    <p class="section-label">Lugar de trabajo</p>
+    <div style="display:flex; align-items:center; justify-content:space-between; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:8px; padding:9px 14px;">
+      <span style="font-size:.92rem; font-weight:600; color:#1e40af;" id="lugarBadgeTxt"></span>
+      <button onclick="cambiarLugar()" style="font-size:.72rem; color:#64748b; background:none; border:none; cursor:pointer; text-decoration:underline dotted;">Cambiar</button>
     </div>
-    <div class="field">
-      <label>Cantidad</label>
-      <input id="cantidad" type="number" min="0" placeholder="0" />
+  </div>
+
+  <!-- Fila de entrada (ítem + cantidad) -->
+  <div id="inputItemWrap" style="display:none;">
+    <p class="section-label">Agregar ítem</p>
+    <div class="input-row">
+      <div class="field">
+        <label>Ítem</label>
+        <select id="item"><option value="" disabled selected>Cargando…</option></select>
+      </div>
+      <div class="field">
+        <label>Cantidad</label>
+        <input id="cantidad" type="number" min="0" placeholder="0" />
+      </div>
+      <button class="btn-add" onclick="agregarALista()" title="Agregar a la lista">+</button>
     </div>
-    <button class="btn-add" onclick="agregarALista()" title="Agregar a la lista">+</button>
   </div>
 
   <hr class="divider" />
@@ -317,13 +336,34 @@
   }
 
   // ── Agregar a lista local ─────────────────────────────────────
+  let lugarSesion = "";
+
+  function confirmarLugar() {
+    const sel = document.getElementById("lugar").value;
+    if (!sel) { mostrarToast("Selecciona un lugar primero.", "warn"); return; }
+    lugarSesion = sel;
+    document.getElementById("lugarBadgeTxt").textContent = sel;
+    document.getElementById("lugarSesionWrap").style.display = "none";
+    document.getElementById("lugarBadgeWrap").style.display  = "block";
+    document.getElementById("inputItemWrap").style.display   = "block";
+    document.getElementById("item").focus();
+  }
+
+  function cambiarLugar() {
+    lugarSesion = "";
+    document.getElementById("lugarBadgeWrap").style.display  = "none";
+    document.getElementById("inputItemWrap").style.display   = "none";
+    document.getElementById("lugarSesionWrap").style.display = "block";
+    document.getElementById("lugar").value = "";
+  }
+
   function agregarALista() {
-    const lugar    = document.getElementById("lugar").value;
+    const lugar    = lugarSesion;
     const item     = document.getElementById("item").value;
     const cantidad = document.getElementById("cantidad").value.trim();
 
     if (!lugar || !item || !cantidad || Number(cantidad) < 0) {
-      mostrarToast("Completa Lugar, Ítem y Cantidad.", "warn");
+      mostrarToast("Completa Ítem y Cantidad.", "warn");
       return;
     }
 
