@@ -79,10 +79,13 @@ function escribir(e, callback) {
       sheet.appendRow(["Lugar","Ítem","Cantidad","Vencimiento","Fecha/Hora","Responsable","ID"]);
 
     sheet.appendRow([
-      p.lugar || "", p.item || "", p.cantidad || "",
+      p.lugar       || "",
+      p.item        || "",
+      p.cantidad    || "",
+      p.vencimiento || "",
       new Date().toLocaleString("es-CL"),
-      p.usuario || "Anónimo",
-      p.usuarioId || ""
+      p.usuario     || "Anónimo",
+      p.usuarioId   || ""
     ]);
 
     return responder({ status: "ok" }, callback);
