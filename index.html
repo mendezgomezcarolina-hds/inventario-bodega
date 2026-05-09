@@ -450,11 +450,7 @@
       return;
     }
 
-    // Formatear fecha a DD/MM/AAAA
-    const [anio, mes, dia] = vencimiento.split("-");
-    const vencFmt = dia + "/" + mes + "/" + anio;
-
-    listaItems.push({ lugar, item, cantidad, vencimiento: vencFmt });
+    listaItems.push({ lugar, item, cantidad, vencimiento });
     renderLista();
 
     // Resetea solo cantidad, mantiene lugar e ítem para agilizar ingreso
@@ -479,7 +475,7 @@
         `<span class="lugar-txt">${entry.lugar}</span>` +
         `<span class="item-txt">${entry.item}</span>` +
         `<span class="cant-txt">${entry.cantidad}</span>` +
-        `<span style="font-size:.72rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap;">${entry.vencimiento}</span>` +
+        `<span style="font-size:.72rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap;">${fmtFecha(entry.vencimiento)}</span>` +
         `<button class="btn-del" onclick="eliminarItem(${idx})" title="Eliminar">` +
           `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>` +
         `</button>`;
@@ -513,7 +509,7 @@
     let errores = 0;
     for (const entry of listaItems) {
       try {
-        const params = new URLSearchParams({ ...entry, usuario: responsableSesion, usuarioId: responsableIdSesion, vencimiento: entry.vencimiento });
+        const params = new URLSearchParams({ ...entry, usuario: responsableSesion, usuarioId: responsableIdSesion });
         await fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" });
       } catch { errores++; }
     }
@@ -530,6 +526,12 @@
   }
 
   // ── Helpers ──────────────────────────────────────────────────
+  function fmtFecha(iso) {
+    if (!iso) return "";
+    const [a, m, d] = iso.split("-");
+    return d + "/" + m + "/" + a;
+  }
+
   function mostrarToast(msg, tipo) {
     const t = document.getElementById("toast");
     t.textContent = msg;

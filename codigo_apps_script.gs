@@ -66,6 +66,14 @@ function leerColumnaA(nombreHoja, clave, respaldo) {
   }
 }
 
+// ── Formatear fecha ISO → DD/MM/AAAA ────────────────────────
+function formatearFecha(iso) {
+  if (!iso) return "";
+  const partes = iso.split("-");
+  if (partes.length !== 3) return iso;
+  return partes[2] + "/" + partes[1] + "/" + partes[0];
+}
+
 // ── Escribir registro ─────────────────────────────────────────
 function escribir(e, callback) {
   try {
@@ -82,7 +90,7 @@ function escribir(e, callback) {
       p.lugar       || "",
       p.item        || "",
       p.cantidad    || "",
-      p.vencimiento || "",
+      formatearFecha(p.vencimiento),
       new Date().toLocaleString("es-CL"),
       p.usuario     || "Anónimo",
       p.usuarioId   || ""
