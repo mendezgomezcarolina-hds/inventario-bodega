@@ -4,10 +4,10 @@
 //  Implementar → Aplicación web → Cualquier persona
 // ============================================================
 
-const SHEET_DATOS        = "Hoja1";
-const SHEET_LUGARES      = "Hoja2";
-const SHEET_ITEMS        = "Hoja3";
-const SHEET_COLABORADORES = "colaboradores";
+const SHEET_DATOS         = "PEDIDOS";
+const SHEET_LUGARES       = "LUGAR";
+const SHEET_ITEMS         = "INSUMOS";
+const SHEET_COLABORADORES = "COLABORADORES";
 
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
