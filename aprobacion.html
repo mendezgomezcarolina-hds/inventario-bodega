@@ -144,8 +144,8 @@
 
   <!-- Supervisor + Actualizar -->
   <div class="sup-bar">
-    <label>Supervisor</label>
-    <select id="supervisorSel"><option value="" disabled selected>Cargando colaboradores…</option></select>
+    <label>Colaborador</label>
+    <select id="supervisorSel"><option value="" disabled selected>Selecciona tu nombre…</option></select>
     <button class="btn-refresh" onclick="cargarSolicitudes()">
       <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
       Actualizar
@@ -186,37 +186,57 @@
     cargarSolicitudes();
   };
 
-  async function cargarColaboradores() {
+  function cargarColaboradores() {
     const sel = document.getElementById("supervisorSel");
-    try {
-      const res  = await fetch(SCRIPT_URL + "?accion=colaboradores");
-      const data = await res.json();
+    const cbName = "_cbCol_" + Date.now();
+    window[cbName] = function(data) {
+      delete window[cbName];
       if (data.status === "ok" && data.colaboradores.length > 0) {
         sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
         data.colaboradores.forEach(c => {
           const o = document.createElement("option");
-          o.value = c.nombre; o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
+          o.value = c.nombre;
+          o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
           sel.appendChild(o);
         });
+      } else {
+        sel.innerHTML = '<option value="">Sin colaboradores</option>';
       }
-    } catch { sel.innerHTML = '<option value="">Error al cargar</option>'; }
+    };
+    const s = document.createElement("script");
+    s.src = SCRIPT_URL + "?accion=colaboradores&callback=" + cbName;
+    s.onerror = () => { delete window[cbName]; sel.innerHTML = '<option value="">Error al cargar</option>'; };
+    document.head.appendChild(s);
   }
 
-  async function cargarSolicitudes() {
+  function cargarSolicitudes() {
     document.getElementById("listaSolicitudes").innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    try {
-      const res  = await fetch(SCRIPT_URL + "?accion=listarSolicitudes");
-      const data = await res.json();
+    const cbName = "_cbSol_" + Date.now();
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Tiempo de espera agotado. Verifica la URL del script.</div>';
+    }, 10000);
+
+    window[cbName] = function(data) {
+      clearTimeout(timeout);
+      delete window[cbName];
       if (data.status === "ok") {
         todasSolicitudes = data.solicitudes;
         actualizarStats();
         renderSolicitudes();
       } else {
-        document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error al cargar solicitudes.</div>';
+        document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error: ' + (data.mensaje || "sin detalles") + '</div>';
       }
-    } catch(err) {
-      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">No se pudo conectar al servidor.</div>';
-    }
+    };
+
+    const s = document.createElement("script");
+    s.src = SCRIPT_URL + "?accion=listarSolicitudes&callback=" + cbName;
+    s.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error de conexión al script.</div>';
+    };
+    document.head.appendChild(s);
   }
 
   function actualizarStats() {
