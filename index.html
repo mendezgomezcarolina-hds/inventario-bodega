@@ -2,344 +2,416 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Inventario" />
-  <title>Inventario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro de Inventario</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:        #f2f2f7;
+      --bg:        #f0f4f8;
       --surface:   #ffffff;
-      --border:    #c6c6c8;
-      --accent:    #007aff;
-      --accent-dk: #0062cc;
-      --success:   #34c759;
-      --error:     #ff3b30;
-      --warn:      #ff9500;
-      --text:      #000000;
-      --text2:     #3c3c43;
-      --muted:     #8e8e93;
-      --radius:    12px;
-      --safe-top:    env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --border:    #d1dce8;
+      --accent:    #1a6fbd;
+      --accent-dk: #134f8a;
+      --success:   #16a34a;
+      --error:     #dc2626;
+      --warn:      #d97706;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --radius:    10px;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       background: var(--bg);
-      min-height: 100dvh;
-      padding: calc(var(--safe-top) + 20px) 16px calc(var(--safe-bottom) + 32px);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 640px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.07);
     }
 
-    /* Header */
-    .header { display:flex; align-items:center; gap:12px; margin-bottom:22px; padding:0 4px; }
+    /* ── Header ── */
+    .header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+    }
     .header-icon {
-      width:46px; height:46px; background:var(--accent); border-radius:12px;
-      display:grid; place-items:center; flex-shrink:0;
-      box-shadow:0 2px 8px rgba(0,122,255,.35);
+      width: 42px; height: 42px; background: var(--accent); border-radius: 10px;
+      display: grid; place-items: center; flex-shrink: 0;
     }
-    .header-icon svg { width:24px; height:24px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .header h1 { font-size:1.15rem; font-weight:700; color:var(--text); }
-    .header p  { font-size:.78rem; color:var(--muted); margin-top:1px; }
+    .header-icon svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .header-text h1 { font-size: 1.15rem; font-weight: 600; color: var(--text); }
+    .header-text p  { font-size: .78rem; color: var(--muted); margin-top: 2px; }
 
-    /* Tarjeta */
-    .card { background:var(--surface); border-radius:16px; overflow:hidden; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-    .card-title { font-size:.72rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); padding:14px 16px 6px; }
-
-    /* Filas de campo */
-    .field-row {
-      display:flex; align-items:center; min-height:52px;
-      padding:0 16px; border-bottom:1px solid var(--border); gap:12px;
+    /* ── Sección título ── */
+    .section-label {
+      font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
     }
-    .field-row:last-child { border-bottom:none; }
-    .field-label { font-size:.95rem; color:var(--text2); font-weight:500; min-width:80px; flex-shrink:0; }
 
-    select, .field-row input {
-      flex:1; border:none; outline:none; background:transparent;
-      font-family:-apple-system,'SF Pro Text',sans-serif;
-      font-size:.95rem; padding:14px 0;
-      -webkit-appearance:none; appearance:none;
+    /* ── Fila de entrada ── */
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 90px 44px;
+      gap: 10px;
+      align-items: end;
     }
-    select { color:var(--accent); text-align:right; }
-    .field-row input { color:var(--text); text-align:right; }
-    .field-row input::placeholder { color:var(--muted); }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    label {
+      font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    select, input[type="number"] {
+      font-family: 'DM Sans', sans-serif; font-size: .92rem; color: var(--text);
+      background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 9px 12px; outline: none;
+      transition: border-color .15s, box-shadow .15s; width: 100%;
+      appearance: none; -webkit-appearance: none;
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+    select:focus, input[type="number"]:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,111,189,.12); background-color: #fff;
+    }
+    input[type="number"] { font-family: 'DM Mono', monospace; }
 
-    .select-wrap { flex:1; display:flex; align-items:center; justify-content:flex-end; position:relative; }
-    .select-wrap select { padding-right:18px; }
-    .select-wrap::after { content:"›"; color:var(--muted); font-size:1.1rem; position:absolute; right:0; pointer-events:none; transform:rotate(90deg); }
-
-    /* Estado de carga */
-    .loading-txt { flex:1; text-align:right; font-size:.9rem; color:var(--muted); font-style:italic; }
-
-    /* Botón agregar */
-    .btn-add-row { background:var(--surface); border-radius:16px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden; }
+    /* ── Botón + ── */
     .btn-add {
-      width:100%; min-height:54px; background:none; border:none;
-      font-family:-apple-system,sans-serif; font-size:1rem; font-weight:600;
-      color:var(--accent); cursor:pointer; display:flex; align-items:center;
-      justify-content:center; gap:8px; -webkit-appearance:none;
+      width: 44px; height: 44px; background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius); cursor: pointer; font-size: 1.5rem;
+      display: grid; place-items: center; transition: background .15s, transform .1s;
+      flex-shrink: 0; line-height: 1;
     }
-    .btn-add:active { background:rgba(0,0,0,.06); }
+    .btn-add:hover { background: var(--accent-dk); }
+    .btn-add:active { transform: scale(.93); }
 
-    /* Lista */
-    #listaWrap { display:none; margin-bottom:12px; }
-    .lista-header { display:flex; align-items:center; justify-content:space-between; padding:0 4px 8px; }
-    .lista-count { font-size:.72rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
-    .btn-limpiar { font-size:.8rem; color:var(--error); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:8px; font-family:-apple-system,sans-serif; }
-    .btn-limpiar:active { background:rgba(255,59,48,.1); }
-
-    .item-card {
-      background:var(--surface); border-radius:14px; margin-bottom:8px;
-      box-shadow:0 1px 3px rgba(0,0,0,.07);
-      display:flex; align-items:center; padding:14px 16px; gap:12px;
-      animation:slideIn .18s ease;
+    /* ── Divider ── */
+    .divider {
+      border: none; border-top: 1px dashed var(--border);
+      margin: 24px 0;
     }
-    .item-info { flex:1; min-width:0; }
-    .item-nombre { font-size:.95rem; font-weight:600; color:var(--text); }
-    .item-lugar  { font-size:.8rem; color:var(--muted); margin-top:2px; }
-    .item-cant   { font-size:1rem; font-weight:700; color:var(--accent); margin-right:8px; font-variant-numeric:tabular-nums; }
-    .btn-del { width:30px; height:30px; background:var(--error); border:none; border-radius:50%; cursor:pointer; display:grid; place-items:center; flex-shrink:0; }
-    .btn-del:active { opacity:.7; }
-    .btn-del svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2.5; stroke-linecap:round; }
-    @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
-    /* Enviar */
+    /* ── Lista de items agregados ── */
+    #listaWrap { display: none; }
+    .lista-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .lista-count {
+      font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .btn-limpiar {
+      font-size: .75rem; color: var(--error); background: none; border: none;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+      transition: background .15s;
+    }
+    .btn-limpiar:hover { background: #fee2e2; }
+
+    #lista { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+
+    .item-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 70px 32px;
+      gap: 8px;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      animation: fadeIn .18s ease;
+    }
+    .item-row .lugar-txt { font-size: .88rem; color: var(--muted); }
+    .item-row .item-txt  { font-size: .88rem; color: var(--text); font-weight: 500; }
+    .item-row .cant-txt  {
+      font-family: 'DM Mono', monospace; font-size: .85rem;
+      color: var(--accent); font-weight: 600; text-align: right;
+    }
+    .btn-del {
+      width: 28px; height: 28px; background: none; border: none;
+      color: var(--muted); cursor: pointer; border-radius: 6px;
+      display: grid; place-items: center; transition: background .12s, color .12s;
+    }
+    .btn-del:hover { background: #fee2e2; color: var(--error); }
+    .btn-del svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Usuario + Enviar ── */
+    .bottom-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end;
+    }
+    .user-wrap {
+      display: flex; align-items: center; gap: 8px;
+      background: #f8fafc; border: 1px dashed var(--border);
+      border-radius: var(--radius); padding: 9px 12px;
+    }
+    .user-wrap svg { width: 15px; height: 15px; flex-shrink: 0; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .user-wrap input {
+      background: transparent; border: none; padding: 0; outline: none;
+      font-family: 'DM Sans', sans-serif; font-size: .88rem; color: var(--muted); width: 100%;
+    }
+    .user-wrap input:focus { color: var(--text); }
+
     .btn-submit {
-      width:100%; min-height:54px; background:var(--accent); color:#fff;
-      font-family:-apple-system,sans-serif; font-size:1.05rem; font-weight:700;
-      border:none; border-radius:16px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center; gap:8px;
-      margin-bottom:12px; box-shadow:0 2px 12px rgba(0,122,255,.35);
-      -webkit-appearance:none;
+      padding: 11px 22px; background: var(--accent); color: #fff;
+      font-family: 'DM Sans', sans-serif; font-size: .95rem; font-weight: 600;
+      border: none; border-radius: var(--radius); cursor: pointer; white-space: nowrap;
+      display: flex; align-items: center; gap: 7px;
+      transition: background .15s, transform .1s;
     }
-    .btn-submit:active:not(:disabled) { opacity:.82; transform:scale(.98); }
-    .btn-submit:disabled { opacity:.45; }
+    .btn-submit:hover:not(:disabled) { background: var(--accent-dk); }
+    .btn-submit:active:not(:disabled) { transform: scale(.98); }
+    .btn-submit:disabled { opacity: .55; cursor: not-allowed; }
+    .btn-submit svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-    .spinner { width:18px; height:18px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
-    @keyframes spin { to{transform:rotate(360deg)} }
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,.35);
+      border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Toast */
+    /* ── Toast ── */
     #toast {
-      position:fixed; bottom:calc(var(--safe-bottom) + 24px); left:16px; right:16px;
-      padding:14px 18px; border-radius:14px; font-size:.93rem; font-weight:600;
-      text-align:center; opacity:0; transform:translateY(10px);
-      transition:opacity .25s,transform .25s; pointer-events:none; z-index:999;
-      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      margin-top: 14px; padding: 11px 16px; border-radius: var(--radius);
+      font-size: .87rem; font-weight: 500; text-align: center;
+      opacity: 0; transform: translateY(-5px);
+      transition: opacity .22s, transform .22s; pointer-events: none;
     }
-    #toast.show { opacity:1; transform:translateY(0); }
-    #toast.ok   { background:rgba(52,199,89,.92);  color:#fff; }
-    #toast.fail { background:rgba(255,59,48,.92);  color:#fff; }
-    #toast.warn { background:rgba(255,149,0,.92);  color:#fff; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.ok   { background: #dcfce7; color: var(--success); border: 1px solid #bbf7d0; }
+    #toast.fail { background: #fee2e2; color: var(--error);   border: 1px solid #fecaca; }
+    #toast.warn { background: #fef3c7; color: var(--warn);    border: 1px solid #fde68a; }
 
-    .config-link { text-align:center; font-size:.75rem; color:var(--muted); padding:4px 0 8px; }
-    .config-link a { color:var(--accent); }
+    /* ── Config ── */
+    .config-link { text-align: center; margin-top: 18px; font-size: .73rem; color: var(--muted); }
+    .config-link a { color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
   </style>
 </head>
 <body>
+<div class="card">
 
+  <!-- Header -->
   <div class="header">
     <div class="header-icon">
       <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
     </div>
-    <div>
+    <div class="header-text">
       <h1>Registro de Inventario</h1>
       <p>Dermatología · Hospital del Salvador</p>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-title">Nuevo ítem</div>
-
-    <div class="field-row">
-      <span class="field-label">Lugar</span>
-      <span class="loading-txt" id="lugarLoading">Cargando…</span>
-      <div class="select-wrap" id="lugarWrap" style="display:none">
-        <select id="lugar"><option value="" disabled selected>Selecciona…</option></select>
-      </div>
+  <!-- Fila de entrada -->
+  <p class="section-label">Agregar ítem</p>
+  <div class="input-row">
+    <div class="field">
+      <label>Lugar</label>
+      <select id="lugar"><option value="" disabled selected>Cargando…</option></select>
     </div>
-
-    <div class="field-row">
-      <span class="field-label">Ítem</span>
-      <span class="loading-txt" id="itemLoading">Cargando…</span>
-      <div class="select-wrap" id="itemWrap" style="display:none">
-        <select id="item"><option value="" disabled selected>Selecciona…</option></select>
-      </div>
+    <div class="field">
+      <label>Ítem</label>
+      <select id="item"><option value="" disabled selected>Cargando…</option></select>
     </div>
-
-    <div class="field-row">
-      <span class="field-label">Cantidad</span>
-      <input id="cantidad" type="number" min="0" placeholder="0"
-             inputmode="numeric" pattern="[0-9]*" />
+    <div class="field">
+      <label>Cantidad</label>
+      <input id="cantidad" type="number" min="0" placeholder="0" />
     </div>
+    <button class="btn-add" onclick="agregarALista()" title="Agregar a la lista">+</button>
   </div>
 
-  <div class="btn-add-row">
-    <button class="btn-add" onclick="agregarALista()">
-      <span style="font-size:1.3rem;line-height:1">+</span> Agregar a la lista
-    </button>
-  </div>
+  <hr class="divider" />
 
+  <!-- Lista acumulada -->
   <div id="listaWrap">
     <div class="lista-header">
-      <span class="lista-count" id="listaCount">0 ítems</span>
-      <button class="btn-limpiar" onclick="limpiarLista()">✕ Limpiar</button>
+      <span class="lista-count" id="listaCount">0 ítems en lista</span>
+      <button class="btn-limpiar" onclick="limpiarLista()">✕ Limpiar lista</button>
     </div>
     <div id="lista"></div>
-    <div class="card" style="margin-bottom:12px">
-      <div class="field-row">
-        <span class="field-label">Nombre</span>
-        <input id="usuario" type="text" placeholder="Opcional" style="text-align:right" />
+
+    <!-- Usuario + Enviar -->
+    <div class="bottom-row">
+      <div class="user-wrap">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+        <input id="usuario" type="text" placeholder="Tu nombre (opcional)" />
       </div>
+      <button class="btn-submit" id="btnEnviar" onclick="enviarTodo()">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Enviar todo
+      </button>
     </div>
-    <button class="btn-submit" id="btnEnviar" onclick="enviarTodo()">
-      Enviar todo al inventario
-    </button>
   </div>
 
-  <div class="config-link"><a onclick="pedirURL()">⚙ Configurar URL</a></div>
   <div id="toast"></div>
+
+  <div class="config-link">
+    <a onclick="pedirURL()">⚙ Configurar URL del script</a>
+  </div>
+
+</div>
 
 <script>
   let SCRIPT_URL = localStorage.getItem("inv_script_url") || "";
-  let listaItems = [];
+  let listaItems = []; // [{lugar, item, cantidad}]
 
   window.onload = () => {
     if (!SCRIPT_URL) pedirURL();
-    else { cargarJSONP("lugares"); cargarJSONP("items"); }
+    else { cargarLugares(); cargarItems(); }
   };
 
   function pedirURL() {
-    const url = prompt("Pega la URL del Apps Script:", SCRIPT_URL);
+    const url = prompt(
+      "Pega la URL del Apps Script (Web App):",
+      SCRIPT_URL
+    );
     if (url && url.startsWith("https://")) {
       SCRIPT_URL = url.trim();
       localStorage.setItem("inv_script_url", SCRIPT_URL);
-      cargarJSONP("lugares");
-      cargarJSONP("items");
+      cargarLugares();
+      cargarItems();
     }
   }
 
-  // ── JSONP: compatible con Safari iOS ─────────────────────────
-  // Inyecta un <script> con la URL — Safari nunca bloquea scripts externos
-  function cargarJSONP(accion) {
-    const cbName = "_cb_" + accion + "_" + Date.now();
-    const timeout = setTimeout(() => {
-      mostrarError(accion);
-      delete window[cbName];
-    }, 8000);
-
-    window[cbName] = function(data) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (accion === "lugares") poblarSelect("lugar", data.lugares, "lugarLoading", "lugarWrap");
-      if (accion === "items")   poblarSelect("item",  data.items,   "itemLoading",  "itemWrap");
-    };
-
-    const s = document.createElement("script");
-    s.src = SCRIPT_URL + "?accion=" + accion + "&callback=" + cbName;
-    s.onerror = () => { clearTimeout(timeout); mostrarError(accion); };
-    document.head.appendChild(s);
+  // ── Carga listas desde el script ─────────────────────────────
+  async function cargarLugares() {
+    const sel = document.getElementById("lugar");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=lugares");
+      const data = await res.json();
+      if (data.status === "ok" && data.lugares.length > 0) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona un lugar…</option>';
+        data.lugares.forEach(l => {
+          const opt = document.createElement("option");
+          opt.value = l; opt.textContent = l; sel.appendChild(opt);
+        });
+      } else {
+        sel.innerHTML = '<option value="" disabled selected>Sin lugares en Hoja2</option>';
+      }
+    } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
   }
 
-  function poblarSelect(id, lista, loadingId, wrapId) {
-    document.getElementById(loadingId).style.display = "none";
-    const wrap = document.getElementById(wrapId);
-    const sel  = document.getElementById(id);
-    if (lista && lista.length > 0) {
-      sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-      lista.forEach(v => {
-        const o = document.createElement("option");
-        o.value = v; o.textContent = v; sel.appendChild(o);
-      });
-      wrap.style.display = "flex";
-    } else {
-      document.getElementById(loadingId).textContent = "Sin datos";
-      document.getElementById(loadingId).style.display = "block";
-    }
+  async function cargarItems() {
+    const sel = document.getElementById("item");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=items");
+      const data = await res.json();
+      if (data.status === "ok" && data.items.length > 0) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona un insumo…</option>';
+        data.items.forEach(i => {
+          const opt = document.createElement("option");
+          opt.value = i; opt.textContent = i; sel.appendChild(opt);
+        });
+      } else {
+        sel.innerHTML = '<option value="" disabled selected>Sin insumos en Hoja3</option>';
+      }
+    } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
   }
 
-  function mostrarError(accion) {
-    const id = accion === "lugares" ? "lugarLoading" : "itemLoading";
-    const el = document.getElementById(id);
-    el.textContent = "Error al cargar";
-    el.style.color = "var(--error)";
-    el.style.display = "block";
-  }
-
-  // ── Lista local ───────────────────────────────────────────────
+  // ── Agregar a lista local ─────────────────────────────────────
   function agregarALista() {
     const lugar    = document.getElementById("lugar").value;
     const item     = document.getElementById("item").value;
     const cantidad = document.getElementById("cantidad").value.trim();
+
     if (!lugar || !item || !cantidad || Number(cantidad) < 0) {
-      mostrarToast("Completa los tres campos.", "warn"); return;
+      mostrarToast("Completa Lugar, Ítem y Cantidad.", "warn");
+      return;
     }
+
     listaItems.push({ lugar, item, cantidad });
     renderLista();
+
+    // Resetea solo cantidad, mantiene lugar e ítem para agilizar ingreso
     document.getElementById("cantidad").value = "";
     document.getElementById("cantidad").focus();
   }
 
   function renderLista() {
-    const cont = document.getElementById("lista");
-    const wrap = document.getElementById("listaWrap");
-    document.getElementById("listaCount").textContent =
-      listaItems.length + (listaItems.length === 1 ? " ítem" : " ítems");
+    const contenedor = document.getElementById("lista");
+    const wrap       = document.getElementById("listaWrap");
+    const countEl    = document.getElementById("listaCount");
+
     wrap.style.display = listaItems.length ? "block" : "none";
-    cont.innerHTML = "";
-    listaItems.forEach((e, i) => {
-      const d = document.createElement("div");
-      d.className = "item-card";
-      d.innerHTML =
-        `<div class="item-info">
-          <div class="item-nombre">${e.item}</div>
-          <div class="item-lugar">${e.lugar}</div>
-        </div>
-        <span class="item-cant">${e.cantidad}</span>
-        <button class="btn-del" onclick="eliminarItem(${i})">
-          <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>`;
-      cont.appendChild(d);
+    countEl.textContent = listaItems.length + (listaItems.length === 1 ? " ítem en lista" : " ítems en lista");
+
+    contenedor.innerHTML = "";
+    listaItems.forEach((entry, idx) => {
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.innerHTML =
+        `<span class="lugar-txt">${entry.lugar}</span>` +
+        `<span class="item-txt">${entry.item}</span>` +
+        `<span class="cant-txt">${entry.cantidad}</span>` +
+        `<button class="btn-del" onclick="eliminarItem(${idx})" title="Eliminar">` +
+          `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>` +
+        `</button>`;
+      contenedor.appendChild(row);
     });
   }
 
-  function eliminarItem(i) { listaItems.splice(i, 1); renderLista(); }
-  function limpiarLista()  { listaItems = []; renderLista(); }
-
-  // ── Enviar con Image — funciona en iPhone sin CORS ────────────
-  function enviarConImagen(params) {
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = img.onerror = () => resolve();
-      img.src = SCRIPT_URL + "?" + params.toString();
-      setTimeout(resolve, 5000);
-    });
+  function eliminarItem(idx) {
+    listaItems.splice(idx, 1);
+    renderLista();
   }
 
+  function limpiarLista() {
+    listaItems = [];
+    renderLista();
+  }
+
+  // ── Enviar toda la lista al sheet ─────────────────────────────
   async function enviarTodo() {
-    if (!listaItems.length) { mostrarToast("Agrega al menos un ítem.", "warn"); return; }
+    if (listaItems.length === 0) {
+      mostrarToast("Agrega al menos un ítem antes de enviar.", "warn");
+      return;
+    }
     if (!SCRIPT_URL) { pedirURL(); return; }
 
     const usuario = document.getElementById("usuario").value.trim();
-    const btn = document.getElementById("btnEnviar");
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div>&nbsp; Enviando…';
+    const btn     = document.getElementById("btnEnviar");
+    btn.disabled  = true;
+    btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
-    for (const e of listaItems) {
-      await enviarConImagen(new URLSearchParams({ ...e, usuario }));
+    let errores = 0;
+    for (const entry of listaItems) {
+      try {
+        const params = new URLSearchParams({ ...entry, usuario });
+        await fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" });
+      } catch { errores++; }
     }
 
     btn.disabled = false;
-    btn.innerHTML = "Enviar todo al inventario";
-    mostrarToast(`✓ ${listaItems.length} registro${listaItems.length > 1 ? "s" : ""} enviado${listaItems.length > 1 ? "s" : ""}.`, "ok");
-    limpiarLista();
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Enviar todo';
+
+    if (errores === 0) {
+      mostrarToast(`✓ ${listaItems.length} registro${listaItems.length > 1 ? "s" : ""} enviado${listaItems.length > 1 ? "s" : ""} correctamente.`, "ok");
+      limpiarLista();
+    } else {
+      mostrarToast(`${errores} error(es) al enviar. Intenta nuevamente.`, "fail");
+    }
   }
 
+  // ── Helpers ──────────────────────────────────────────────────
   function mostrarToast(msg, tipo) {
     const t = document.getElementById("toast");
-    t.textContent = msg; t.className = "show " + tipo;
-    setTimeout(() => { t.className = ""; }, 3000);
+    t.textContent = msg;
+    t.className = "show " + tipo;
+    setTimeout(() => { t.className = ""; }, 3500);
   }
+
+  // Enter en cantidad → agregar a lista
+  document.addEventListener("keydown", e => {
+    if (e.key === "Enter" && document.activeElement.id === "cantidad") agregarALista();
+  });
 </script>
 </body>
 </html>
