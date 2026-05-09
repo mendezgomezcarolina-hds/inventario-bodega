@@ -295,6 +295,10 @@
 
   <div class="config-link">
     <a onclick="pedirURL()">⚙ Configurar URL del script</a>
+    <div style="margin-top:8px; background:#f8fafc; border:1px dashed #d1dce8; border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px;">
+      <span style="font-family:monospace; font-size:.68rem; color:#475569; word-break:break-all; flex:1;">https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec</span>
+      <button onclick="copiarURL()" title="Copiar" style="flex-shrink:0; background:var(--accent); border:none; border-radius:6px; padding:4px 8px; cursor:pointer; color:#fff; font-size:.72rem; font-weight:600;">Copiar</button>
+    </div>
   </div>
 
 </div>
@@ -520,6 +524,15 @@
     t.textContent = msg;
     t.className = "show " + tipo;
     setTimeout(() => { t.className = ""; }, 3500);
+  }
+
+  function copiarURL() {
+    const url = "https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec";
+    navigator.clipboard.writeText(url).then(() => {
+      mostrarToast("URL copiada al portapapeles.", "ok");
+    }).catch(() => {
+      mostrarToast("Selecciona y copia la URL manualmente.", "warn");
+    });
   }
 
   // Enter en cantidad → agregar a lista
