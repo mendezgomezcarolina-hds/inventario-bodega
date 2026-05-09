@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ingreso de insumos</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #d1dce8;
+      border-radius: 16px;
+      padding: 48px 36px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.07);
+      text-align: center;
+    }
+    .icon-wrap {
+      width: 72px; height: 72px;
+      background: #FAEEDA;
+      border-radius: 20px;
+      display: grid; place-items: center;
+      margin: 0 auto 24px;
+    }
+    .icon-wrap i { font-size: 36px; color: #854F0B; }
+    h1 { font-size: 1.15rem; font-weight: 600; color: #1e293b; margin-bottom: 10px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #fef3c7; color: #92400e;
+      font-size: .75rem; font-weight: 600;
+      padding: 5px 12px; border-radius: 99px;
+      margin-bottom: 20px;
+    }
+    .badge i { font-size: 14px; }
+    p {
+      font-size: .88rem; color: #64748b;
+      line-height: 1.6; margin-bottom: 28px;
+    }
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #1a6fbd; color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .9rem; font-weight: 600;
+      padding: 11px 22px; border-radius: 10px;
+      text-decoration: none;
+      transition: background .15s;
+    }
+    .btn-back:hover { background: #134f8a; }
+    .btn-back i { font-size: 18px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="icon-wrap"><i class="ti ti-package-import"></i></div>
+  <h1>Ingreso de insumos</h1>
+  <div class="badge"><i class="ti ti-tools"></i> En construcción</div>
+  <p>Este módulo se encuentra en desarrollo.<br>Pronto estará disponible.</p>
+  <a class="btn-back" href="index.html">
+    <i class="ti ti-arrow-left"></i> Volver al portal
+  </a>
+</div>
+</body>
+</html>
