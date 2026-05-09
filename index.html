@@ -210,8 +210,29 @@
     </div>
   </div>
 
-  <!-- Lugar de sesión -->
-  <div id="lugarSesionWrap" style="margin-bottom:20px;">
+  <!-- Responsable de sesión -->
+  <div id="responsableSesionWrap" style="margin-bottom:20px;">
+    <p class="section-label">Responsable</p>
+    <div style="display:flex; gap:10px; align-items:flex-end;">
+      <div class="field" style="flex:1">
+        <label>Responsable</label>
+        <select id="responsable"><option value="" disabled selected>Cargando…</option></select>
+      </div>
+      <button class="btn-add" onclick="confirmarResponsable()" title="Confirmar responsable" style="background:var(--accent)">✓</button>
+    </div>
+  </div>
+
+  <!-- Responsable confirmado (badge) -->
+  <div id="responsableBadgeWrap" style="display:none; margin-bottom:20px;">
+    <p class="section-label">Responsable</p>
+    <div style="display:flex; align-items:center; justify-content:space-between; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:8px; padding:9px 14px;">
+      <span style="font-size:.92rem; font-weight:600; color:#15803d;" id="responsableBadgeTxt"></span>
+      <button onclick="cambiarResponsable()" style="font-size:.72rem; color:#64748b; background:none; border:none; cursor:pointer; text-decoration:underline dotted;">Cambiar</button>
+    </div>
+  </div>
+
+  <!-- Lugar de sesión (se muestra tras confirmar responsable) -->
+  <div id="lugarSesionWrap" style="display:none; margin-bottom:20px;">
     <p class="section-label">Lugar de trabajo</p>
     <div style="display:flex; gap:10px; align-items:flex-end;">
       <div class="field" style="flex:1">
@@ -257,11 +278,11 @@
     </div>
     <div id="lista"></div>
 
-    <!-- Usuario + Enviar -->
+    <!-- Enviar -->
     <div class="bottom-row">
       <div class="user-wrap">
         <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
-        <input id="usuario" type="text" placeholder="Tu nombre (opcional)" />
+        <span id="responsableEnviarTxt" style="font-size:.88rem; color:#64748b;"></span>
       </div>
       <button class="btn-submit" id="btnEnviar" onclick="enviarTodo()">
         <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -284,7 +305,7 @@
 
   window.onload = () => {
     if (!SCRIPT_URL) pedirURL();
-    else { cargarLugares(); cargarItems(); }
+    else { cargarColaboradores(); cargarLugares(); cargarItems(); }
   };
 
   function pedirURL() {
@@ -295,6 +316,7 @@
     if (url && url.startsWith("https://")) {
       SCRIPT_URL = url.trim();
       localStorage.setItem("inv_script_url", SCRIPT_URL);
+      cargarColaboradores();
       cargarLugares();
       cargarItems();
     }
@@ -336,7 +358,47 @@
   }
 
   // ── Agregar a lista local ─────────────────────────────────────
+  let responsableSesion = "";
   let lugarSesion = "";
+
+  async function cargarColaboradores() {
+    const sel = document.getElementById("responsable");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=colaboradores");
+      const data = await res.json();
+      if (data.status === "ok" && data.colaboradores.length > 0) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona un responsable…</option>';
+        data.colaboradores.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c; opt.textContent = c; sel.appendChild(opt);
+        });
+      } else {
+        sel.innerHTML = '<option value="" disabled selected>Sin datos en colaboradores</option>';
+      }
+    } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
+  }
+
+  function confirmarResponsable() {
+    const sel = document.getElementById("responsable").value;
+    if (!sel) { mostrarToast("Selecciona un responsable primero.", "warn"); return; }
+    responsableSesion = sel;
+    document.getElementById("responsableBadgeTxt").textContent = sel;
+    document.getElementById("responsableSesionWrap").style.display = "none";
+    document.getElementById("responsableBadgeWrap").style.display  = "block";
+    document.getElementById("lugarSesionWrap").style.display       = "block";
+  }
+
+  function cambiarResponsable() {
+    responsableSesion = "";
+    lugarSesion = "";
+    document.getElementById("responsableBadgeWrap").style.display  = "none";
+    document.getElementById("lugarBadgeWrap").style.display        = "none";
+    document.getElementById("inputItemWrap").style.display         = "none";
+    document.getElementById("lugarSesionWrap").style.display       = "none";
+    document.getElementById("responsableSesionWrap").style.display = "block";
+    document.getElementById("responsable").value = "";
+    document.getElementById("lugar").value = "";
+  }
 
   function confirmarLugar() {
     const sel = document.getElementById("lugar").value;
@@ -346,6 +408,7 @@
     document.getElementById("lugarSesionWrap").style.display = "none";
     document.getElementById("lugarBadgeWrap").style.display  = "block";
     document.getElementById("inputItemWrap").style.display   = "block";
+    document.getElementById("responsableEnviarTxt").textContent = responsableSesion;
     document.getElementById("item").focus();
   }
 
@@ -416,7 +479,7 @@
     }
     if (!SCRIPT_URL) { pedirURL(); return; }
 
-    const usuario = document.getElementById("usuario").value.trim();
+
     const btn     = document.getElementById("btnEnviar");
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
@@ -424,7 +487,7 @@
     let errores = 0;
     for (const entry of listaItems) {
       try {
-        const params = new URLSearchParams({ ...entry, usuario });
+        const params = new URLSearchParams({ ...entry, usuario: responsableSesion });
         await fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" });
       } catch { errores++; }
     }

@@ -4,16 +4,18 @@
 //  Implementar → Aplicación web → Cualquier persona
 // ============================================================
 
-const SHEET_DATOS   = "Hoja1";
-const SHEET_LUGARES = "Hoja2";
-const SHEET_ITEMS   = "Hoja3";
+const SHEET_DATOS        = "Hoja1";
+const SHEET_LUGARES      = "Hoja2";
+const SHEET_ITEMS        = "Hoja3";
+const SHEET_COLABORADORES = "colaboradores";
 
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
   const callback = e.parameter.callback || ""; // para JSONP (iPhone)
 
-  if (accion === "lugares") return responder(leerColumnaA(SHEET_LUGARES, "lugares", 1), callback);
-  if (accion === "items")   return responder(leerColumnaA(SHEET_ITEMS,   "items",   2), callback);
+  if (accion === "lugares")       return responder(leerColumnaA(SHEET_LUGARES,       "lugares",       1), callback);
+  if (accion === "items")         return responder(leerColumnaA(SHEET_ITEMS,         "items",         2), callback);
+  if (accion === "colaboradores") return responder(leerColumnaA(SHEET_COLABORADORES, "colaboradores", 3), callback);
 
   return escribir(e, callback);
 }
