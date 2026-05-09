@@ -361,16 +361,21 @@
   let responsableSesion = "";
   let lugarSesion = "";
 
+  let colaboradoresData = []; // [{nombre, id}]
+
   async function cargarColaboradores() {
     const sel = document.getElementById("responsable");
     try {
       const res  = await fetch(SCRIPT_URL + "?accion=colaboradores");
       const data = await res.json();
       if (data.status === "ok" && data.colaboradores.length > 0) {
+        colaboradoresData = data.colaboradores;
         sel.innerHTML = '<option value="" disabled selected>Selecciona un responsable…</option>';
         data.colaboradores.forEach(c => {
           const opt = document.createElement("option");
-          opt.value = c; opt.textContent = c; sel.appendChild(opt);
+          opt.value = c.nombre;
+          opt.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
+          sel.appendChild(opt);
         });
       } else {
         sel.innerHTML = '<option value="" disabled selected>Sin datos en colaboradores</option>';
@@ -378,11 +383,16 @@
     } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
   }
 
+  let responsableIdSesion = "";
+
   function confirmarResponsable() {
-    const sel = document.getElementById("responsable").value;
-    if (!sel) { mostrarToast("Selecciona un responsable primero.", "warn"); return; }
-    responsableSesion = sel;
-    document.getElementById("responsableBadgeTxt").textContent = sel;
+    const nombre = document.getElementById("responsable").value;
+    if (!nombre) { mostrarToast("Selecciona un responsable primero.", "warn"); return; }
+    responsableSesion = nombre;
+    const colab = colaboradoresData.find(c => c.nombre === nombre);
+    responsableIdSesion = colab ? colab.id : "";
+    const badgeTxt = responsableIdSesion ? nombre + " — " + responsableIdSesion : nombre;
+    document.getElementById("responsableBadgeTxt").textContent = badgeTxt;
     document.getElementById("responsableSesionWrap").style.display = "none";
     document.getElementById("responsableBadgeWrap").style.display  = "block";
     document.getElementById("lugarSesionWrap").style.display       = "block";
@@ -390,6 +400,7 @@
 
   function cambiarResponsable() {
     responsableSesion = "";
+    responsableIdSesion = "";
     lugarSesion = "";
     document.getElementById("responsableBadgeWrap").style.display  = "none";
     document.getElementById("lugarBadgeWrap").style.display        = "none";
@@ -487,7 +498,7 @@
     let errores = 0;
     for (const entry of listaItems) {
       try {
-        const params = new URLSearchParams({ ...entry, usuario: responsableSesion });
+        const params = new URLSearchParams({ ...entry, usuario: responsableSesion, usuarioId: responsableIdSesion });
         await fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" });
       } catch { errores++; }
     }

@@ -15,7 +15,7 @@ function doGet(e) {
 
   if (accion === "lugares")       return responder(leerColumnaA(SHEET_LUGARES,       "lugares",       1), callback);
   if (accion === "items")         return responder(leerColumnaA(SHEET_ITEMS,         "items",         2), callback);
-  if (accion === "colaboradores") return responder(leerColumnaA(SHEET_COLABORADORES, "colaboradores", 3), callback);
+  if (accion === "colaboradores") return responder(leerColaboradores(), callback);
 
   return escribir(e, callback);
 }
@@ -34,6 +34,21 @@ function responder(obj, callback) {
   return ContentService
     .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Leer colaboradores: columna A (Nombre) + B (ID) ─────────
+function leerColaboradores() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_COLABORADORES) || ss.getSheets()[3];
+    const datos = sheet.getDataRange().getValues();
+    const colaboradores = datos
+      .filter(f => f[0] !== "" && f[0] != null)
+      .map(f => ({ nombre: f[0], id: f[1] || "" }));
+    return { status: "ok", colaboradores: colaboradores };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
 }
 
 // ── Leer columna A de una hoja ────────────────────────────────
@@ -61,11 +76,13 @@ function escribir(e, callback) {
     if (!p.lugar && !p.item && !p.cantidad) throw new Error("Sin datos.");
 
     if (sheet.getLastRow() === 0)
-      sheet.appendRow(["Lugar","Ítem","Cantidad","Fecha/Hora","Usuario"]);
+      sheet.appendRow(["Lugar","Ítem","Cantidad","Fecha/Hora","Responsable","ID"]);
 
     sheet.appendRow([
       p.lugar || "", p.item || "", p.cantidad || "",
-      new Date().toLocaleString("es-CL"), p.usuario || "Anónimo"
+      new Date().toLocaleString("es-CL"),
+      p.usuario || "Anónimo",
+      p.usuarioId || ""
     ]);
 
     return responder({ status: "ok" }, callback);
