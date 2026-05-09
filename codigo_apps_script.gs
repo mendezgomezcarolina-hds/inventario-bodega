@@ -76,7 +76,7 @@ function escribir(e, callback) {
     if (!p.lugar && !p.item && !p.cantidad) throw new Error("Sin datos.");
 
     if (sheet.getLastRow() === 0)
-      sheet.appendRow(["Lugar","Ítem","Cantidad","Fecha/Hora","Responsable","ID"]);
+      sheet.appendRow(["Lugar","Ítem","Cantidad","Vencimiento","Fecha/Hora","Responsable","ID"]);
 
     sheet.appendRow([
       p.lugar || "", p.item || "", p.cantidad || "",
