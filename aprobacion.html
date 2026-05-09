@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aprobación de Solicitudes</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #f0f4f8;
+      --surface:   #ffffff;
+      --border:    #d1dce8;
+      --accent:    #1a6fbd;
+      --text:      #1e293b;
+      --muted:     #64748b;
+      --success:   #16a34a;
+      --error:     #dc2626;
+      --warn:      #d97706;
+      --radius:    10px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+    .container { max-width: 780px; margin: 0 auto; }
+    a.back-link {
+      display:inline-flex; align-items:center; gap:5px;
+      font-size:.75rem; color:var(--muted); text-decoration:none; margin-bottom:20px;
+    }
+    a.back-link svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    a.back-link:hover { color:var(--accent); }
+    .header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
+    .header-icon { width:42px; height:42px; background:var(--accent); border-radius:10px; display:grid; place-items:center; }
+    .header-icon svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .header-text h1 { font-size:1.1rem; font-weight:600; color:var(--text); }
+    .header-text p  { font-size:.78rem; color:var(--muted); margin-top:2px; }
+
+    /* Supervisor selector */
+    .sup-bar {
+      background:var(--surface); border:1px solid var(--border); border-radius:12px;
+      padding:16px 20px; margin-bottom:20px;
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    }
+    .sup-bar label { font-size:.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+    .sup-bar select { font-family:'DM Sans',sans-serif; font-size:.9rem; color:var(--text); background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:8px 12px; outline:none; flex:1; min-width:200px; }
+    .sup-bar select:focus { border-color:var(--accent); }
+    .btn-refresh { padding:8px 16px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:600; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+    .btn-refresh svg { width:15px; height:15px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; }
+    .btn-refresh:hover { background:#134f8a; }
+
+    /* Filtros */
+    .filtros { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .filtro {
+      padding:6px 14px; border-radius:99px; font-size:.78rem; font-weight:600;
+      border:1.5px solid var(--border); background:var(--surface); color:var(--muted);
+      cursor:pointer; transition:all .15s;
+    }
+    .filtro.activo.todos    { background:#e0eaf5; border-color:#1a6fbd; color:#1a6fbd; }
+    .filtro.activo.pend     { background:#fef3c7; border-color:#d97706; color:#d97706; }
+    .filtro.activo.apro     { background:#dcfce7; border-color:#16a34a; color:#16a34a; }
+    .filtro.activo.rech     { background:#fee2e2; border-color:#dc2626; color:#dc2626; }
+
+    /* Stats */
+    .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:20px; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; text-align:center; }
+    .stat-num { font-size:1.4rem; font-weight:600; color:var(--text); }
+    .stat-lbl { font-size:.7rem; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.04em; }
+    .stat.pend .stat-num { color:var(--warn); }
+    .stat.apro .stat-num { color:var(--success); }
+    .stat.rech .stat-num { color:var(--error); }
+
+    /* Grupos por ID */
+    .grupo { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; }
+    .grupo-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 16px; border-bottom:1px solid var(--border);
+      flex-wrap:wrap; gap:10px;
+    }
+    .grupo-id { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600; color:var(--accent); }
+    .grupo-meta { font-size:.78rem; color:var(--muted); }
+    .grupo-acciones { display:flex; gap:8px; align-items:center; }
+    .estado-badge {
+      font-size:.72rem; font-weight:700; padding:3px 10px;
+      border-radius:99px; text-transform:uppercase; letter-spacing:.04em;
+    }
+    .estado-PENDIENTE  { background:#fef3c7; color:#92400e; }
+    .estado-APROBADO   { background:#dcfce7; color:#15803d; }
+    .estado-RECHAZADO  { background:#fee2e2; color:#991b1b; }
+
+    .btn-aprobar  { padding:7px 16px; background:var(--success); color:#fff; border:none; border-radius:8px; font-size:.82rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .btn-rechazar { padding:7px 16px; background:var(--error);   color:#fff; border:none; border-radius:8px; font-size:.82rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .btn-aprobar:hover  { background:#15803d; }
+    .btn-rechazar:hover { background:#b91c1c; }
+    .btn-aprobar:disabled, .btn-rechazar:disabled { opacity:.5; cursor:not-allowed; }
+    .resuelto-info { font-size:.72rem; color:var(--muted); font-style:italic; }
+
+    /* Filas de insumos */
+    .grupo-items { padding:0; }
+    .item-fila {
+      display:grid; grid-template-columns:1fr 1fr 80px;
+      gap:8px; align-items:center;
+      padding:10px 16px; border-bottom:0.5px solid var(--border);
+      font-size:.85rem;
+    }
+    .item-fila:last-child { border-bottom:none; }
+    .item-lugar { color:var(--muted); }
+    .item-nom   { color:var(--text); font-weight:500; }
+    .item-cant  { font-family:'DM Mono',monospace; color:var(--accent); font-weight:600; text-align:right; }
+
+    /* Estado vacío / carga */
+    .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:.9rem; }
+    .loading { text-align:center; padding:32px; color:var(--muted); }
+    .spinner { display:inline-block; width:20px; height:20px; border:2.5px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* Toast */
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px); padding:12px 22px; border-radius:12px; font-size:.88rem; font-weight:500; opacity:0; transition:opacity .22s,transform .22s; pointer-events:none; z-index:999; white-space:nowrap; }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    #toast.ok   { background:#dcfce7; color:var(--success); border:1px solid #bbf7d0; }
+    #toast.fail { background:#fee2e2; color:var(--error);   border:1px solid #fecaca; }
+    #toast.warn { background:#fef3c7; color:var(--warn);    border:1px solid #fde68a; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back-link" href="index.html">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Volver al portal
+  </a>
+
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>Aprobación de Solicitudes</h1>
+      <p>Dermatología · Hospital del Salvador</p>
+    </div>
+  </div>
+
+  <!-- Supervisor + Actualizar -->
+  <div class="sup-bar">
+    <label>Supervisor</label>
+    <select id="supervisorSel"><option value="" disabled selected>Cargando colaboradores…</option></select>
+    <button class="btn-refresh" onclick="cargarSolicitudes()">
+      <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      Actualizar
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">Total</div></div>
+    <div class="stat pend"><div class="stat-num" id="statPend">—</div><div class="stat-lbl">Pendientes</div></div>
+    <div class="stat apro"><div class="stat-num" id="statApro">—</div><div class="stat-lbl">Aprobadas</div></div>
+    <div class="stat rech"><div class="stat-num" id="statRech">—</div><div class="stat-lbl">Rechazadas</div></div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filtros">
+    <button class="filtro activo todos" onclick="setFiltro('todos', this)">Todas</button>
+    <button class="filtro pend"         onclick="setFiltro('PENDIENTE', this)">Pendientes</button>
+    <button class="filtro apro"         onclick="setFiltro('APROBADO', this)">Aprobadas</button>
+    <button class="filtro rech"         onclick="setFiltro('RECHAZADO', this)">Rechazadas</button>
+  </div>
+
+  <!-- Lista solicitudes -->
+  <div id="listaSolicitudes"><div class="loading"><div class="spinner"></div></div></div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+  const SCRIPT_URL = localStorage.getItem("inv_script_url") ||
+    "https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec";
+
+  let todasSolicitudes = [];
+  let filtroActual = "todos";
+
+  window.onload = () => {
+    cargarColaboradores();
+    cargarSolicitudes();
+  };
+
+  async function cargarColaboradores() {
+    const sel = document.getElementById("supervisorSel");
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=colaboradores");
+      const data = await res.json();
+      if (data.status === "ok" && data.colaboradores.length > 0) {
+        sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
+        data.colaboradores.forEach(c => {
+          const o = document.createElement("option");
+          o.value = c.nombre; o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
+          sel.appendChild(o);
+        });
+      }
+    } catch { sel.innerHTML = '<option value="">Error al cargar</option>'; }
+  }
+
+  async function cargarSolicitudes() {
+    document.getElementById("listaSolicitudes").innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    try {
+      const res  = await fetch(SCRIPT_URL + "?accion=listarSolicitudes");
+      const data = await res.json();
+      if (data.status === "ok") {
+        todasSolicitudes = data.solicitudes;
+        actualizarStats();
+        renderSolicitudes();
+      } else {
+        document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error al cargar solicitudes.</div>';
+      }
+    } catch(err) {
+      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">No se pudo conectar al servidor.</div>';
+    }
+  }
+
+  function actualizarStats() {
+    const ids = [...new Set(todasSolicitudes.map(s => s.id))];
+    const estados = {};
+    ids.forEach(id => {
+      const filas = todasSolicitudes.filter(s => s.id === id);
+      estados[filas[0].estado] = (estados[filas[0].estado] || 0) + 1;
+    });
+    document.getElementById("statTotal").textContent = ids.length;
+    document.getElementById("statPend").textContent  = estados["PENDIENTE"]  || 0;
+    document.getElementById("statApro").textContent  = estados["APROBADO"]   || 0;
+    document.getElementById("statRech").textContent  = estados["RECHAZADO"]  || 0;
+  }
+
+  function setFiltro(f, btn) {
+    filtroActual = f;
+    document.querySelectorAll(".filtro").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+    renderSolicitudes();
+  }
+
+  function renderSolicitudes() {
+    const cont = document.getElementById("listaSolicitudes");
+
+    // Agrupar por ID
+    const grupos = {};
+    todasSolicitudes.forEach(s => {
+      if (!grupos[s.id]) grupos[s.id] = [];
+      grupos[s.id].push(s);
+    });
+
+    const ids = Object.keys(grupos).filter(id => {
+      if (filtroActual === "todos") return true;
+      return grupos[id][0].estado === filtroActual;
+    }).reverse(); // más recientes primero
+
+    if (ids.length === 0) {
+      cont.innerHTML = '<div class="empty">No hay solicitudes para mostrar.</div>';
+      return;
+    }
+
+    cont.innerHTML = "";
+    ids.forEach(id => {
+      const filas  = grupos[id];
+      const estado = filas[0].estado;
+      const fecha  = filas[0].fecha;
+      const resp   = filas[0].responsable;
+      const lugar  = filas[0].lugar;
+      const esPend = estado === "PENDIENTE";
+
+      const div = document.createElement("div");
+      div.className = "grupo";
+
+      const accionesHTML = esPend
+        ? `<button class="btn-aprobar"  onclick="resolver('${id}','APROBADO')">✓ Aprobar</button>
+           <button class="btn-rechazar" onclick="resolver('${id}','RECHAZADO')">✕ Rechazar</button>`
+        : `<span class="resuelto-info">${filas[0].fechaResol || ""} · ${filas[0].supervisor || ""}</span>`;
+
+      const itemsHTML = filas.map(f =>
+        `<div class="item-fila">
+          <span class="item-lugar">${f.lugar}</span>
+          <span class="item-nom">${f.item}</span>
+          <span class="item-cant">${f.cantidad}</span>
+        </div>`
+      ).join("");
+
+      div.innerHTML = `
+        <div class="grupo-header">
+          <div>
+            <div class="grupo-id">${id}</div>
+            <div class="grupo-meta">${resp} · ${lugar} · ${fecha}</div>
+          </div>
+          <div class="grupo-acciones">
+            <span class="estado-badge estado-${estado}">${estado}</span>
+            ${accionesHTML}
+          </div>
+        </div>
+        <div class="grupo-items">${itemsHTML}</div>`;
+      cont.appendChild(div);
+    });
+  }
+
+  async function resolver(idSolicitud, nuevoEstado) {
+    const supervisor = document.getElementById("supervisorSel").value;
+    if (!supervisor) { mostrarToast("Selecciona tu nombre antes de aprobar/rechazar.", "warn"); return; }
+
+    // Deshabilitar botones del grupo
+    document.querySelectorAll(`.grupo`).forEach(g => {
+      if (g.querySelector(`.grupo-id`)?.textContent === idSolicitud) {
+        g.querySelectorAll("button").forEach(b => b.disabled = true);
+      }
+    });
+
+    try {
+      const params = new URLSearchParams({ accion:"actualizarEstado", idSolicitud, estado:nuevoEstado, supervisor });
+      await fetch(SCRIPT_URL + "?" + params.toString(), { method:"GET", mode:"no-cors" });
+      // Actualizar local sin recargar
+      todasSolicitudes.forEach(s => {
+        if (s.id === idSolicitud) {
+          s.estado      = nuevoEstado;
+          s.supervisor  = supervisor;
+          s.fechaResol  = new Date().toLocaleString("es-CL");
+        }
+      });
+      actualizarStats();
+      renderSolicitudes();
+      mostrarToast(`Solicitud ${nuevoEstado.toLowerCase()} correctamente.`, nuevoEstado === "APROBADO" ? "ok" : "fail");
+    } catch(err) {
+      mostrarToast("Error al actualizar. Intenta nuevamente.", "fail");
+    }
+  }
+
+  function mostrarToast(msg, tipo) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.className = "show " + tipo;
+    setTimeout(() => { t.className = ""; }, 3500);
+  }
+</script>
+</body>
+</html>
