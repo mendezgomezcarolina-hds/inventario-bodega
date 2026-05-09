@@ -100,15 +100,23 @@
     /* Filas de insumos */
     .grupo-items { padding:0; }
     .item-fila {
-      display:grid; grid-template-columns:1fr 1fr 80px;
-      gap:8px; align-items:center;
+      display:grid; grid-template-columns:1fr 1fr 70px auto auto;
+      gap:10px; align-items:center;
       padding:10px 16px; border-bottom:0.5px solid var(--border);
       font-size:.85rem;
     }
     .item-fila:last-child { border-bottom:none; }
-    .item-lugar { color:var(--muted); }
+    .item-lugar { color:var(--muted); font-size:.82rem; }
     .item-nom   { color:var(--text); font-weight:500; }
     .item-cant  { font-family:'DM Mono',monospace; color:var(--accent); font-weight:600; text-align:right; }
+    .item-estado { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:99px; text-align:center; white-space:nowrap; }
+    .item-acciones { display:flex; gap:5px; justify-content:flex-end; }
+    .btn-item-ap { padding:4px 10px; background:var(--success); color:#fff; border:none; border-radius:6px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .btn-item-re { padding:4px 10px; background:var(--error);   color:#fff; border:none; border-radius:6px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .btn-item-ap:hover { background:#15803d; }
+    .btn-item-re:hover { background:#b91c1c; }
+    .btn-item-ap:disabled, .btn-item-re:disabled { opacity:.45; cursor:not-allowed; }
+    .resuelto-item { font-size:.68rem; color:var(--muted); font-style:italic; white-space:nowrap; }
 
     /* Estado vacío / carga */
     .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:.9rem; }
@@ -282,27 +290,47 @@
     cont.innerHTML = "";
     ids.forEach(id => {
       const filas  = grupos[id];
-      const estado = filas[0].estado;
       const fecha  = filas[0].fecha;
       const resp   = filas[0].responsable;
       const lugar  = filas[0].lugar;
-      const esPend = estado === "PENDIENTE";
+
+      // Calcular estado global del grupo
+      const estados = filas.map(f => f.estado);
+      const todosPend = estados.every(e => e === "PENDIENTE");
+      const todosAprob = estados.every(e => e === "APROBADO");
+      const todosRech  = estados.every(e => e === "RECHAZADO");
+      const estadoGrupo = todosAprob ? "APROBADO" : todosRech ? "RECHAZADO" : todosPend ? "PENDIENTE" : "PARCIAL";
+      const pendientes  = estados.filter(e => e === "PENDIENTE").length;
 
       const div = document.createElement("div");
       div.className = "grupo";
+      div.id = "grupo-" + id;
 
-      const accionesHTML = esPend
-        ? `<button class="btn-aprobar"  onclick="resolver('${id}','APROBADO')">✓ Aprobar</button>
-           <button class="btn-rechazar" onclick="resolver('${id}','RECHAZADO')">✕ Rechazar</button>`
-        : `<span class="resuelto-info">${filas[0].fechaResol || ""} · ${filas[0].supervisor || ""}</span>`;
+      const resumenBadge = estadoGrupo === "PARCIAL"
+        ? `<span class="estado-badge" style="background:#e0eaf5;color:#1a6fbd;">${filas.filter(f=>f.estado==="APROBADO").length}/${filas.length} aprobados</span>`
+        : `<span class="estado-badge estado-${estadoGrupo}">${estadoGrupo}</span>`;
 
-      const itemsHTML = filas.map(f =>
-        `<div class="item-fila">
+      const itemsHTML = filas.map(f => {
+        const pend = f.estado === "PENDIENTE";
+        const estadoColor = f.estado === "APROBADO"
+          ? 'background:#dcfce7;color:#15803d;'
+          : f.estado === "RECHAZADO"
+          ? 'background:#fee2e2;color:#991b1b;'
+          : 'background:#fef3c7;color:#92400e;';
+        const botonesHTML = pend
+          ? `<div class="item-acciones">
+              <button class="btn-item-ap" id="ap-${f.fila}" onclick="resolverItem(${f.fila},'APROBADO','${id}')">✓</button>
+              <button class="btn-item-re" id="re-${f.fila}" onclick="resolverItem(${f.fila},'RECHAZADO','${id}')">✕</button>
+            </div>`
+          : `<div class="resuelto-item">${f.supervisor || ""}</div>`;
+        return `<div class="item-fila" id="fila-${f.fila}">
           <span class="item-lugar">${f.lugar}</span>
           <span class="item-nom">${f.item}</span>
           <span class="item-cant">${f.cantidad}</span>
-        </div>`
-      ).join("");
+          <span class="item-estado" style="${estadoColor}">${f.estado}</span>
+          ${botonesHTML}
+        </div>`;
+      }).join("");
 
       div.innerHTML = `
         <div class="grupo-header">
@@ -310,44 +338,40 @@
             <div class="grupo-id">${id}</div>
             <div class="grupo-meta">${resp} · ${lugar} · ${fecha}</div>
           </div>
-          <div class="grupo-acciones">
-            <span class="estado-badge estado-${estado}">${estado}</span>
-            ${accionesHTML}
-          </div>
+          <div class="grupo-acciones">${resumenBadge}</div>
         </div>
         <div class="grupo-items">${itemsHTML}</div>`;
       cont.appendChild(div);
     });
   }
 
-  async function resolver(idSolicitud, nuevoEstado) {
+  function resolverItem(fila, nuevoEstado, idSolicitud) {
     const supervisor = document.getElementById("supervisorSel").value;
     if (!supervisor) { mostrarToast("Selecciona tu nombre antes de aprobar/rechazar.", "warn"); return; }
 
-    // Deshabilitar botones del grupo
-    document.querySelectorAll(`.grupo`).forEach(g => {
-      if (g.querySelector(`.grupo-id`)?.textContent === idSolicitud) {
-        g.querySelectorAll("button").forEach(b => b.disabled = true);
-      }
-    });
+    // Deshabilitar botones de esa fila
+    const apBtn = document.getElementById("ap-" + fila);
+    const reBtn = document.getElementById("re-" + fila);
+    if (apBtn) apBtn.disabled = true;
+    if (reBtn) reBtn.disabled = true;
 
-    try {
-      const params = new URLSearchParams({ accion:"actualizarEstado", idSolicitud, estado:nuevoEstado, supervisor });
-      await fetch(SCRIPT_URL + "?" + params.toString(), { method:"GET", mode:"no-cors" });
-      // Actualizar local sin recargar
-      todasSolicitudes.forEach(s => {
-        if (s.id === idSolicitud) {
-          s.estado      = nuevoEstado;
-          s.supervisor  = supervisor;
-          s.fechaResol  = new Date().toLocaleString("es-CL");
-        }
-      });
-      actualizarStats();
-      renderSolicitudes();
-      mostrarToast(`Solicitud ${nuevoEstado.toLowerCase()} correctamente.`, nuevoEstado === "APROBADO" ? "ok" : "fail");
-    } catch(err) {
-      mostrarToast("Error al actualizar. Intenta nuevamente.", "fail");
+    // Actualizar local inmediatamente para feedback rápido
+    const item = todasSolicitudes.find(s => s.fila === fila);
+    if (item) {
+      item.estado     = nuevoEstado;
+      item.supervisor = supervisor;
+      item.fechaResol = new Date().toLocaleString("es-CL");
     }
+    actualizarStats();
+    renderSolicitudes();
+
+    // Enviar al script via imagen (no-cors compatible)
+    const params = new URLSearchParams({ accion:"actualizarEstado", fila, estado:nuevoEstado, supervisor });
+    const img = new Image();
+    img.src = SCRIPT_URL + "?" + params.toString();
+
+    const color = nuevoEstado === "APROBADO" ? "ok" : "fail";
+    mostrarToast(`Ítem ${nuevoEstado.toLowerCase()} correctamente.`, color);
   }
 
   function mostrarToast(msg, tipo) {
