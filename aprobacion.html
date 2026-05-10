@@ -4,144 +4,127 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Aprobación de Solicitudes</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:      #f0f4f8; --surface:#fff; --border:#d1dce8;
-      --accent:  #1a6fbd; --accent-dk:#134f8a;
-      --text:    #1e293b; --muted:#64748b;
-      --ok:      #16a34a; --err:#dc2626; --warn:#d97706;
+      --bg:      #f0f4f8;
+      --surface: #fff;
+      --border:  #d1dce8;
+      --accent:  #185FA5;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --ok:      #16a34a;
+      --ok-bg:   #dcfce7;
+      --ok-br:   #bbf7d0;
+      --er:      #dc2626;
+      --er-bg:   #fee2e2;
+      --er-br:   #fecaca;
+      --warn-bg: #fef3c7;
+      --warn:    #92400e;
       --radius:  10px;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); min-height:100vh; padding:32px 16px; }
-    .container { max-width:720px; margin:0 auto; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); min-height:100vh; padding:24px 16px; }
+    .container { max-width:560px; margin:0 auto; }
 
-    a.back-link { display:inline-flex; align-items:center; gap:5px; font-size:.75rem; color:var(--muted); text-decoration:none; margin-bottom:20px; }
-    a.back-link svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    a.back-link:hover { color:var(--accent); }
+    a.back { display:inline-flex; align-items:center; gap:5px; font-size:.75rem; color:var(--muted); text-decoration:none; margin-bottom:18px; }
+    a.back svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    a.back:hover { color:var(--accent); }
 
-    .header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
-    .header-icon { width:42px; height:42px; background:var(--accent); border-radius:10px; display:grid; place-items:center; }
-    .header-icon svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .header h1 { font-size:1.1rem; font-weight:600; color:var(--text); }
-    .header p  { font-size:.78rem; color:var(--muted); margin-top:2px; }
+    .header { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+    .hicon { width:40px; height:40px; background:var(--accent); border-radius:10px; display:grid; place-items:center; flex-shrink:0; }
+    .hicon svg { width:20px; height:20px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .header h1 { font-size:1.05rem; font-weight:600; color:var(--text); }
+    .header p  { font-size:.75rem; color:var(--muted); margin-top:2px; }
 
-    /* Barra colaborador */
-    .colab-bar { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-    .colab-bar label { font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); white-space:nowrap; }
-    .colab-bar select { font-family:'DM Sans',sans-serif; font-size:.9rem; color:var(--text); background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:8px 12px; outline:none; flex:1; min-width:180px; transition:border-color .15s; }
-    .colab-bar select.error { border-color:var(--err); }
-    .colab-bar select:focus { border-color:var(--accent); }
-    .btn-refresh { padding:8px 14px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:5px; }
-    .btn-refresh svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; }
-    .btn-refresh:hover { background:var(--accent-dk); }
+    .sec-label { font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
 
-    /* Stats */
-    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
-    .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center; }
-    .stat-num { font-size:1.4rem; font-weight:600; color:var(--text); }
-    .stat-lbl { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
-    .stat.pend .stat-num { color:var(--warn); }
-    .stat.apro .stat-num { color:var(--ok); }
-    .stat.rech .stat-num { color:var(--err); }
+    /* ── Stats ── */
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:18px; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; text-align:center; }
+    .stat-n { font-size:1.3rem; font-weight:600; color:var(--text); }
+    .stat-l { font-size:.65rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-top:2px; }
+    .stat.pend .stat-n { color:#d97706; }
+    .stat.apro .stat-n { color:var(--ok); }
+    .stat.rech .stat-n { color:var(--er); }
 
-    /* Filtros */
-    .filtros { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-    .filtro { padding:6px 14px; border-radius:99px; font-size:.78rem; font-weight:600; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; }
-    .filtro.activo.todos { background:#e0eaf5; border-color:var(--accent); color:var(--accent); }
-    .filtro.activo.pend  { background:#fef3c7; border-color:var(--warn); color:#92400e; }
-    .filtro.activo.apro  { background:#dcfce7; border-color:var(--ok); color:#15803d; }
-    .filtro.activo.rech  { background:#fee2e2; border-color:var(--err); color:#991b1b; }
+    /* ── Solicitud card ── */
+    .sol-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+    .sol-head { padding:12px 14px; border-bottom:1px solid var(--border); }
+    .sol-id   { font-family:'DM Mono',monospace; font-size:.8rem; font-weight:500; color:var(--accent); margin-bottom:3px; }
+    .sol-meta { font-size:.75rem; color:var(--muted); }
+    .sol-foot { padding:10px 14px; display:flex; align-items:center; justify-content:space-between; }
+    .badge { font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:99px; text-transform:uppercase; }
+    .badge-pend { background:var(--warn-bg); color:var(--warn); }
+    .badge-apro { background:var(--ok-bg); color:#15803d; }
+    .badge-rech { background:var(--er-bg); color:#991b1b; }
+    .badge-parc { background:#e0eaf5; color:var(--accent); }
+    .btn-eval { font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600; padding:7px 16px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); cursor:pointer; display:flex; align-items:center; gap:4px; }
+    .btn-eval:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-eval svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-    /* ── VISTA LISTA ─────────────────────────────────────────── */
-    #vistaLista { }
-    .grupo-row {
-      background:var(--surface); border:1px solid var(--border);
-      border-radius:12px; padding:14px 16px; margin-bottom:10px;
-      display:flex; align-items:center; justify-content:space-between;
-      gap:12px; flex-wrap:wrap;
-    }
-    .grupo-row:hover { border-color:var(--accent); }
-    .grupo-id   { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600; color:var(--accent); }
-    .grupo-meta { font-size:.75rem; color:var(--muted); margin-top:3px; }
-    .grupo-right { display:flex; align-items:center; gap:10px; }
-    .estado-badge { font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:99px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
-    .est-PENDIENTE { background:#fef3c7; color:#92400e; }
-    .est-APROBADO  { background:#dcfce7; color:#15803d; }
-    .est-RECHAZADO { background:#fee2e2; color:#991b1b; }
-    .est-PARCIAL   { background:#e0eaf5; color:var(--accent); }
-    .btn-revisar { padding:7px 16px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; }
-    .btn-revisar:hover { background:var(--accent-dk); }
-
-    /* ── VISTA DETALLE ───────────────────────────────────────── */
+    /* ── Vista detalle ── */
     #vistaDetalle { display:none; }
-    .det-back { display:inline-flex; align-items:center; gap:6px; font-size:.78rem; color:var(--muted); cursor:pointer; background:none; border:none; margin-bottom:16px; padding:0; font-family:'DM Sans',sans-serif; }
-    .det-back svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .det-back:hover { color:var(--accent); }
-    .det-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:16px; }
-    .det-header { padding:16px 18px; border-bottom:1px solid var(--border); }
-    .det-id   { font-family:'DM Mono',monospace; font-size:.88rem; font-weight:600; color:var(--accent); }
-    .det-meta { display:flex; gap:18px; flex-wrap:wrap; margin-top:6px; }
-    .det-meta span { font-size:.78rem; color:var(--muted); display:flex; align-items:center; gap:4px; }
-    .det-meta svg { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .btn-back { font-family:'DM Sans',sans-serif; font-size:.78rem; color:var(--muted); background:none; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:5px; margin-bottom:14px; padding:0; }
+    .btn-back svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .btn-back:hover { color:var(--accent); }
 
-    /* Toolbar */
-    .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 18px; background:#f8fafc; border-bottom:1px solid var(--border); }
-    .toolbar-lbl { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
-    .toolbar-btns { display:flex; gap:6px; }
-    .btn-sel { font-size:.75rem; font-weight:600; padding:4px 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; }
-    .btn-sel:hover { border-color:var(--accent); color:var(--accent); }
+    .det-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    .det-head { padding:13px 16px; border-bottom:1px solid var(--border); }
+    .det-id   { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:500; color:var(--accent); margin-bottom:3px; }
+    .det-meta { font-size:.75rem; color:var(--muted); }
 
-    /* Fila item */
-    .item-det { display:grid; grid-template-columns:1fr 60px 150px; gap:12px; align-items:center; padding:12px 18px; border-bottom:0.5px solid var(--border); }
-    .item-det:last-child { border-bottom:none; }
-    .item-nom  { font-size:.9rem; font-weight:500; color:var(--text); }
-    .item-info { font-size:.75rem; color:var(--muted); margin-top:2px; }
-    .item-cant { font-family:'DM Mono',monospace; font-size:.88rem; color:var(--accent); font-weight:600; text-align:right; }
+    /* ── Item fila ── */
+    .item-fila { padding:11px 16px; border-bottom:1px solid var(--border); display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; }
+    .item-fila:last-of-type { border-bottom:none; }
+    .item-nom  { font-size:.88rem; font-weight:500; color:var(--text); line-height:1.3; }
+    .item-sub  { font-size:.72rem; color:var(--muted); margin-top:3px; }
+    .item-btns { display:flex; gap:6px; flex-shrink:0; }
+    .btn-ap, .btn-re {
+      width:36px; height:36px; border-radius:8px; border:1px solid;
+      font-size:.9rem; cursor:pointer; display:grid; place-items:center;
+      font-family:'DM Sans',sans-serif; font-weight:600; transition:opacity .1s;
+      flex-shrink:0;
+    }
+    .btn-ap { border-color:var(--ok-br); background:var(--ok-bg); color:var(--ok); }
+    .btn-re { border-color:var(--er-br); background:var(--er-bg); color:var(--er); }
+    .btn-ap.inactivo, .btn-re.inactivo { opacity:.25; }
+    .btn-ap.activo { background:var(--ok); color:#fff; border-color:var(--ok); }
+    .btn-re.activo { background:var(--er); color:#fff; border-color:var(--er); }
+    .item-estado { font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:99px; margin-top:4px; display:inline-block; }
 
-    /* Toggle aprobar/rechazar */
-    .toggle-group { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; }
-    .t-btn { flex:1; padding:6px 0; font-size:.75rem; font-weight:600; border:none; cursor:pointer; background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; transition:background .12s, color .12s; }
-    .t-btn.ap.on { background:#dcfce7; color:#15803d; }
-    .t-btn.re.on { background:#fee2e2; color:#991b1b; }
-    .t-btn:not(.on):hover { background:var(--bg); }
-    .t-sep { width:1px; background:var(--border); }
-    .resuelto-lbl { font-size:.72rem; color:var(--muted); font-style:italic; text-align:right; }
+    /* ── Footer detalle ── */
+    .det-foot { padding:12px 16px; background:#f8fafc; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .det-prog  { font-size:.78rem; color:var(--muted); }
+    .det-prog strong { color:var(--text); }
+    .btn-guardar { font-family:'DM Sans',sans-serif; font-size:.88rem; font-weight:600; padding:9px 20px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:6px; }
+    .btn-guardar:disabled { opacity:.45; cursor:not-allowed; }
+    .btn-guardar svg { width:15px; height:15px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-    /* Footer */
-    .det-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-top:1px solid var(--border); background:#f8fafc; flex-wrap:wrap; }
-    .det-counter { font-size:.8rem; color:var(--muted); }
-    .det-counter strong { color:var(--text); }
-    .btn-enviar { padding:10px 22px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:600; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:7px; }
-    .btn-enviar svg { width:15px; height:15px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .btn-enviar:hover:not(:disabled) { background:var(--accent-dk); }
-    .btn-enviar:disabled { opacity:.5; cursor:not-allowed; }
-
-    /* Spinner / estados */
-    .spinner { width:16px; height:16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    .spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
-    .empty { text-align:center; padding:40px; color:var(--muted); font-size:.9rem; }
-    .loading { text-align:center; padding:30px; color:var(--muted); }
-    .spinner-lg { display:inline-block; width:22px; height:22px; border:2.5px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
 
-    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(12px); padding:12px 22px; border-radius:12px; font-size:.88rem; font-weight:500; opacity:0; transition:opacity .22s,transform .22s; pointer-events:none; z-index:999; white-space:nowrap; }
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px); padding:11px 20px; border-radius:10px; font-size:.85rem; font-weight:500; opacity:0; transition:opacity .2s,transform .2s; pointer-events:none; z-index:99; white-space:nowrap; }
     #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-    #toast.ok   { background:#dcfce7; color:var(--ok); border:1px solid #bbf7d0; }
-    #toast.fail { background:#fee2e2; color:var(--err); border:1px solid #fecaca; }
-    #toast.warn { background:#fef3c7; color:var(--warn); border:1px solid #fde68a; }
+    #toast.ok   { background:var(--ok-bg); color:var(--ok); border:1px solid var(--ok-br); }
+    #toast.fail { background:var(--er-bg); color:var(--er); border:1px solid var(--er-br); }
+    #toast.warn { background:var(--warn-bg); color:var(--warn); border:1px solid #fde68a; }
+
+    .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:.9rem; }
+    .loading { text-align:center; padding:32px; color:var(--muted); }
+    .sp-lg { display:inline-block; width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
   </style>
 </head>
 <body>
 <div class="container">
 
-  <a class="back-link" href="index.html">
+  <a class="back" href="index.html">
     <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
     Volver al portal
   </a>
 
   <div class="header">
-    <div class="header-icon">
+    <div class="hicon">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
     </div>
     <div>
@@ -150,61 +133,60 @@
     </div>
   </div>
 
-  <!-- Colaborador -->
-  <div class="colab-bar">
-    <label>Colaborador</label>
-    <select id="colabSel"><option value="" disabled selected>Cargando…</option></select>
-    <button class="btn-refresh" onclick="cargarSolicitudes()">
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="sTotal">—</div><div class="stat-l">Total</div></div>
+    <div class="stat pend"><div class="stat-n" id="sPend">—</div><div class="stat-l">Pendientes</div></div>
+    <div class="stat apro"><div class="stat-n" id="sApro">—</div><div class="stat-l">Aprobadas</div></div>
+  </div>
+
+  <!-- Botón actualizar -->
+  <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+    <button class="btn-eval" onclick="cargarSolicitudes()">
       <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
       Actualizar
     </button>
   </div>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat"><div class="stat-num" id="sTotal">—</div><div class="stat-lbl">Total</div></div>
-    <div class="stat pend"><div class="stat-num" id="sPend">—</div><div class="stat-lbl">Pendientes</div></div>
-    <div class="stat apro"><div class="stat-num" id="sApro">—</div><div class="stat-lbl">Aprobadas</div></div>
-    <div class="stat rech"><div class="stat-num" id="sRech">—</div><div class="stat-lbl">Rechazadas</div></div>
-  </div>
-
-  <!-- Filtros -->
-  <div class="filtros">
-    <button class="filtro activo todos" onclick="setFiltro('todos',this)">Todas</button>
-    <button class="filtro pend"         onclick="setFiltro('PENDIENTE',this)">Pendientes</button>
-    <button class="filtro apro"         onclick="setFiltro('APROBADO',this)">Aprobadas</button>
-    <button class="filtro rech"         onclick="setFiltro('RECHAZADO',this)">Rechazadas</button>
-  </div>
-
   <!-- Vista lista -->
-  <div id="vistaLista"><div class="loading"><div class="spinner-lg"></div></div></div>
+  <div id="vistaLista">
+    <div class="loading"><div class="sp-lg"></div></div>
+  </div>
 
   <!-- Vista detalle -->
   <div id="vistaDetalle">
-    <button class="det-back" onclick="volverLista()">
+    <button class="btn-back" onclick="volverLista()">
       <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
       Volver a solicitudes
     </button>
-    <div id="detContenido"></div>
+    <div class="det-card">
+      <div class="det-head">
+        <div class="det-id" id="detId"></div>
+        <div class="det-meta" id="detMeta"></div>
+      </div>
+      <div id="detItems"></div>
+      <div class="det-foot">
+        <div class="det-prog" id="detProg"></div>
+        <button class="btn-guardar" id="btnGuardar" onclick="guardarDecisiones()">
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          Guardar decisiones
+        </button>
+      </div>
+    </div>
   </div>
 
 </div>
 <div id="toast"></div>
 
 <script>
-  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec"; // URL fija
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  var _cbN = 0;
+  var todasSolicitudes = [];
+  var solicitudActual  = [];
+  var decisiones       = {}; // { idx: 'APROBADO' | 'RECHAZADO' | null }
 
-  let todasSolicitudes = [];
-  let filtroActual = "todos";
-  let solicitudActual = null; // items del detalle abierto
-  let decisionesActuales = {}; // { fila: 'APROBADO' | 'RECHAZADO' | null }
-
-  window.onload = function() { cargarColaboradores(); cargarSolicitudes(); };
-
-  // ── JSONP helper (compatible iOS Safari) ─────────────────────
-  var _cbCount = 0;
   function jsonp(url, cb) {
-    var name  = "_jcb_" + Date.now() + "_" + (++_cbCount);
+    var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
     var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 10000);
     window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
     var s = document.createElement("script");
@@ -213,28 +195,13 @@
     document.head.appendChild(s);
   }
 
-  // ── Cargar colaboradores ──────────────────────────────────────
-  function cargarColaboradores() {
-    jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
-      var sel = document.getElementById("colabSel");
-      if (!data || err) { sel.innerHTML = '<option value="">Error al cargar</option>'; return; }
-      sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
-      for (var i = 0; i < data.colaboradores.length; i++) {
-        var c = data.colaboradores[i];
-        var o = document.createElement("option");
-        o.value = c.nombre;
-        o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
-        sel.appendChild(o);
-      }
-    });
-  }
+  window.onload = function() { cargarSolicitudes(); };
 
-  // ── Cargar solicitudes ────────────────────────────────────────
   function cargarSolicitudes() {
-    document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="spinner-lg"></div></div>';
+    document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="sp-lg"></div></div>';
     jsonp(SCRIPT_URL + "?accion=listarSolicitudes", function(data, err) {
       if (!data || err) {
-        document.getElementById("vistaLista").innerHTML = '<div class="empty">Error de conexión. Verifica la URL del script.</div>';
+        document.getElementById("vistaLista").innerHTML = '<div class="empty">Error de conexión. Verifica el script.</div>';
         return;
       }
       todasSolicitudes = data.solicitudes || [];
@@ -243,94 +210,81 @@
     });
   }
 
-  // ── Stats ─────────────────────────────────────────────────────
   function actualizarStats() {
-    const grupos = agrupar(todasSolicitudes);
-    const ids = Object.keys(grupos);
-    let pend = 0, apro = 0, rech = 0;
+    var grupos = agrupar(todasSolicitudes);
+    var ids    = Object.keys(grupos);
+    var pend = 0, apro = 0;
     ids.forEach(function(id) {
-      const est = estadoGrupo(grupos[id]);
+      var est = estadoGrupo(grupos[id]);
       if (est === "PENDIENTE" || est === "PARCIAL") pend++;
-      else if (est === "APROBADO")  apro++;
-      else if (est === "RECHAZADO") rech++;
+      else if (est === "APROBADO") apro++;
     });
     document.getElementById("sTotal").textContent = ids.length;
     document.getElementById("sPend").textContent  = pend;
     document.getElementById("sApro").textContent  = apro;
-    document.getElementById("sRech").textContent  = rech;
   }
 
   function agrupar(lista) {
-    const g = {};
-    lista.forEach(function(s) { if (!g[s.id]) g[s.id] = []; g[s.id].push(s); });
+    var g = {};
+    for (var i = 0; i < lista.length; i++) {
+      var s = lista[i];
+      if (!g[s.id]) g[s.id] = [];
+      g[s.id].push(s);
+    }
     return g;
   }
 
   function estadoGrupo(filas) {
-    const estados = filas.map(function(f) { return f.estado; });
-    if (estados.every(function(e) { return (e||"").toUpperCase().trim() === "APROBADO"; }))  return "APROBADO";
-    if (estados.every(function(e) { return (e||"").toUpperCase().trim() === "RECHAZADO"; })) return "RECHAZADO";
-    if (estados.every(function(e) { return (e||"").toUpperCase().trim() === "PENDIENTE"; })) return "PENDIENTE";
+    var estados = filas.map(function(f) { return (f.estado || "").toUpperCase().trim(); });
+    if (estados.every(function(e) { return e === "APROBADO"; }))  return "APROBADO";
+    if (estados.every(function(e) { return e === "RECHAZADO"; })) return "RECHAZADO";
+    if (estados.every(function(e) { return e === "PENDIENTE"; })) return "PENDIENTE";
     return "PARCIAL";
   }
 
-  // ── Render lista ──────────────────────────────────────────────
-  function setFiltro(f, btn) {
-    filtroActual = f;
-    document.querySelectorAll(".filtro").forEach(function(b) { b.classList.remove("activo"); });
-    btn.classList.add("activo");
-    renderLista();
-  }
-
   function renderLista() {
-    const cont   = document.getElementById("vistaLista");
-    const grupos = agrupar(todasSolicitudes);
-    const ids    = Object.keys(grupos)
-      .filter(function(id) {
-        if (filtroActual === "todos") return true;
-        const est = estadoGrupo(grupos[id]);
-        if (filtroActual === "PENDIENTE") return est === "PENDIENTE" || est === "PARCIAL";
-        return est === filtroActual;
-      }).reverse();
+    var cont   = document.getElementById("vistaLista");
+    var grupos = agrupar(todasSolicitudes);
+    var ids    = Object.keys(grupos).reverse();
 
-    if (!ids.length) { cont.innerHTML = '<div class="empty">No hay solicitudes para mostrar.</div>'; return; }
+    if (!ids.length) { cont.innerHTML = '<div class="empty">No hay solicitudes.</div>'; return; }
     cont.innerHTML = "";
 
     ids.forEach(function(id) {
-      const filas = grupos[id];
-      const est   = estadoGrupo(filas);
-      const f0    = filas[0];
-      const aprobN = filas.filter(function(f) { return f.estado === "APROBADO"; }).length;
+      var filas  = grupos[id];
+      var f0     = filas[0];
+      var est    = estadoGrupo(filas);
+      var aprobN = filas.filter(function(f) { return (f.estado||"").toUpperCase().trim() === "APROBADO"; }).length;
+      var badgeClass = est === "PARCIAL" ? "badge-parc" :
+                       est === "APROBADO" ? "badge-apro" :
+                       est === "RECHAZADO" ? "badge-rech" : "badge-pend";
+      var badgeTxt = est === "PARCIAL" ? aprobN + "/" + filas.length + " aprobados" : est;
 
-      const badgeClass = est === "PARCIAL" ? "" : "est-" + est;
-      const badgeTxt   = est === "PARCIAL" ? aprobN + "/" + filas.length + " aprobados" : est;
-      const badgeStyle = est === "PARCIAL" ? ' style="background:#e0eaf5;color:#1a6fbd;"' : "";
-
-      const div = document.createElement("div");
-      div.className = "grupo-row";
+      var div = document.createElement("div");
+      div.className = "sol-card";
       div.innerHTML =
-        `<div>
-          <div class="grupo-id">${id}</div>
-          <div class="grupo-meta">${f0.responsable} · ${f0.lugar} · ${f0.fecha} · ${filas.length} ítem${filas.length>1?"s":""}</div>
-        </div>
-        <div class="grupo-right">
-          <span class="estado-badge ${badgeClass}"${badgeStyle}>${badgeTxt}</span>
-          <button class="btn-revisar" onclick="abrirDetalle('${id}')">Revisar →</button>
-        </div>`;
+        '<div class="sol-head">' +
+          '<div class="sol-id">' + id + '</div>' +
+          '<div class="sol-meta">' + (f0.responsable || "—") + " · " + (f0.lugar || "—") + " · " + filas.length + " ítem" + (filas.length > 1 ? "s" : "") + " · " + (f0.fecha || "—") + '</div>' +
+        '</div>' +
+        '<div class="sol-foot">' +
+          '<span class="badge ' + badgeClass + '">' + badgeTxt + '</span>' +
+          '<button class="btn-eval" onclick="abrirDetalle(\'' + id.replace(/'/g, "\\'") + '\')">' +
+            'Evaluar <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 18l6-6-6-6"/></svg>' +
+          '</button>' +
+        '</div>';
       cont.appendChild(div);
     });
   }
 
-  // ── Vista detalle ─────────────────────────────────────────────
   function abrirDetalle(id) {
-    const grupos = agrupar(todasSolicitudes);
-    solicitudActual = grupos[id];
-    decisionesActuales = {};
-    solicitudActual.forEach(function(f, i) {
-      var est = (f.estado || "").toString().trim().toUpperCase();
-      decisionesActuales[i] = est !== "PENDIENTE" && est !== "" ? f.estado : null;
-    });
-
+    var grupos = agrupar(todasSolicitudes);
+    solicitudActual = grupos[id] || [];
+    decisiones = {};
+    for (var i = 0; i < solicitudActual.length; i++) {
+      var est = (solicitudActual[i].estado || "").toUpperCase().trim();
+      decisiones[i] = (est === "APROBADO" || est === "RECHAZADO") ? est : null;
+    }
     document.getElementById("vistaLista").style.display   = "none";
     document.getElementById("vistaDetalle").style.display = "block";
     renderDetalle();
@@ -339,174 +293,138 @@
   function volverLista() {
     document.getElementById("vistaDetalle").style.display = "none";
     document.getElementById("vistaLista").style.display   = "block";
-    solicitudActual = null;
   }
 
   function renderDetalle() {
-    if (!solicitudActual) return;
-    const f0  = solicitudActual[0];
-    const id  = f0.id;
-    const total    = solicitudActual.length;
-    const resueltos = Object.values(decisionesActuales).filter(function(v) { return v !== null; }).length;
-    const aprobN   = Object.values(decisionesActuales).filter(function(v) { return v === "APROBADO"; }).length;
-    const rechN    = Object.values(decisionesActuales).filter(function(v) { return v === "RECHAZADO"; }).length;
-    const sinN     = total - resueltos;
+    var f0 = solicitudActual[0] || {};
+    document.getElementById("detId").textContent   = f0.id || "";
+    document.getElementById("detMeta").textContent = (f0.responsable || "—") + " · " + (f0.lugar || "—");
 
-    var itemsHTML_arr = []; solicitudActual.forEach(function(f, i) {
-      const resuelto = f.estado !== "PENDIENTE";
-      const dec = decisionesActuales[i];
+    var html = "";
+    for (var i = 0; i < solicitudActual.length; i++) {
+      var f   = solicitudActual[i];
+      var dec = decisiones[i];
+      var est = (f.estado || "").toUpperCase().trim();
+      var resuelto = est === "APROBADO" || est === "RECHAZADO";
 
-      const controles = resuelto
-        ? `<div class="resuelto-lbl">${f.estado}<br>${f.supervisor || ""}</div>`
-        : `<div class="toggle-group">
-            <button class="t-btn ap ${dec==="APROBADO"?"on":""}" onclick="toggleDecision(${i},'APROBADO')">✓ Aprobar</button>
-            <div class="t-sep"></div>
-            <button class="t-btn re ${dec==="RECHAZADO"?"on":""}" onclick="toggleDecision(${i},'RECHAZADO')">✕ Rechazar</button>
-          </div>`;
+      var apCls = dec === "APROBADO"  ? "btn-ap activo" : "btn-ap" + (dec === "RECHAZADO" ? " inactivo" : "");
+      var reCls = dec === "RECHAZADO" ? "btn-re activo" : "btn-re" + (dec === "APROBADO"  ? " inactivo" : "");
 
-      return `<div class="item-det">
-        <div>
-          <div class="item-nom">${f.item}</div>
-          <div class="item-info">${f.lugar}</div>
-        </div>
-        <div class="item-cant">${f.cantidad}</div>
-        ${controles}
-      </div>`;
-    }); var itemsHTML = itemsHTML_arr.join("");
-
-    const pendientes = solicitudActual.filter(function(f) { return f.estado === "PENDIENTE"; }).length;
-
-    document.getElementById("detContenido").innerHTML = `
-      <div class="det-card">
-        <div class="det-header">
-          <div class="det-id">${id}</div>
-          <div class="det-meta">
-            <span><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8"/></svg>${f0.responsable}</span>
-            <span><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>${f0.lugar}</span>
-            <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${f0.fecha}</span>
-          </div>
-        </div>
-        <div class="toolbar">
-          <span class="toolbar-lbl">${pendientes} ítem${pendientes!==1?"s":""} pendiente${pendientes!==1?"s":""} de decisión</span>
-          ${pendientes > 0 ? `<div class="toolbar-btns">
-            <button class="btn-sel" onclick="decidirTodos('APROBADO')">Aprobar todos</button>
-            <button class="btn-sel" onclick="decidirTodos('RECHAZADO')">Rechazar todos</button>
-          </div>` : ""}
-        </div>
-        <div>${itemsHTML}</div>
-        <div class="det-footer">
-          <div class="det-counter">${resueltos} de ${total} resueltos — <strong>${aprobN} aprobado${aprobN!==1?"s":""} · ${rechN} rechazado${rechN!==1?"s":""} · ${sinN} sin decidir</strong></div>
-          <button class="btn-enviar" id="btnEnviar" onclick="enviarDecisiones()" ${resueltos===0?"disabled":""}>
-            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-            Enviar decisiones
-          </button>
-        </div>
-      </div>`;
-  }
-
-  function toggleDecision(fila, estado) {
-    decisionesActuales[fila] = decisionesActuales[fila] === estado ? null : estado;
-    renderDetalle();
-  }
-
-  function decidirTodos(estado) {
-    solicitudActual.forEach(function(f, i) {
-      if ((f.estado||"").toString().trim().toUpperCase() === "PENDIENTE") decisionesActuales[i] = estado;
-    });
-    renderDetalle();
-  }
-
-  // ── Enviar decisiones (sin async/await, compatible iOS) ───────
-  var _erroresEnvio = 0;
-
-  function enviarDecisiones() {
-    var supervisor = document.getElementById("colabSel").value;
-    if (!supervisor) {
-      document.getElementById("colabSel").classList.add("error");
-      mostrarToast("Selecciona tu nombre antes de enviar.", "warn");
-      return;
+      html +=
+        '<div class="item-fila" id="ifila-' + i + '">' +
+          '<div>' +
+            '<div class="item-nom">' + (f.item || "—") + '</div>' +
+            '<div class="item-sub">Cód: ' + (f.codigo || "—") + ' · Cant: ' + (f.cantidad || "—") + '</div>' +
+          '</div>' +
+          '<div class="item-btns">' +
+            '<button class="' + apCls + '" onclick="toggleDec(' + i + ',\'APROBADO\')" title="Aprobar">✓</button>' +
+            '<button class="' + reCls + '" onclick="toggleDec(' + i + ',\'RECHAZADO\')" title="Rechazar">✕</button>' +
+          '</div>' +
+        '</div>';
     }
-    document.getElementById("colabSel").classList.remove("error");
+    document.getElementById("detItems").innerHTML = html;
+    actualizarProgreso();
+  }
 
+  function toggleDec(i, estado) {
+    decisiones[i] = decisiones[i] === estado ? null : estado;
+    renderDetalle();
+  }
+
+  function actualizarProgreso() {
+    var total  = solicitudActual.length;
+    var apro   = 0;
+    var rech   = 0;
+    var sin    = 0;
+    for (var i = 0; i < total; i++) {
+      if (decisiones[i] === "APROBADO")  apro++;
+      else if (decisiones[i] === "RECHAZADO") rech++;
+      else sin++;
+    }
+    var resueltos = apro + rech;
+    document.getElementById("detProg").innerHTML =
+      "<strong>" + resueltos + " de " + total + "</strong> · " + apro + " aprobado" + (apro !== 1 ? "s" : "") + " · " + rech + " rechazado" + (rech !== 1 ? "s" : "");
+    document.getElementById("btnGuardar").disabled = resueltos === 0;
+  }
+
+  // Envío secuencial sin async/await
+  var _envIdx = 0;
+  var _envItems = [];
+  var _envErr = 0;
+
+  function guardarDecisiones() {
     var pendientes = [];
     for (var i = 0; i < solicitudActual.length; i++) {
-      var f = solicitudActual[i];
-      if (f.estado === "PENDIENTE" && decisionesActuales[i] !== null) {
-        pendientes.push({ f: f, i: i });
+      if (decisiones[i] !== null) {
+        var f = solicitudActual[i];
+        var estActual = (f.estado || "").toUpperCase().trim();
+        if (estActual !== decisiones[i]) {
+          pendientes.push({ i: i, f: f, dec: decisiones[i] });
+        }
       }
     }
+    if (!pendientes.length) { toast("No hay cambios nuevos.", "warn"); return; }
 
-    if (!pendientes.length) {
-      mostrarToast("No hay decisiones nuevas para enviar.", "warn");
-      return;
-    }
-
-    var btn = document.getElementById("btnEnviar");
+    var btn = document.getElementById("btnGuardar");
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Enviando…';
+    btn.innerHTML = '<div class="spinner"></div> Guardando\u2026';
 
-    _erroresEnvio = 0;
-    enviarUno(pendientes, 0, supervisor);
+    _envIdx   = 0;
+    _envItems = pendientes;
+    _envErr   = 0;
+    enviarUno();
   }
 
-  function enviarUno(pendientes, idx, supervisor) {
-    if (idx >= pendientes.length) {
-      // Fin del envío
-      actualizarStats();
-      var btn = document.getElementById("btnEnviar");
+  function enviarUno() {
+    if (_envIdx >= _envItems.length) {
+      var btn = document.getElementById("btnGuardar");
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar decisiones';
-      if (_erroresEnvio === 0) {
-        mostrarToast("✓ Decisiones enviadas correctamente.", "ok");
-        volverLista();
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Guardar decisiones';
+
+      if (_envErr === 0) {
+        // Actualizar local
+        for (var k = 0; k < _envItems.length; k++) {
+          var it = _envItems[k];
+          for (var j = 0; j < todasSolicitudes.length; j++) {
+            var s = todasSolicitudes[j];
+            if (s.id === it.f.id && s.item === it.f.item && s.lugar === it.f.lugar) {
+              s.estado = it.dec;
+            }
+          }
+          solicitudActual[it.i].estado = it.dec;
+        }
+        actualizarStats();
+        toast("\u2713 Decisiones guardadas correctamente.", "ok");
+        setTimeout(function() { volverLista(); renderLista(); }, 1200);
       } else {
-        mostrarToast(_erroresEnvio + " error(es) al enviar. Intenta nuevamente.", "fail");
+        toast(_envErr + " error(es) al guardar.", "fail");
         renderDetalle();
       }
       return;
     }
 
-    var item     = pendientes[idx];
-    var f        = item.f;
-    var i        = item.i;
-    var decision = decisionesActuales[i];
+    var item = _envItems[_envIdx];
+    var f    = item.f;
+    var dec  = item.dec;
 
-    var params = "accion=actualizarEstado" +
+    var url = SCRIPT_URL +
+      "?accion=actualizarEstado" +
       "&idSolicitud=" + encodeURIComponent(f.id || "") +
       "&item="        + encodeURIComponent(f.item || "") +
       "&lugar="       + encodeURIComponent(f.lugar || "") +
-      "&estado="      + encodeURIComponent(decision) +
-      "&supervisor="  + encodeURIComponent(supervisor);
+      "&estado="      + encodeURIComponent(dec);
 
-    jsonp(SCRIPT_URL + "?" + params, function(data, err) {
-      if (!data || err || data.status !== "ok") {
-        _erroresEnvio++;
-      } else {
-        f.estado     = decision;
-        f.supervisor = supervisor;
-        f.fechaResol = new Date().toLocaleString("es-CL");
-        for (var j = 0; j < todasSolicitudes.length; j++) {
-          var s = todasSolicitudes[j];
-          if (s.id === f.id && s.item === f.item && s.lugar === f.lugar) {
-            s.estado     = decision;
-            s.supervisor = supervisor;
-            s.fechaResol = f.fechaResol;
-          }
-        }
-      }
-      setTimeout(function() { enviarUno(pendientes, idx + 1, supervisor); }, 300);
+    jsonp(url, function(data, err) {
+      if (!data || err || data.status !== "ok") _envErr++;
+      _envIdx++;
+      setTimeout(enviarUno, 300);
     });
   }
 
-  function _dummy_errores() { // solo para compatibilidad
-    actualizarStats();
-
-  }
-
-  function mostrarToast(msg, tipo) {
-    const t = document.getElementById("toast");
+  function toast(msg, tipo) {
+    var t = document.getElementById("toast");
     t.textContent = msg; t.className = "show " + tipo;
-    setTimeout(function() { t.className = ""; }, 4000);
+    setTimeout(function() { t.className = ""; }, 3500);
   }
 </script>
 </body>
