@@ -3,7 +3,7 @@
 //  Implementar → Aplicación web → Cualquier persona
 // ============================================================
 
-const SHEET_DATOS         = "PEDIDOS";
+const SHEET_DATOS         = "INVENTARIO";
 const SHEET_LUGARES       = "LUGAR";
 const SHEET_ITEMS         = "INSUMOS";
 const SHEET_COLABORADORES = "COLABORADORES";
@@ -91,7 +91,7 @@ function formatearFecha(iso) {
   return partes[2] + "/" + partes[1] + "/" + partes[0];
 }
 
-// ── Escribir inventario (PEDIDOS) ────────────────────────────
+// ── Escribir inventario (INVENTARIO) ───────────────────────
 function escribir(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
