@@ -351,15 +351,20 @@
     });
   }
 
+  var itemsData = []; // [{codigo, descripcion}]
+
   function cargarItems() {
     var sel = document.getElementById("item");
     jsonp(SCRIPT_URL + "?accion=items", function(data, err) {
       if (!data || err) { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return; }
+      itemsData = data.items || [];
       sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-      var lista = data.items || [];
-      for (var i = 0; i < lista.length; i++) {
-        var o = document.createElement("option");
-        o.value = lista[i]; o.textContent = lista[i]; sel.appendChild(o);
+      for (var i = 0; i < itemsData.length; i++) {
+        var it = itemsData[i];
+        var o  = document.createElement("option");
+        o.value = it.codigo;
+        o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
+        sel.appendChild(o);
       }
     });
   }
@@ -422,7 +427,16 @@
     if (!item || !cantidad || Number(cantidad) < 1) {
       mostrarToast("Selecciona insumo y cantidad mayor a 0.", "warn"); return;
     }
-    listaItems.push({ lugar: lugarSesion, item: item, cantidad: cantidad });
+    var codigoItem = item;
+    var descItem   = item;
+    for (var _i = 0; _i < itemsData.length; _i++) {
+      if (itemsData[_i].codigo === item) {
+        codigoItem = itemsData[_i].codigo;
+        descItem   = itemsData[_i].descripcion || item;
+        break;
+      }
+    }
+    listaItems.push({ lugar: lugarSesion, item: descItem, codigo: codigoItem, cantidad: cantidad });
     renderLista();
     document.getElementById("cantidad").value = "";
     document.getElementById("item").focus();
@@ -490,6 +504,8 @@
       "?accion=solicitud" +
       "&lugar="       + encodeURIComponent(entry.lugar) +
       "&item="        + encodeURIComponent(entry.item) +
+      "&codigo="      + encodeURIComponent(entry.codigo || entry.item) +
+      "&descripcion=" + encodeURIComponent(entry.item) +
       "&cantidad="    + encodeURIComponent(entry.cantidad) +
       "&usuario="     + encodeURIComponent(responsableSesion) +
       "&usuarioId="   + encodeURIComponent(responsableIdSesion) +

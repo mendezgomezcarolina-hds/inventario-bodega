@@ -14,7 +14,7 @@ function doGet(e) {
   const callback = e.parameter.callback || "";
 
   if (accion === "lugares")           return responder(leerColumnaA(SHEET_LUGARES,       "lugares",       1), callback);
-  if (accion === "items")             return responder(leerColumnaA(SHEET_ITEMS,         "items",         2), callback);
+  if (accion === "items")             return responder(leerItems(),                                          callback);
   if (accion === "colaboradores")     return responder(leerColaboradores(),                                   callback);
   if (accion === "solicitud")         return responder(escribirSolicitud(e),                                  callback);
   if (accion === "listarSolicitudes") return responder(listarSolicitudes(e),                                  callback);
@@ -53,6 +53,21 @@ function leerColaboradores() {
   }
 }
 
+// ── Leer insumos: columna A (Código) + B (Descripción) ──────
+function leerItems() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_ITEMS) || ss.getSheets()[2];
+    const datos = sheet.getDataRange().getValues();
+    const items = datos
+      .filter(f => f[0] !== "" && f[0] != null)
+      .map(f => ({ codigo: f[0], descripcion: f[1] || "" }));
+    return { status: "ok", items };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 // ── Leer columna A de una hoja ────────────────────────────────
 function leerColumnaA(nombreHoja, clave, respaldo) {
   try {
@@ -86,16 +101,17 @@ function escribir(e) {
     if (!p.lugar && !p.item && !p.cantidad) throw new Error("Sin datos.");
 
     if (sheet.getLastRow() === 0)
-      sheet.appendRow(["Lugar","Ítem","Cantidad","Vencimiento","Fecha/Hora","Responsable","ID"]);
+      sheet.appendRow(["Lugar","Código","Ítem","Cantidad","Vencimiento","Fecha/Hora","Responsable","ID"]);
 
     sheet.appendRow([
-      p.lugar       || "",
-      p.item        || "",
-      p.cantidad    || "",
+      p.lugar        || "",
+      p.codigo       || p.item || "",
+      p.descripcion  || p.item || "",
+      p.cantidad     || "",
       formatearFecha(p.vencimiento),
       new Date().toLocaleString("es-CL"),
-      p.usuario     || "Anónimo",
-      p.usuarioId   || ""
+      p.usuario      || "Anónimo",
+      p.usuarioId    || ""
     ]);
 
     return { status: "ok" };
@@ -116,12 +132,13 @@ function escribirSolicitud(e) {
     if (!p.item || !p.cantidad) throw new Error("Sin datos de insumo.");
 
     if (sheet.getLastRow() === 0)
-      sheet.appendRow(["ID Solicitud","Lugar","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Supervisor"]);
+      sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Supervisor"]);
 
     sheet.appendRow([
       p.idSolicitud  || "",
       p.lugar        || "",
-      p.item         || "",
+      p.codigo       || p.item || "",
+      p.descripcion  || p.item || "",
       p.cantidad     || "",
       p.usuario      || "Anónimo",
       p.usuarioId    || "",

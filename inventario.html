@@ -348,21 +348,30 @@
     } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
   }
 
-  async function cargarItems() {
-    const sel = document.getElementById("item");
-    try {
-      const res  = await fetch(SCRIPT_URL + "?accion=items");
-      const data = await res.json();
-      if (data.status === "ok" && data.items.length > 0) {
-        sel.innerHTML = '<option value="" disabled selected>Selecciona un insumo…</option>';
-        data.items.forEach(i => {
-          const opt = document.createElement("option");
-          opt.value = i; opt.textContent = i; sel.appendChild(opt);
-        });
-      } else {
-        sel.innerHTML = '<option value="" disabled selected>Sin insumos en Hoja3</option>';
+  var itemsData = [];
+
+  function cargarItems() {
+    var sel = document.getElementById("item");
+    var cbName = "_cbIt_" + Date.now();
+    window[cbName] = function(data) {
+      delete window[cbName];
+      if (!data || data.status !== "ok") {
+        sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return;
       }
-    } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
+      itemsData = data.items || [];
+      sel.innerHTML = '<option value="" disabled selected>Selecciona un insumo…</option>';
+      for (var i = 0; i < itemsData.length; i++) {
+        var it = itemsData[i];
+        var o  = document.createElement("option");
+        o.value = it.codigo;
+        o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
+        sel.appendChild(o);
+      }
+    };
+    var s = document.createElement("script");
+    s.src = SCRIPT_URL + "?accion=items&callback=" + cbName;
+    s.onerror = function() { delete window[cbName]; sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; };
+    document.head.appendChild(s);
   }
 
   // ── Agregar a lista local ─────────────────────────────────────
@@ -450,7 +459,17 @@
       return;
     }
 
-    listaItems.push({ lugar, item, cantidad, vencimiento });
+    // Buscar codigo y descripcion del item seleccionado
+    var codigoItem = item;
+    var descItem   = item;
+    for (var _i = 0; _i < itemsData.length; _i++) {
+      if (itemsData[_i].codigo === item) {
+        codigoItem = itemsData[_i].codigo;
+        descItem   = itemsData[_i].descripcion || item;
+        break;
+      }
+    }
+    listaItems.push({ lugar: lugar, item: descItem, codigo: codigoItem, cantidad: cantidad, vencimiento: vencimiento });
     renderLista();
 
     // Resetea solo cantidad, mantiene lugar e ítem para agilizar ingreso
@@ -509,7 +528,16 @@
     let errores = 0;
     for (const entry of listaItems) {
       try {
-        const params = new URLSearchParams({ ...entry, usuario: responsableSesion, usuarioId: responsableIdSesion });
+        const params = new URLSearchParams({
+          lugar:       entry.lugar,
+          item:        entry.item,
+          codigo:      entry.codigo || entry.item,
+          descripcion: entry.item,
+          cantidad:    entry.cantidad,
+          vencimiento: entry.vencimiento,
+          usuario:     responsableSesion,
+          usuarioId:   responsableIdSesion
+        });
         await fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" });
       } catch { errores++; }
     }
