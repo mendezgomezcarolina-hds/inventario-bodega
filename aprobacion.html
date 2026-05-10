@@ -200,40 +200,42 @@
   let solicitudActual = null; // items del detalle abierto
   let decisionesActuales = {}; // { fila: 'APROBADO' | 'RECHAZADO' | null }
 
-  window.onload = () => { cargarColaboradores(); cargarSolicitudes(); };
+  window.onload = function() { cargarColaboradores(); cargarSolicitudes(); };
 
-  // ── JSONP helper ─────────────────────────────────────────────
+  // ── JSONP helper (compatible iOS Safari) ─────────────────────
+  var _cbCount = 0;
   function jsonp(url, cb) {
-    const name = "_cb_" + Date.now();
-    const timer = setTimeout(() => { delete window[name]; cb(null, "Timeout"); }, 10000);
-    window[name] = data => { clearTimeout(timer); delete window[name]; cb(data); };
-    const s = document.createElement("script");
-    s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + name;
-    s.onerror = () => { clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
+    var name  = "_jcb_" + Date.now() + "_" + (++_cbCount);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 10000);
+    window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
     document.head.appendChild(s);
   }
 
   // ── Cargar colaboradores ──────────────────────────────────────
   function cargarColaboradores() {
-    jsonp(SCRIPT_URL + "?accion=colaboradores", (data, err) => {
-      const sel = document.getElementById("colabSel");
+    jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
+      var sel = document.getElementById("colabSel");
       if (!data || err) { sel.innerHTML = '<option value="">Error al cargar</option>'; return; }
       sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
-      data.colaboradores.forEach(c => {
-        const o = document.createElement("option");
+      for (var i = 0; i < data.colaboradores.length; i++) {
+        var c = data.colaboradores[i];
+        var o = document.createElement("option");
         o.value = c.nombre;
         o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
         sel.appendChild(o);
-      });
+      }
     });
   }
 
   // ── Cargar solicitudes ────────────────────────────────────────
   function cargarSolicitudes() {
     document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="spinner-lg"></div></div>';
-    jsonp(SCRIPT_URL + "?accion=listarSolicitudes", (data, err) => {
+    jsonp(SCRIPT_URL + "?accion=listarSolicitudes", function(data, err) {
       if (!data || err) {
-        document.getElementById("vistaLista").innerHTML = '<div class="empty">Error de conexión.</div>';
+        document.getElementById("vistaLista").innerHTML = '<div class="empty">Error de conexión. Verifica la URL del script.</div>';
         return;
       }
       todasSolicitudes = data.solicitudes || [];
@@ -247,7 +249,7 @@
     const grupos = agrupar(todasSolicitudes);
     const ids = Object.keys(grupos);
     let pend = 0, apro = 0, rech = 0;
-    ids.forEach(id => {
+    ids.forEach(function(id) {
       const est = estadoGrupo(grupos[id]);
       if (est === "PENDIENTE" || est === "PARCIAL") pend++;
       else if (est === "APROBADO")  apro++;
@@ -261,22 +263,22 @@
 
   function agrupar(lista) {
     const g = {};
-    lista.forEach(s => { if (!g[s.id]) g[s.id] = []; g[s.id].push(s); });
+    lista.forEach(function(s) { if (!g[s.id]) g[s.id] = []; g[s.id].push(s); });
     return g;
   }
 
   function estadoGrupo(filas) {
-    const estados = filas.map(f => f.estado);
-    if (estados.every(e => e === "APROBADO"))  return "APROBADO";
-    if (estados.every(e => e === "RECHAZADO")) return "RECHAZADO";
-    if (estados.every(e => e === "PENDIENTE")) return "PENDIENTE";
+    const estados = filas.map(function(f) { return f.estado; });
+    if (estados.every(function(e) { return e === "APROBADO"; }))  return "APROBADO";
+    if (estados.every(function(e) { return e === "RECHAZADO"; })) return "RECHAZADO";
+    if (estados.every(function(e) { return e === "PENDIENTE"; })) return "PENDIENTE";
     return "PARCIAL";
   }
 
   // ── Render lista ──────────────────────────────────────────────
   function setFiltro(f, btn) {
     filtroActual = f;
-    document.querySelectorAll(".filtro").forEach(b => b.classList.remove("activo"));
+    document.querySelectorAll(".filtro").forEach(function(b) { b.classList.remove("activo"); });
     btn.classList.add("activo");
     renderLista();
   }
@@ -285,7 +287,7 @@
     const cont   = document.getElementById("vistaLista");
     const grupos = agrupar(todasSolicitudes);
     const ids    = Object.keys(grupos)
-      .filter(id => {
+      .filter(function(id) {
         if (filtroActual === "todos") return true;
         const est = estadoGrupo(grupos[id]);
         if (filtroActual === "PENDIENTE") return est === "PENDIENTE" || est === "PARCIAL";
@@ -295,11 +297,11 @@
     if (!ids.length) { cont.innerHTML = '<div class="empty">No hay solicitudes para mostrar.</div>'; return; }
     cont.innerHTML = "";
 
-    ids.forEach(id => {
+    ids.forEach(function(id) {
       const filas = grupos[id];
       const est   = estadoGrupo(filas);
       const f0    = filas[0];
-      const aprobN = filas.filter(f => f.estado === "APROBADO").length;
+      const aprobN = filas.filter(function(f) { return f.estado === "APROBADO"; }).length;
 
       const badgeClass = est === "PARCIAL" ? "" : "est-" + est;
       const badgeTxt   = est === "PARCIAL" ? aprobN + "/" + filas.length + " aprobados" : est;
@@ -325,7 +327,7 @@
     const grupos = agrupar(todasSolicitudes);
     solicitudActual = grupos[id];
     decisionesActuales = {};
-    solicitudActual.forEach((f, i) => {
+    solicitudActual.forEach(function(f, i) {
       decisionesActuales[i] = f.estado !== "PENDIENTE" ? f.estado : null;
     });
 
@@ -345,12 +347,12 @@
     const f0  = solicitudActual[0];
     const id  = f0.id;
     const total    = solicitudActual.length;
-    const resueltos = Object.values(decisionesActuales).filter(v => v !== null).length;
-    const aprobN   = Object.values(decisionesActuales).filter(v => v === "APROBADO").length;
-    const rechN    = Object.values(decisionesActuales).filter(v => v === "RECHAZADO").length;
+    const resueltos = Object.values(decisionesActuales).filter(function(v) { return v !== null; }).length;
+    const aprobN   = Object.values(decisionesActuales).filter(function(v) { return v === "APROBADO"; }).length;
+    const rechN    = Object.values(decisionesActuales).filter(function(v) { return v === "RECHAZADO"; }).length;
     const sinN     = total - resueltos;
 
-    const itemsHTML = solicitudActual.map((f, i) => {
+    var itemsHTML_arr = []; solicitudActual.forEach(function(f, i) {
       const resuelto = f.estado !== "PENDIENTE";
       const dec = decisionesActuales[i];
 
@@ -370,9 +372,9 @@
         <div class="item-cant">${f.cantidad}</div>
         ${controles}
       </div>`;
-    }).join("");
+    }); var itemsHTML = itemsHTML_arr.join("");
 
-    const pendientes = solicitudActual.filter(f => f.estado === "PENDIENTE").length;
+    const pendientes = solicitudActual.filter(function(f) { return f.estado === "PENDIENTE"; }).length;
 
     document.getElementById("detContenido").innerHTML = `
       <div class="det-card">
@@ -408,15 +410,17 @@
   }
 
   function decidirTodos(estado) {
-    solicitudActual.forEach((f, i) => {
+    solicitudActual.forEach(function(f, i) {
       if (f.estado === "PENDIENTE") decisionesActuales[i] = estado;
     });
     renderDetalle();
   }
 
-  // ── Enviar decisiones vía JSONP ───────────────────────────────
-  async function enviarDecisiones() {
-    const supervisor = document.getElementById("colabSel").value;
+  // ── Enviar decisiones (sin async/await, compatible iOS) ───────
+  var _erroresEnvio = 0;
+
+  function enviarDecisiones() {
+    var supervisor = document.getElementById("colabSel").value;
     if (!supervisor) {
       document.getElementById("colabSel").classList.add("error");
       mostrarToast("Selecciona tu nombre antes de enviar.", "warn");
@@ -424,63 +428,85 @@
     }
     document.getElementById("colabSel").classList.remove("error");
 
-    // Recopilar decisiones pendientes con su índice
-    const pendientesConDecision = solicitudActual
-      .map((f, i) => ({ f, i }))
-      .filter(({ f, i }) => f.estado === "PENDIENTE" && decisionesActuales[i] !== null);
+    var pendientes = [];
+    for (var i = 0; i < solicitudActual.length; i++) {
+      var f = solicitudActual[i];
+      if (f.estado === "PENDIENTE" && decisionesActuales[i] !== null) {
+        pendientes.push({ f: f, i: i });
+      }
+    }
 
-    if (!pendientesConDecision.length) {
+    if (!pendientes.length) {
       mostrarToast("No hay decisiones nuevas para enviar.", "warn");
       return;
     }
 
-    const btn = document.getElementById("btnEnviar");
+    var btn = document.getElementById("btnEnviar");
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
-    let errores = 0;
-    for (const { f, i } of pendientesConDecision) {
-      const decision = decisionesActuales[i];
-      await new Promise(resolve => {
-        const params = new URLSearchParams({
-          accion:       "actualizarEstado",
-          idSolicitud:  f.id,
-          item:         f.item,
-          lugar:        f.lugar,
-          estado:       decision,
-          supervisor:   supervisor
-        });
-        jsonp(SCRIPT_URL + "?" + params.toString(), (data, err) => {
-          if (!data || data.status !== "ok" || err) {
-            errores++;
-          } else {
-            // Actualizar localmente
-            f.estado     = decision;
-            f.supervisor = supervisor;
-            f.fechaResol = new Date().toLocaleString("es-CL");
-            const orig = todasSolicitudes.find(s => s.id === f.id && s.item === f.item && s.lugar === f.lugar);
-            if (orig) { orig.estado = decision; orig.supervisor = supervisor; orig.fechaResol = f.fechaResol; }
-          }
-          resolve();
-        });
-      });
+    _erroresEnvio = 0;
+    enviarUno(pendientes, 0, supervisor);
+  }
+
+  function enviarUno(pendientes, idx, supervisor) {
+    if (idx >= pendientes.length) {
+      // Fin del envío
+      actualizarStats();
+      var btn = document.getElementById("btnEnviar");
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar decisiones';
+      if (_erroresEnvio === 0) {
+        mostrarToast("✓ Decisiones enviadas correctamente.", "ok");
+        volverLista();
+      } else {
+        mostrarToast(_erroresEnvio + " error(es) al enviar. Intenta nuevamente.", "fail");
+        renderDetalle();
+      }
+      return;
     }
 
+    var item     = pendientes[idx];
+    var f        = item.f;
+    var i        = item.i;
+    var decision = decisionesActuales[i];
+
+    var params = "accion=actualizarEstado" +
+      "&idSolicitud=" + encodeURIComponent(f.id || "") +
+      "&item="        + encodeURIComponent(f.item || "") +
+      "&lugar="       + encodeURIComponent(f.lugar || "") +
+      "&estado="      + encodeURIComponent(decision) +
+      "&supervisor="  + encodeURIComponent(supervisor);
+
+    jsonp(SCRIPT_URL + "?" + params, function(data, err) {
+      if (!data || err || data.status !== "ok") {
+        _erroresEnvio++;
+      } else {
+        f.estado     = decision;
+        f.supervisor = supervisor;
+        f.fechaResol = new Date().toLocaleString("es-CL");
+        for (var j = 0; j < todasSolicitudes.length; j++) {
+          var s = todasSolicitudes[j];
+          if (s.id === f.id && s.item === f.item && s.lugar === f.lugar) {
+            s.estado     = decision;
+            s.supervisor = supervisor;
+            s.fechaResol = f.fechaResol;
+          }
+        }
+      }
+      setTimeout(function() { enviarUno(pendientes, idx + 1, supervisor); }, 300);
+    });
+  }
+
+  function _dummy_errores() { // solo para compatibilidad
     actualizarStats();
 
-    if (errores === 0) {
-      mostrarToast(`✓ ${pendientesConDecision.length} decisión${pendientesConDecision.length>1?"es":""} enviada${pendientesConDecision.length>1?"s":""} correctamente.`, "ok");
-      volverLista();
-    } else {
-      mostrarToast(`${errores} error(es) al enviar. Intenta nuevamente.`, "fail");
-      renderDetalle();
-    }
   }
 
   function mostrarToast(msg, tipo) {
     const t = document.getElementById("toast");
     t.textContent = msg; t.className = "show " + tipo;
-    setTimeout(() => { t.className = ""; }, 4000);
+    setTimeout(function() { t.className = ""; }, 4000);
   }
 </script>
 </body>
