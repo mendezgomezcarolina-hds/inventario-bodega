@@ -428,6 +428,12 @@
     }
     var codigoItem = item;
     var descItem   = item;
+    // DEBUG
+    if (itemsData.length === 0) {
+      alert("itemsData VACIO - cargarItems no cargó datos");
+    } else {
+      alert("itemsData[0]: codigo=" + JSON.stringify(itemsData[0].codigo) + " tipo=" + typeof itemsData[0].codigo + "\nitem seleccionado: " + JSON.stringify(item) + " tipo=" + typeof item + "\nIgual: " + (String(itemsData[0].codigo) === String(item)));
+    }
     for (var _i = 0; _i < itemsData.length; _i++) {
       if (String(itemsData[_i].codigo) === String(item)) {
         codigoItem = itemsData[_i].codigo;
