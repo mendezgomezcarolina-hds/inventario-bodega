@@ -7,129 +7,129 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:        #f0f4f8;
-      --surface:   #ffffff;
-      --border:    #d1dce8;
-      --accent:    #1a6fbd;
-      --text:      #1e293b;
-      --muted:     #64748b;
-      --success:   #16a34a;
-      --error:     #dc2626;
-      --warn:      #d97706;
-      --radius:    10px;
+      --bg:      #f0f4f8; --surface:#fff; --border:#d1dce8;
+      --accent:  #1a6fbd; --accent-dk:#134f8a;
+      --text:    #1e293b; --muted:#64748b;
+      --ok:      #16a34a; --err:#dc2626; --warn:#d97706;
+      --radius:  10px;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      min-height: 100vh;
-      padding: 32px 16px;
-    }
-    .container { max-width: 780px; margin: 0 auto; }
-    a.back-link {
-      display:inline-flex; align-items:center; gap:5px;
-      font-size:.75rem; color:var(--muted); text-decoration:none; margin-bottom:20px;
-    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); min-height:100vh; padding:32px 16px; }
+    .container { max-width:720px; margin:0 auto; }
+
+    a.back-link { display:inline-flex; align-items:center; gap:5px; font-size:.75rem; color:var(--muted); text-decoration:none; margin-bottom:20px; }
     a.back-link svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     a.back-link:hover { color:var(--accent); }
+
     .header { display:flex; align-items:center; gap:12px; margin-bottom:24px; }
     .header-icon { width:42px; height:42px; background:var(--accent); border-radius:10px; display:grid; place-items:center; }
     .header-icon svg { width:22px; height:22px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .header-text h1 { font-size:1.1rem; font-weight:600; color:var(--text); }
-    .header-text p  { font-size:.78rem; color:var(--muted); margin-top:2px; }
+    .header h1 { font-size:1.1rem; font-weight:600; color:var(--text); }
+    .header p  { font-size:.78rem; color:var(--muted); margin-top:2px; }
 
-    /* Supervisor selector */
-    .sup-bar {
-      background:var(--surface); border:1px solid var(--border); border-radius:12px;
-      padding:16px 20px; margin-bottom:20px;
-      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-    }
-    .sup-bar label { font-size:.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
-    .sup-bar select { font-family:'DM Sans',sans-serif; font-size:.9rem; color:var(--text); background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:8px 12px; outline:none; flex:1; min-width:200px; }
-    .sup-bar select:focus { border-color:var(--accent); }
-    .btn-refresh { padding:8px 16px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.85rem; font-weight:600; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
-    .btn-refresh svg { width:15px; height:15px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; }
-    .btn-refresh:hover { background:#134f8a; }
+    /* Barra colaborador */
+    .colab-bar { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .colab-bar label { font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); white-space:nowrap; }
+    .colab-bar select { font-family:'DM Sans',sans-serif; font-size:.9rem; color:var(--text); background:var(--bg); border:1.5px solid var(--border); border-radius:var(--radius); padding:8px 12px; outline:none; flex:1; min-width:180px; transition:border-color .15s; }
+    .colab-bar select.error { border-color:var(--err); }
+    .colab-bar select:focus { border-color:var(--accent); }
+    .btn-refresh { padding:8px 14px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:5px; }
+    .btn-refresh svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; }
+    .btn-refresh:hover { background:var(--accent-dk); }
+
+    /* Stats */
+    .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:20px; }
+    .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; text-align:center; }
+    .stat-num { font-size:1.4rem; font-weight:600; color:var(--text); }
+    .stat-lbl { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+    .stat.pend .stat-num { color:var(--warn); }
+    .stat.apro .stat-num { color:var(--ok); }
+    .stat.rech .stat-num { color:var(--err); }
 
     /* Filtros */
     .filtros { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-    .filtro {
-      padding:6px 14px; border-radius:99px; font-size:.78rem; font-weight:600;
-      border:1.5px solid var(--border); background:var(--surface); color:var(--muted);
-      cursor:pointer; transition:all .15s;
-    }
-    .filtro.activo.todos    { background:#e0eaf5; border-color:#1a6fbd; color:#1a6fbd; }
-    .filtro.activo.pend     { background:#fef3c7; border-color:#d97706; color:#d97706; }
-    .filtro.activo.apro     { background:#dcfce7; border-color:#16a34a; color:#16a34a; }
-    .filtro.activo.rech     { background:#fee2e2; border-color:#dc2626; color:#dc2626; }
+    .filtro { padding:6px 14px; border-radius:99px; font-size:.78rem; font-weight:600; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; }
+    .filtro.activo.todos { background:#e0eaf5; border-color:var(--accent); color:var(--accent); }
+    .filtro.activo.pend  { background:#fef3c7; border-color:var(--warn); color:#92400e; }
+    .filtro.activo.apro  { background:#dcfce7; border-color:var(--ok); color:#15803d; }
+    .filtro.activo.rech  { background:#fee2e2; border-color:var(--err); color:#991b1b; }
 
-    /* Stats */
-    .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; margin-bottom:20px; }
-    .stat { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; text-align:center; }
-    .stat-num { font-size:1.4rem; font-weight:600; color:var(--text); }
-    .stat-lbl { font-size:.7rem; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.04em; }
-    .stat.pend .stat-num { color:var(--warn); }
-    .stat.apro .stat-num { color:var(--success); }
-    .stat.rech .stat-num { color:var(--error); }
-
-    /* Grupos por ID */
-    .grupo { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; }
-    .grupo-header {
+    /* ── VISTA LISTA ─────────────────────────────────────────── */
+    #vistaLista { }
+    .grupo-row {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:14px 16px; margin-bottom:10px;
       display:flex; align-items:center; justify-content:space-between;
-      padding:14px 16px; border-bottom:1px solid var(--border);
-      flex-wrap:wrap; gap:10px;
+      gap:12px; flex-wrap:wrap;
     }
-    .grupo-id { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600; color:var(--accent); }
-    .grupo-meta { font-size:.78rem; color:var(--muted); }
-    .grupo-acciones { display:flex; gap:8px; align-items:center; }
-    .estado-badge {
-      font-size:.72rem; font-weight:700; padding:3px 10px;
-      border-radius:99px; text-transform:uppercase; letter-spacing:.04em;
-    }
-    .estado-PENDIENTE  { background:#fef3c7; color:#92400e; }
-    .estado-APROBADO   { background:#dcfce7; color:#15803d; }
-    .estado-RECHAZADO  { background:#fee2e2; color:#991b1b; }
+    .grupo-row:hover { border-color:var(--accent); }
+    .grupo-id   { font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600; color:var(--accent); }
+    .grupo-meta { font-size:.75rem; color:var(--muted); margin-top:3px; }
+    .grupo-right { display:flex; align-items:center; gap:10px; }
+    .estado-badge { font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:99px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+    .est-PENDIENTE { background:#fef3c7; color:#92400e; }
+    .est-APROBADO  { background:#dcfce7; color:#15803d; }
+    .est-RECHAZADO { background:#fee2e2; color:#991b1b; }
+    .est-PARCIAL   { background:#e0eaf5; color:var(--accent); }
+    .btn-revisar { padding:7px 16px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; }
+    .btn-revisar:hover { background:var(--accent-dk); }
 
-    .btn-aprobar  { padding:7px 16px; background:var(--success); color:#fff; border:none; border-radius:8px; font-size:.82rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
-    .btn-rechazar { padding:7px 16px; background:var(--error);   color:#fff; border:none; border-radius:8px; font-size:.82rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
-    .btn-aprobar:hover  { background:#15803d; }
-    .btn-rechazar:hover { background:#b91c1c; }
-    .btn-aprobar:disabled, .btn-rechazar:disabled { opacity:.5; cursor:not-allowed; }
-    .resuelto-info { font-size:.72rem; color:var(--muted); font-style:italic; }
+    /* ── VISTA DETALLE ───────────────────────────────────────── */
+    #vistaDetalle { display:none; }
+    .det-back { display:inline-flex; align-items:center; gap:6px; font-size:.78rem; color:var(--muted); cursor:pointer; background:none; border:none; margin-bottom:16px; padding:0; font-family:'DM Sans',sans-serif; }
+    .det-back svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .det-back:hover { color:var(--accent); }
+    .det-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:16px; }
+    .det-header { padding:16px 18px; border-bottom:1px solid var(--border); }
+    .det-id   { font-family:'DM Mono',monospace; font-size:.88rem; font-weight:600; color:var(--accent); }
+    .det-meta { display:flex; gap:18px; flex-wrap:wrap; margin-top:6px; }
+    .det-meta span { font-size:.78rem; color:var(--muted); display:flex; align-items:center; gap:4px; }
+    .det-meta svg { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-    /* Filas de insumos */
-    .grupo-items { padding:0; }
-    .item-fila {
-      display:grid; grid-template-columns:1fr 1fr 70px auto auto;
-      gap:10px; align-items:center;
-      padding:10px 16px; border-bottom:0.5px solid var(--border);
-      font-size:.85rem;
-    }
-    .item-fila:last-child { border-bottom:none; }
-    .item-lugar { color:var(--muted); font-size:.82rem; }
-    .item-nom   { color:var(--text); font-weight:500; }
-    .item-cant  { font-family:'DM Mono',monospace; color:var(--accent); font-weight:600; text-align:right; }
-    .item-estado { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:99px; text-align:center; white-space:nowrap; }
-    .item-acciones { display:flex; gap:5px; justify-content:flex-end; }
-    .btn-item-ap { padding:4px 10px; background:var(--success); color:#fff; border:none; border-radius:6px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
-    .btn-item-re { padding:4px 10px; background:var(--error);   color:#fff; border:none; border-radius:6px; font-size:.72rem; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; }
-    .btn-item-ap:hover { background:#15803d; }
-    .btn-item-re:hover { background:#b91c1c; }
-    .btn-item-ap:disabled, .btn-item-re:disabled { opacity:.45; cursor:not-allowed; }
-    .resuelto-item { font-size:.68rem; color:var(--muted); font-style:italic; white-space:nowrap; }
+    /* Toolbar */
+    .toolbar { display:flex; align-items:center; justify-content:space-between; padding:10px 18px; background:#f8fafc; border-bottom:1px solid var(--border); }
+    .toolbar-lbl { font-size:.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+    .toolbar-btns { display:flex; gap:6px; }
+    .btn-sel { font-size:.75rem; font-weight:600; padding:4px 12px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; }
+    .btn-sel:hover { border-color:var(--accent); color:var(--accent); }
 
-    /* Estado vacío / carga */
-    .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:.9rem; }
-    .loading { text-align:center; padding:32px; color:var(--muted); }
-    .spinner { display:inline-block; width:20px; height:20px; border:2.5px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+    /* Fila item */
+    .item-det { display:grid; grid-template-columns:1fr 60px 150px; gap:12px; align-items:center; padding:12px 18px; border-bottom:0.5px solid var(--border); }
+    .item-det:last-child { border-bottom:none; }
+    .item-nom  { font-size:.9rem; font-weight:500; color:var(--text); }
+    .item-info { font-size:.75rem; color:var(--muted); margin-top:2px; }
+    .item-cant { font-family:'DM Mono',monospace; font-size:.88rem; color:var(--accent); font-weight:600; text-align:right; }
+
+    /* Toggle aprobar/rechazar */
+    .toggle-group { display:flex; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; }
+    .t-btn { flex:1; padding:6px 0; font-size:.75rem; font-weight:600; border:none; cursor:pointer; background:transparent; color:var(--muted); font-family:'DM Sans',sans-serif; transition:background .12s, color .12s; }
+    .t-btn.ap.on { background:#dcfce7; color:#15803d; }
+    .t-btn.re.on { background:#fee2e2; color:#991b1b; }
+    .t-btn:not(.on):hover { background:var(--bg); }
+    .t-sep { width:1px; background:var(--border); }
+    .resuelto-lbl { font-size:.72rem; color:var(--muted); font-style:italic; text-align:right; }
+
+    /* Footer */
+    .det-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-top:1px solid var(--border); background:#f8fafc; flex-wrap:wrap; }
+    .det-counter { font-size:.8rem; color:var(--muted); }
+    .det-counter strong { color:var(--text); }
+    .btn-enviar { padding:10px 22px; background:var(--accent); color:#fff; font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:600; border:none; border-radius:var(--radius); cursor:pointer; display:flex; align-items:center; gap:7px; }
+    .btn-enviar svg { width:15px; height:15px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .btn-enviar:hover:not(:disabled) { background:var(--accent-dk); }
+    .btn-enviar:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* Spinner / estados */
+    .spinner { width:16px; height:16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
+    .empty { text-align:center; padding:40px; color:var(--muted); font-size:.9rem; }
+    .loading { text-align:center; padding:30px; color:var(--muted); }
+    .spinner-lg { display:inline-block; width:22px; height:22px; border:2.5px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
 
-    /* Toast */
-    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(10px); padding:12px 22px; border-radius:12px; font-size:.88rem; font-weight:500; opacity:0; transition:opacity .22s,transform .22s; pointer-events:none; z-index:999; white-space:nowrap; }
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(12px); padding:12px 22px; border-radius:12px; font-size:.88rem; font-weight:500; opacity:0; transition:opacity .22s,transform .22s; pointer-events:none; z-index:999; white-space:nowrap; }
     #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-    #toast.ok   { background:#dcfce7; color:var(--success); border:1px solid #bbf7d0; }
-    #toast.fail { background:#fee2e2; color:var(--error);   border:1px solid #fecaca; }
-    #toast.warn { background:#fef3c7; color:var(--warn);    border:1px solid #fde68a; }
+    #toast.ok   { background:#dcfce7; color:var(--ok); border:1px solid #bbf7d0; }
+    #toast.fail { background:#fee2e2; color:var(--err); border:1px solid #fecaca; }
+    #toast.warn { background:#fef3c7; color:var(--warn); border:1px solid #fde68a; }
   </style>
 </head>
 <body>
@@ -144,16 +144,16 @@
     <div class="header-icon">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
     </div>
-    <div class="header-text">
+    <div>
       <h1>Aprobación de Solicitudes</h1>
       <p>Dermatología · Hospital del Salvador</p>
     </div>
   </div>
 
-  <!-- Supervisor + Actualizar -->
-  <div class="sup-bar">
+  <!-- Colaborador -->
+  <div class="colab-bar">
     <label>Colaborador</label>
-    <select id="supervisorSel"><option value="" disabled selected>Selecciona tu nombre…</option></select>
+    <select id="colabSel"><option value="" disabled selected>Cargando…</option></select>
     <button class="btn-refresh" onclick="cargarSolicitudes()">
       <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
       Actualizar
@@ -162,22 +162,31 @@
 
   <!-- Stats -->
   <div class="stats">
-    <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">Total</div></div>
-    <div class="stat pend"><div class="stat-num" id="statPend">—</div><div class="stat-lbl">Pendientes</div></div>
-    <div class="stat apro"><div class="stat-num" id="statApro">—</div><div class="stat-lbl">Aprobadas</div></div>
-    <div class="stat rech"><div class="stat-num" id="statRech">—</div><div class="stat-lbl">Rechazadas</div></div>
+    <div class="stat"><div class="stat-num" id="sTotal">—</div><div class="stat-lbl">Total</div></div>
+    <div class="stat pend"><div class="stat-num" id="sPend">—</div><div class="stat-lbl">Pendientes</div></div>
+    <div class="stat apro"><div class="stat-num" id="sApro">—</div><div class="stat-lbl">Aprobadas</div></div>
+    <div class="stat rech"><div class="stat-num" id="sRech">—</div><div class="stat-lbl">Rechazadas</div></div>
   </div>
 
   <!-- Filtros -->
   <div class="filtros">
-    <button class="filtro activo todos" onclick="setFiltro('todos', this)">Todas</button>
-    <button class="filtro pend"         onclick="setFiltro('PENDIENTE', this)">Pendientes</button>
-    <button class="filtro apro"         onclick="setFiltro('APROBADO', this)">Aprobadas</button>
-    <button class="filtro rech"         onclick="setFiltro('RECHAZADO', this)">Rechazadas</button>
+    <button class="filtro activo todos" onclick="setFiltro('todos',this)">Todas</button>
+    <button class="filtro pend"         onclick="setFiltro('PENDIENTE',this)">Pendientes</button>
+    <button class="filtro apro"         onclick="setFiltro('APROBADO',this)">Aprobadas</button>
+    <button class="filtro rech"         onclick="setFiltro('RECHAZADO',this)">Rechazadas</button>
   </div>
 
-  <!-- Lista solicitudes -->
-  <div id="listaSolicitudes"><div class="loading"><div class="spinner"></div></div></div>
+  <!-- Vista lista -->
+  <div id="vistaLista"><div class="loading"><div class="spinner-lg"></div></div></div>
+
+  <!-- Vista detalle -->
+  <div id="vistaDetalle">
+    <button class="det-back" onclick="volverLista()">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Volver a solicitudes
+    </button>
+    <div id="detContenido"></div>
+  </div>
 
 </div>
 <div id="toast"></div>
@@ -188,196 +197,282 @@
 
   let todasSolicitudes = [];
   let filtroActual = "todos";
+  let solicitudActual = null; // items del detalle abierto
+  let decisionesActuales = {}; // { fila: 'APROBADO' | 'RECHAZADO' | null }
 
-  window.onload = () => {
-    cargarColaboradores();
-    cargarSolicitudes();
-  };
+  window.onload = () => { cargarColaboradores(); cargarSolicitudes(); };
 
+  // ── JSONP helper ─────────────────────────────────────────────
+  function jsonp(url, cb) {
+    const name = "_cb_" + Date.now();
+    const timer = setTimeout(() => { delete window[name]; cb(null, "Timeout"); }, 10000);
+    window[name] = data => { clearTimeout(timer); delete window[name]; cb(data); };
+    const s = document.createElement("script");
+    s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + name;
+    s.onerror = () => { clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
+    document.head.appendChild(s);
+  }
+
+  // ── Cargar colaboradores ──────────────────────────────────────
   function cargarColaboradores() {
-    const sel = document.getElementById("supervisorSel");
-    const cbName = "_cbCol_" + Date.now();
-    window[cbName] = function(data) {
-      delete window[cbName];
-      if (data.status === "ok" && data.colaboradores.length > 0) {
-        sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
-        data.colaboradores.forEach(c => {
-          const o = document.createElement("option");
-          o.value = c.nombre;
-          o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
-          sel.appendChild(o);
-        });
-      } else {
-        sel.innerHTML = '<option value="">Sin colaboradores</option>';
-      }
-    };
-    const s = document.createElement("script");
-    s.src = SCRIPT_URL + "?accion=colaboradores&callback=" + cbName;
-    s.onerror = () => { delete window[cbName]; sel.innerHTML = '<option value="">Error al cargar</option>'; };
-    document.head.appendChild(s);
-  }
-
-  function cargarSolicitudes() {
-    document.getElementById("listaSolicitudes").innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-    const cbName = "_cbSol_" + Date.now();
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Tiempo de espera agotado. Verifica la URL del script.</div>';
-    }, 10000);
-
-    window[cbName] = function(data) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      if (data.status === "ok") {
-        todasSolicitudes = data.solicitudes;
-        actualizarStats();
-        renderSolicitudes();
-      } else {
-        document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error: ' + (data.mensaje || "sin detalles") + '</div>';
-      }
-    };
-
-    const s = document.createElement("script");
-    s.src = SCRIPT_URL + "?accion=listarSolicitudes&callback=" + cbName;
-    s.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error de conexión al script.</div>';
-    };
-    document.head.appendChild(s);
-  }
-
-  function actualizarStats() {
-    const ids = [...new Set(todasSolicitudes.map(s => s.id))];
-    const estados = {};
-    ids.forEach(id => {
-      const filas = todasSolicitudes.filter(s => s.id === id);
-      estados[filas[0].estado] = (estados[filas[0].estado] || 0) + 1;
+    jsonp(SCRIPT_URL + "?accion=colaboradores", (data, err) => {
+      const sel = document.getElementById("colabSel");
+      if (!data || err) { sel.innerHTML = '<option value="">Error al cargar</option>'; return; }
+      sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
+      data.colaboradores.forEach(c => {
+        const o = document.createElement("option");
+        o.value = c.nombre;
+        o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
+        sel.appendChild(o);
+      });
     });
-    document.getElementById("statTotal").textContent = ids.length;
-    document.getElementById("statPend").textContent  = estados["PENDIENTE"]  || 0;
-    document.getElementById("statApro").textContent  = estados["APROBADO"]   || 0;
-    document.getElementById("statRech").textContent  = estados["RECHAZADO"]  || 0;
   }
 
+  // ── Cargar solicitudes ────────────────────────────────────────
+  function cargarSolicitudes() {
+    document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="spinner-lg"></div></div>';
+    jsonp(SCRIPT_URL + "?accion=listarSolicitudes", (data, err) => {
+      if (!data || err) {
+        document.getElementById("vistaLista").innerHTML = '<div class="empty">Error de conexión.</div>';
+        return;
+      }
+      todasSolicitudes = data.solicitudes || [];
+      actualizarStats();
+      renderLista();
+    });
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────
+  function actualizarStats() {
+    const grupos = agrupar(todasSolicitudes);
+    const ids = Object.keys(grupos);
+    let pend = 0, apro = 0, rech = 0;
+    ids.forEach(id => {
+      const est = estadoGrupo(grupos[id]);
+      if (est === "PENDIENTE" || est === "PARCIAL") pend++;
+      else if (est === "APROBADO")  apro++;
+      else if (est === "RECHAZADO") rech++;
+    });
+    document.getElementById("sTotal").textContent = ids.length;
+    document.getElementById("sPend").textContent  = pend;
+    document.getElementById("sApro").textContent  = apro;
+    document.getElementById("sRech").textContent  = rech;
+  }
+
+  function agrupar(lista) {
+    const g = {};
+    lista.forEach(s => { if (!g[s.id]) g[s.id] = []; g[s.id].push(s); });
+    return g;
+  }
+
+  function estadoGrupo(filas) {
+    const estados = filas.map(f => f.estado);
+    if (estados.every(e => e === "APROBADO"))  return "APROBADO";
+    if (estados.every(e => e === "RECHAZADO")) return "RECHAZADO";
+    if (estados.every(e => e === "PENDIENTE")) return "PENDIENTE";
+    return "PARCIAL";
+  }
+
+  // ── Render lista ──────────────────────────────────────────────
   function setFiltro(f, btn) {
     filtroActual = f;
     document.querySelectorAll(".filtro").forEach(b => b.classList.remove("activo"));
     btn.classList.add("activo");
-    renderSolicitudes();
+    renderLista();
   }
 
-  function renderSolicitudes() {
-    const cont = document.getElementById("listaSolicitudes");
+  function renderLista() {
+    const cont   = document.getElementById("vistaLista");
+    const grupos = agrupar(todasSolicitudes);
+    const ids    = Object.keys(grupos)
+      .filter(id => {
+        if (filtroActual === "todos") return true;
+        const est = estadoGrupo(grupos[id]);
+        if (filtroActual === "PENDIENTE") return est === "PENDIENTE" || est === "PARCIAL";
+        return est === filtroActual;
+      }).reverse();
 
-    // Agrupar por ID
-    const grupos = {};
-    todasSolicitudes.forEach(s => {
-      if (!grupos[s.id]) grupos[s.id] = [];
-      grupos[s.id].push(s);
-    });
-
-    const ids = Object.keys(grupos).filter(id => {
-      if (filtroActual === "todos") return true;
-      return grupos[id][0].estado === filtroActual;
-    }).reverse(); // más recientes primero
-
-    if (ids.length === 0) {
-      cont.innerHTML = '<div class="empty">No hay solicitudes para mostrar.</div>';
-      return;
-    }
-
+    if (!ids.length) { cont.innerHTML = '<div class="empty">No hay solicitudes para mostrar.</div>'; return; }
     cont.innerHTML = "";
-    ids.forEach(id => {
-      const filas  = grupos[id];
-      const fecha  = filas[0].fecha;
-      const resp   = filas[0].responsable;
-      const lugar  = filas[0].lugar;
 
-      // Calcular estado global del grupo
-      const estados = filas.map(f => f.estado);
-      const todosPend = estados.every(e => e === "PENDIENTE");
-      const todosAprob = estados.every(e => e === "APROBADO");
-      const todosRech  = estados.every(e => e === "RECHAZADO");
-      const estadoGrupo = todosAprob ? "APROBADO" : todosRech ? "RECHAZADO" : todosPend ? "PENDIENTE" : "PARCIAL";
-      const pendientes  = estados.filter(e => e === "PENDIENTE").length;
+    ids.forEach(id => {
+      const filas = grupos[id];
+      const est   = estadoGrupo(filas);
+      const f0    = filas[0];
+      const aprobN = filas.filter(f => f.estado === "APROBADO").length;
+
+      const badgeClass = est === "PARCIAL" ? "" : "est-" + est;
+      const badgeTxt   = est === "PARCIAL" ? aprobN + "/" + filas.length + " aprobados" : est;
+      const badgeStyle = est === "PARCIAL" ? ' style="background:#e0eaf5;color:#1a6fbd;"' : "";
 
       const div = document.createElement("div");
-      div.className = "grupo";
-      div.id = "grupo-" + id;
-
-      const resumenBadge = estadoGrupo === "PARCIAL"
-        ? `<span class="estado-badge" style="background:#e0eaf5;color:#1a6fbd;">${filas.filter(f=>f.estado==="APROBADO").length}/${filas.length} aprobados</span>`
-        : `<span class="estado-badge estado-${estadoGrupo}">${estadoGrupo}</span>`;
-
-      const itemsHTML = filas.map(f => {
-        const pend = f.estado === "PENDIENTE";
-        const estadoColor = f.estado === "APROBADO"
-          ? 'background:#dcfce7;color:#15803d;'
-          : f.estado === "RECHAZADO"
-          ? 'background:#fee2e2;color:#991b1b;'
-          : 'background:#fef3c7;color:#92400e;';
-        const botonesHTML = pend
-          ? `<div class="item-acciones">
-              <button class="btn-item-ap" id="ap-${f.fila}" onclick="resolverItem(${f.fila},'APROBADO','${id}')">✓</button>
-              <button class="btn-item-re" id="re-${f.fila}" onclick="resolverItem(${f.fila},'RECHAZADO','${id}')">✕</button>
-            </div>`
-          : `<div class="resuelto-item">${f.supervisor || ""}</div>`;
-        return `<div class="item-fila" id="fila-${f.fila}">
-          <span class="item-lugar">${f.lugar}</span>
-          <span class="item-nom">${f.item}</span>
-          <span class="item-cant">${f.cantidad}</span>
-          <span class="item-estado" style="${estadoColor}">${f.estado}</span>
-          ${botonesHTML}
-        </div>`;
-      }).join("");
-
-      div.innerHTML = `
-        <div class="grupo-header">
-          <div>
-            <div class="grupo-id">${id}</div>
-            <div class="grupo-meta">${resp} · ${lugar} · ${fecha}</div>
-          </div>
-          <div class="grupo-acciones">${resumenBadge}</div>
+      div.className = "grupo-row";
+      div.innerHTML =
+        `<div>
+          <div class="grupo-id">${id}</div>
+          <div class="grupo-meta">${f0.responsable} · ${f0.lugar} · ${f0.fecha} · ${filas.length} ítem${filas.length>1?"s":""}</div>
         </div>
-        <div class="grupo-items">${itemsHTML}</div>`;
+        <div class="grupo-right">
+          <span class="estado-badge ${badgeClass}"${badgeStyle}>${badgeTxt}</span>
+          <button class="btn-revisar" onclick="abrirDetalle('${id}')">Revisar →</button>
+        </div>`;
       cont.appendChild(div);
     });
   }
 
-  function resolverItem(fila, nuevoEstado, idSolicitud) {
-    const supervisor = document.getElementById("supervisorSel").value;
-    if (!supervisor) { mostrarToast("Selecciona tu nombre antes de aprobar/rechazar.", "warn"); return; }
+  // ── Vista detalle ─────────────────────────────────────────────
+  function abrirDetalle(id) {
+    const grupos = agrupar(todasSolicitudes);
+    solicitudActual = grupos[id];
+    decisionesActuales = {};
+    solicitudActual.forEach(f => {
+      decisionesActuales[f.fila] = f.estado !== "PENDIENTE" ? f.estado : null;
+    });
 
-    // Deshabilitar botones de esa fila
-    const apBtn = document.getElementById("ap-" + fila);
-    const reBtn = document.getElementById("re-" + fila);
-    if (apBtn) apBtn.disabled = true;
-    if (reBtn) reBtn.disabled = true;
+    document.getElementById("vistaLista").style.display   = "none";
+    document.getElementById("vistaDetalle").style.display = "block";
+    renderDetalle();
+  }
 
-    // Actualizar local inmediatamente para feedback rápido
-    const item = todasSolicitudes.find(s => s.fila === fila);
-    if (item) {
-      item.estado     = nuevoEstado;
-      item.supervisor = supervisor;
-      item.fechaResol = new Date().toLocaleString("es-CL");
+  function volverLista() {
+    document.getElementById("vistaDetalle").style.display = "none";
+    document.getElementById("vistaLista").style.display   = "block";
+    solicitudActual = null;
+  }
+
+  function renderDetalle() {
+    if (!solicitudActual) return;
+    const f0  = solicitudActual[0];
+    const id  = f0.id;
+    const total    = solicitudActual.length;
+    const resueltos = Object.values(decisionesActuales).filter(v => v !== null).length;
+    const aprobN   = Object.values(decisionesActuales).filter(v => v === "APROBADO").length;
+    const rechN    = Object.values(decisionesActuales).filter(v => v === "RECHAZADO").length;
+    const sinN     = total - resueltos;
+
+    const itemsHTML = solicitudActual.map(f => {
+      const resuelto = f.estado !== "PENDIENTE";
+      const dec = decisionesActuales[f.fila];
+
+      const controles = resuelto
+        ? `<div class="resuelto-lbl">${f.estado}<br>${f.supervisor || ""}</div>`
+        : `<div class="toggle-group">
+            <button class="t-btn ap ${dec==="APROBADO"?"on":""}" onclick="toggleDecision(${f.fila},'APROBADO')">✓ Aprobar</button>
+            <div class="t-sep"></div>
+            <button class="t-btn re ${dec==="RECHAZADO"?"on":""}" onclick="toggleDecision(${f.fila},'RECHAZADO')">✕ Rechazar</button>
+          </div>`;
+
+      return `<div class="item-det">
+        <div>
+          <div class="item-nom">${f.item}</div>
+          <div class="item-info">${f.lugar}</div>
+        </div>
+        <div class="item-cant">${f.cantidad}</div>
+        ${controles}
+      </div>`;
+    }).join("");
+
+    const pendientes = solicitudActual.filter(f => f.estado === "PENDIENTE").length;
+
+    document.getElementById("detContenido").innerHTML = `
+      <div class="det-card">
+        <div class="det-header">
+          <div class="det-id">${id}</div>
+          <div class="det-meta">
+            <span><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8"/></svg>${f0.responsable}</span>
+            <span><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>${f0.lugar}</span>
+            <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>${f0.fecha}</span>
+          </div>
+        </div>
+        <div class="toolbar">
+          <span class="toolbar-lbl">${pendientes} ítem${pendientes!==1?"s":""} pendiente${pendientes!==1?"s":""} de decisión</span>
+          ${pendientes > 0 ? `<div class="toolbar-btns">
+            <button class="btn-sel" onclick="decidirTodos('APROBADO')">Aprobar todos</button>
+            <button class="btn-sel" onclick="decidirTodos('RECHAZADO')">Rechazar todos</button>
+          </div>` : ""}
+        </div>
+        <div>${itemsHTML}</div>
+        <div class="det-footer">
+          <div class="det-counter">${resueltos} de ${total} resueltos — <strong>${aprobN} aprobado${aprobN!==1?"s":""} · ${rechN} rechazado${rechN!==1?"s":""} · ${sinN} sin decidir</strong></div>
+          <button class="btn-enviar" id="btnEnviar" onclick="enviarDecisiones()" ${resueltos===0?"disabled":""}>
+            <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            Enviar decisiones
+          </button>
+        </div>
+      </div>`;
+  }
+
+  function toggleDecision(fila, estado) {
+    decisionesActuales[fila] = decisionesActuales[fila] === estado ? null : estado;
+    renderDetalle();
+  }
+
+  function decidirTodos(estado) {
+    solicitudActual.forEach(f => {
+      if (f.estado === "PENDIENTE") decisionesActuales[f.fila] = estado;
+    });
+    renderDetalle();
+  }
+
+  // ── Enviar decisiones vía JSONP ───────────────────────────────
+  async function enviarDecisiones() {
+    const supervisor = document.getElementById("colabSel").value;
+    if (!supervisor) {
+      document.getElementById("colabSel").classList.add("error");
+      mostrarToast("Selecciona tu nombre antes de enviar.", "warn");
+      return;
     }
+    document.getElementById("colabSel").classList.remove("error");
+
+    const pendientesConDecision = solicitudActual.filter(f =>
+      f.estado === "PENDIENTE" && decisionesActuales[f.fila] !== null
+    );
+
+    if (!pendientesConDecision.length) {
+      mostrarToast("No hay decisiones nuevas para enviar.", "warn");
+      return;
+    }
+
+    const btn = document.getElementById("btnEnviar");
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Enviando…';
+
+    let errores = 0;
+    for (const f of pendientesConDecision) {
+      await new Promise(resolve => {
+        jsonp(SCRIPT_URL + "?accion=actualizarEstado&fila=" + f.fila +
+          "&estado=" + decisionesActuales[f.fila] + "&supervisor=" + encodeURIComponent(supervisor),
+          (data, err) => {
+            if (!data || data.status !== "ok" || err) errores++;
+            else {
+              // Actualizar localmente
+              const item = todasSolicitudes.find(s => s.fila === f.fila);
+              if (item) {
+                item.estado     = decisionesActuales[f.fila];
+                item.supervisor = supervisor;
+                item.fechaResol = new Date().toLocaleString("es-CL");
+              }
+            }
+            resolve();
+          });
+      });
+    }
+
     actualizarStats();
-    renderSolicitudes();
 
-    // Enviar al script via imagen (no-cors compatible)
-    const params = new URLSearchParams({ accion:"actualizarEstado", fila, estado:nuevoEstado, supervisor });
-    const img = new Image();
-    img.src = SCRIPT_URL + "?" + params.toString();
-
-    const color = nuevoEstado === "APROBADO" ? "ok" : "fail";
-    mostrarToast(`Ítem ${nuevoEstado.toLowerCase()} correctamente.`, color);
+    if (errores === 0) {
+      mostrarToast(`✓ ${pendientesConDecision.length} decisión${pendientesConDecision.length>1?"es":""} enviada${pendientesConDecision.length>1?"s":""} correctamente.`, "ok");
+      volverLista();
+    } else {
+      mostrarToast(`${errores} error(es) al enviar. Intenta nuevamente.`, "fail");
+      renderDetalle();
+    }
   }
 
   function mostrarToast(msg, tipo) {
     const t = document.getElementById("toast");
     t.textContent = msg; t.className = "show " + tipo;
-    setTimeout(() => { t.className = ""; }, 3500);
+    setTimeout(() => { t.className = ""; }, 4000);
   }
 </script>
 </body>
