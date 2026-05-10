@@ -147,9 +147,6 @@
 <body>
 <div class="card">
 
-  <!-- VERSION TAG -->
-  <div style="background:#7c3aed;color:#fff;font-size:.65rem;font-weight:700;text-align:center;padding:4px;letter-spacing:.05em;">v8E2E299 — DEBUG ACTIVO</div>
-
   <a class="back-link" href="index.html">
     <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
     Volver al portal
@@ -239,12 +236,6 @@
   </div>
 
   <!-- Confirmación enviado -->
-  <!-- DEBUG - remover después -->
-  <div id="debugBox" style="display:none;margin-top:12px;background:#1e293b;border-radius:8px;padding:12px;">
-    <p style="font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">URL enviada (debug)</p>
-    <p id="debugUrl" style="font-family:monospace;font-size:.6rem;color:#7dd3fc;word-break:break-all;line-height:1.5;"></p>
-  </div>
-
   <div class="estado-ok" id="estadoOk">
     <div class="icon">✅</div>
     <h2>Solicitud enviada correctamente</h2>
@@ -263,7 +254,7 @@
   <div class="config-link">
     <a onclick="pedirURL()">⚙ Configurar URL del script</a>
     <div class="url-box">
-      <span class="url-txt">https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec</span>
+      <span class="url-txt">https://script.google.com/macros/s/AKfycbwdRMtPOxqUj0TeB3dZWXI2jXHx-35FcuTtXo9nPLFrwX69OWOn4fdzigDnvnnTcAZ7Sw/exec</span>
       <button class="btn-copy" onclick="copiarURL()">Copiar</button>
     </div>
   </div>
@@ -272,7 +263,7 @@
 
 <script>
   // URL fija — no depende de localStorage para garantizar la versión correcta
-  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec";
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdRMtPOxqUj0TeB3dZWXI2jXHx-35FcuTtXo9nPLFrwX69OWOn4fdzigDnvnnTcAZ7Sw/exec";
 
   var responsableSesion = "";
   var responsableIdSesion = "";
@@ -503,11 +494,6 @@
       "&usuario="     + encodeURIComponent(responsableSesion) +
       "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
       "&idSolicitud=" + encodeURIComponent(idSolicitud);
-
-    // DEBUG: mostrar URL que se va a enviar
-    var dbx = document.getElementById("debugBox");
-    var dbu = document.getElementById("debugUrl");
-    if (dbx && dbu) { dbx.style.display = "block"; dbu.textContent += url + "\n\n"; }
 
     enviarImagen(url);
     _envioIdx++;
