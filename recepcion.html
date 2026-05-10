@@ -211,14 +211,16 @@
     }
     var sel = document.getElementById("selMes");
     var actual = sel.value;
+    var mesesList = Object.keys(meses).sort();
     sel.innerHTML = '<option value="">Todos los meses</option>';
-    var keys = Object.keys(meses).sort().reverse();
-    for (var j = 0; j < keys.length; j++) {
+    for (var j = 0; j < mesesList.length; j++) {
       var o = document.createElement("option");
-      o.value = keys[j]; o.textContent = keys[j];
+      o.value = mesesList[j];
+      o.textContent = mesesList[j].charAt(0) + mesesList[j].slice(1).toLowerCase();
       sel.appendChild(o);
     }
-    if (actual) sel.value = actual;
+    if (mesesList.length === 1) sel.value = mesesList[0];
+    else if (actual && meses[actual]) sel.value = actual;
   }
 
   // ── Cargar pedidos ────────────────────────────────────────────

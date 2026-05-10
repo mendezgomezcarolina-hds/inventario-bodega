@@ -242,43 +242,65 @@ function actualizarEstado(e) {
   }
 }
 
-// ── Listar RECEPCION_BODEGA por mes y estado ─────────────────
-// Columnas esperadas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
+// ── Listar RECEPCION_BODEGA por mes ──────────────────────────
+// Columnas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
 // F=CantSolicitada G=CantRecibida H=Responsable I=Fecha J=Estado
+// Mes/N°Sol/Lugar solo en primera fila del grupo - se propagan
 function listarRecepcion(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_RECEPCION);
     if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", pedidos: [] };
 
-    const mes          = (e.parameter.mes    || "").trim();
-    const filtroEstado = (e.parameter.estado || "PENDIENTE").toUpperCase().trim();
+    const mes   = (e.parameter.mes || "").trim().toUpperCase();
     const datos = sheet.getDataRange().getValues();
 
     // Detectar si fila 1 es encabezado
-    const inicio = String(datos[0][0]).toUpperCase().indexOf("MES") === 0 || isNaN(datos[0][0]) ? 1 : 0;
+    const inicio = String(datos[0][0]).toUpperCase() === "MES" ? 1 : 0;
+
+    // Propagar Mes, N°Sol, Lugar y Responsable en filas del mismo grupo
+    var mesCurrent   = "";
+    var idCurrent    = "";
+    var lugarCurrent = "";
+    var respCurrent  = "";
 
     const pedidos = [];
     for (var i = inicio; i < datos.length; i++) {
       const f = datos[i];
-      if (!f[1] || String(f[1]).trim() === "") continue;
-      const estadoFila = String(f[9] || "PENDIENTE").toUpperCase().trim();
-      const mesFila    = String(f[0] || "").trim();
-      if (filtroEstado && estadoFila !== filtroEstado) continue;
-      if (mes && mesFila !== mes) continue;
+
+      // Fin de bloque si toda la fila está vacía
+      if (!f[0] && !f[1] && !f[3] && !f[4]) continue;
+
+      // Propagar valores del grupo
+      if (String(f[0] || "").trim() !== "") mesCurrent   = String(f[0]).trim().toUpperCase();
+      if (String(f[1] || "").trim() !== "") idCurrent    = String(f[1]).trim();
+      if (String(f[2] || "").trim() !== "") lugarCurrent = String(f[2]).trim();
+      if (String(f[7] || "").trim() !== "") respCurrent  = String(f[7]).trim();
+
+      // Filtro por mes
+      if (mes && mesCurrent !== mes) continue;
+
+      // Estado vacío = PENDIENTE
+      const estadoFila = String(f[9] || "").trim().toUpperCase() || "PENDIENTE";
+      if (estadoFila !== "PENDIENTE") continue;
+
+      // Necesita descripcion o codigo
+      if (!f[3] && !f[4]) continue;
+
       const fecha = f[8] instanceof Date ? f[8].toLocaleString("es-CL") : String(f[8] || "");
+
       pedidos.push({
-        fila:            i + 1,
-        mes:             mesFila,
-        id:              String(f[1] || ""),
-        lugar:           String(f[2] || ""),
-        codigo:          String(f[3] || ""),
-        item:            String(f[4] || ""),
-        cantSolicitada:  String(f[5] || ""),
-        cantRecibida:    String(f[6] || ""),
-        responsable:     String(f[7] || ""),
-        fecha:           fecha,
-        estado:          String(f[9] || "PENDIENTE")
+        fila:           i + 1,
+        mes:            mesCurrent,
+        id:             idCurrent,
+        lugar:          lugarCurrent,
+        codigo:         String(f[3] || ""),
+        item:           String(f[4] || ""),
+        cantSolicitada: String(f[5] || "").replace(/-/g,"").trim(),
+        cantRecibida:   String(f[6] || "").replace(/-/g,"").trim(),
+        responsable:    respCurrent,
+        fecha:          fecha,
+        estado:         estadoFila
       });
     }
     return { status: "ok", pedidos };
@@ -311,43 +333,65 @@ function actualizarRecepcion(e) {
   }
 }
 
-// ── Test manual ───────────────────────────────────────────────// ── Listar RECEPCION_BODEGA por mes y estado ─────────────────
-// Columnas esperadas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
+// ── Test manual ───────────────────────────────────────────────// ── Listar RECEPCION_BODEGA por mes ──────────────────────────
+// Columnas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
 // F=CantSolicitada G=CantRecibida H=Responsable I=Fecha J=Estado
+// Mes/N°Sol/Lugar solo en primera fila del grupo - se propagan
 function listarRecepcion(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_RECEPCION);
     if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", pedidos: [] };
 
-    const mes          = (e.parameter.mes    || "").trim();
-    const filtroEstado = (e.parameter.estado || "PENDIENTE").toUpperCase().trim();
+    const mes   = (e.parameter.mes || "").trim().toUpperCase();
     const datos = sheet.getDataRange().getValues();
 
     // Detectar si fila 1 es encabezado
-    const inicio = String(datos[0][0]).toUpperCase().indexOf("MES") === 0 || isNaN(datos[0][0]) ? 1 : 0;
+    const inicio = String(datos[0][0]).toUpperCase() === "MES" ? 1 : 0;
+
+    // Propagar Mes, N°Sol, Lugar y Responsable en filas del mismo grupo
+    var mesCurrent   = "";
+    var idCurrent    = "";
+    var lugarCurrent = "";
+    var respCurrent  = "";
 
     const pedidos = [];
     for (var i = inicio; i < datos.length; i++) {
       const f = datos[i];
-      if (!f[1] || String(f[1]).trim() === "") continue;
-      const estadoFila = String(f[9] || "PENDIENTE").toUpperCase().trim();
-      const mesFila    = String(f[0] || "").trim();
-      if (filtroEstado && estadoFila !== filtroEstado) continue;
-      if (mes && mesFila !== mes) continue;
+
+      // Fin de bloque si toda la fila está vacía
+      if (!f[0] && !f[1] && !f[3] && !f[4]) continue;
+
+      // Propagar valores del grupo
+      if (String(f[0] || "").trim() !== "") mesCurrent   = String(f[0]).trim().toUpperCase();
+      if (String(f[1] || "").trim() !== "") idCurrent    = String(f[1]).trim();
+      if (String(f[2] || "").trim() !== "") lugarCurrent = String(f[2]).trim();
+      if (String(f[7] || "").trim() !== "") respCurrent  = String(f[7]).trim();
+
+      // Filtro por mes
+      if (mes && mesCurrent !== mes) continue;
+
+      // Estado vacío = PENDIENTE
+      const estadoFila = String(f[9] || "").trim().toUpperCase() || "PENDIENTE";
+      if (estadoFila !== "PENDIENTE") continue;
+
+      // Necesita descripcion o codigo
+      if (!f[3] && !f[4]) continue;
+
       const fecha = f[8] instanceof Date ? f[8].toLocaleString("es-CL") : String(f[8] || "");
+
       pedidos.push({
-        fila:            i + 1,
-        mes:             mesFila,
-        id:              String(f[1] || ""),
-        lugar:           String(f[2] || ""),
-        codigo:          String(f[3] || ""),
-        item:            String(f[4] || ""),
-        cantSolicitada:  String(f[5] || ""),
-        cantRecibida:    String(f[6] || ""),
-        responsable:     String(f[7] || ""),
-        fecha:           fecha,
-        estado:          String(f[9] || "PENDIENTE")
+        fila:           i + 1,
+        mes:            mesCurrent,
+        id:             idCurrent,
+        lugar:          lugarCurrent,
+        codigo:         String(f[3] || ""),
+        item:           String(f[4] || ""),
+        cantSolicitada: String(f[5] || "").replace(/-/g,"").trim(),
+        cantRecibida:   String(f[6] || "").replace(/-/g,"").trim(),
+        responsable:    respCurrent,
+        fecha:          fecha,
+        estado:         estadoFila
       });
     }
     return { status: "ok", pedidos };
