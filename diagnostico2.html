@@ -3,316 +3,322 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Diagnóstico — Aprobaciones</title>
+  <title>Diagnóstico Aprobaciones</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    :root { --bg:#f0f4f8; --surface:#fff; --border:#d1dce8; --accent:#1a6fbd; --text:#1e293b; --muted:#64748b; --ok:#16a34a; --err:#dc2626; --warn:#d97706; }
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); padding:24px 16px; }
-    .wrap { max-width:740px; margin:0 auto; }
-    h1 { font-size:1rem; font-weight:600; color:var(--text); margin-bottom:4px; }
-    p.sub { font-size:.78rem; color:var(--muted); margin-bottom:20px; }
-
-    .url-row { display:flex; gap:8px; margin-bottom:16px; }
-    .url-row input { flex:1; font-family:'DM Mono',monospace; font-size:.78rem; background:var(--surface); border:1.5px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--text); outline:none; }
-    .url-row input:focus { border-color:var(--accent); }
-    .btn { padding:8px 16px; background:var(--accent); color:#fff; font-size:.85rem; font-weight:600; border:none; border-radius:8px; cursor:pointer; white-space:nowrap; }
-    .btn:hover { background:#134f8a; }
-    .btn.verde { background:var(--ok); }
-    .btn.rojo  { background:var(--err); }
-
-    .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden; }
-    .card-title { font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); padding:12px 16px 6px; display:flex; justify-content:space-between; align-items:center; }
-    .card-body  { padding:12px 16px; }
-
-    /* Solicitudes */
-    .sol-row { display:grid; grid-template-columns:140px 1fr 70px 100px 36px 36px; gap:8px; align-items:center; padding:8px 0; border-bottom:0.5px solid var(--border); font-size:.82rem; }
-    .sol-row:last-child { border-bottom:none; }
-    .sol-id   { font-family:'DM Mono',monospace; font-size:.72rem; color:var(--accent); }
-    .sol-item { color:var(--text); font-weight:500; }
-    .sol-lugar{ color:var(--muted); font-size:.78rem; }
-    .sol-cant { font-family:'DM Mono',monospace; color:var(--accent); text-align:right; }
-    .sol-est  { font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:99px; text-align:center; }
-    .est-PENDIENTE { background:#fef3c7; color:#92400e; }
-    .est-APROBADO  { background:#dcfce7; color:#15803d; }
-    .est-RECHAZADO { background:#fee2e2; color:#991b1b; }
-    .btn-test { padding:4px 8px; font-size:.7rem; font-weight:600; border:none; border-radius:5px; cursor:pointer; color:#fff; }
-    .btn-test.ap { background:var(--ok); }
-    .btn-test.re { background:var(--err); }
-
-    /* Log */
-    .log-entry { font-family:'DM Mono',monospace; font-size:.72rem; line-height:1.7; padding:8px 12px; border-bottom:0.5px solid var(--border); }
-    .log-entry:last-child { border-bottom:none; }
-    .log-entry.ok   { color:var(--ok); }
-    .log-entry.err  { color:var(--err); }
-    .log-entry.info { color:var(--accent); }
-    .log-entry.warn { color:var(--warn); }
-    .log-time { color:var(--muted); margin-right:8px; }
-
-    /* Estado */
-    .badge-ok   { display:inline-block; background:#dcfce7; color:var(--ok); font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
-    .badge-err  { display:inline-block; background:#fee2e2; color:var(--err); font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
-    .badge-pend { display:inline-block; background:#f1f5f9; color:var(--muted); font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:99px; }
-
-    .raw { font-family:'DM Mono',monospace; font-size:.7rem; background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:10px; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; color:var(--text); line-height:1.6; }
-
-    .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; }
-    @keyframes spin { to{transform:rotate(360deg)} }
-
-    .step-header { font-size:.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:16px 0 8px; }
+    :root{--bg:#f0f4f8;--s:#fff;--b:#d1dce8;--ac:#1a6fbd;--t:#1e293b;--m:#64748b;--ok:#16a34a;--er:#dc2626;--wa:#d97706;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);padding:24px 16px;}
+    .wrap{max-width:720px;margin:0 auto;}
+    h1{font-size:1rem;font-weight:600;color:var(--t);margin-bottom:4px;}
+    .sub{font-size:.78rem;color:var(--m);margin-bottom:20px;}
+    .row{display:flex;gap:8px;margin-bottom:14px;}
+    input.url{flex:1;font-family:'DM Mono',monospace;font-size:.78rem;background:var(--s);border:1.5px solid var(--b);border-radius:8px;padding:8px 12px;outline:none;}
+    input.url:focus{border-color:var(--ac);}
+    .btn{padding:8px 16px;color:#fff;font-size:.83rem;font-weight:600;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;}
+    .btn-ac{background:var(--ac);}  .btn-ok{background:var(--ok);}  .btn-er{background:var(--er);}
+    .card{background:var(--s);border:1px solid var(--b);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+    .ctit{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--m);padding:10px 16px 6px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--b);}
+    .cbody{padding:12px 16px;}
+    .mono{font-family:'DM Mono',monospace;}
+    pre.raw{font-family:'DM Mono',monospace;font-size:.7rem;background:#f8fafc;border:1px solid var(--b);border-radius:6px;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto;color:var(--t);line-height:1.6;}
+    .logbox{max-height:280px;overflow-y:auto;}
+    .le{font-family:'DM Mono',monospace;font-size:.72rem;line-height:1.8;padding:4px 14px;border-bottom:0.5px solid var(--b);}
+    .le:last-child{border-bottom:none;}
+    .le.ok{color:var(--ok);}  .le.er{color:var(--er);}  .le.wa{color:var(--wa);}  .le.in{color:var(--ac);}
+    .ltime{color:var(--m);margin-right:8px;}
+    table{width:100%;border-collapse:collapse;font-size:.82rem;}
+    th{background:#f8fafc;font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--m);padding:7px 10px;text-align:left;border-bottom:1px solid var(--b);}
+    td{padding:8px 10px;border-bottom:0.5px solid var(--b);vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    .bap{background:var(--ok);padding:3px 10px;border:none;border-radius:5px;color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;opacity:.3;}
+    .bre{background:var(--er);padding:3px 10px;border:none;border-radius:5px;color:#fff;font-size:.72rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;opacity:.3;}
+    .bap.on{opacity:1;} .bre.on{opacity:1;}
+    .est-badge{font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:99px;}
+    .eP{background:#fef3c7;color:#92400e;} .eA{background:#dcfce7;color:#15803d;} .eR{background:#fee2e2;color:#991b1b;}
+    .sp{display:inline-block;width:14px;height:14px;border:2px solid var(--b);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .hidden{display:none;}
+    .nota{font-size:.78rem;color:var(--m);padding:8px 0;}
   </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Diagnóstico — Flujo de Aprobaciones</h1>
-  <p class="sub">Traza cada paso del ciclo: cargar solicitudes → decidir → enviar → verificar resultado en sheet.</p>
+  <p class="sub">4 pasos para identificar dónde falla: cargar → decidir → enviar → verificar.</p>
 
-  <div class="url-row">
-    <input id="urlInput" value="https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec" />
-    <button class="btn" onclick="paso1()">1 · Cargar solicitudes</button>
+  <div class="row">
+    <input class="url" id="urlIn" value="https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec" />
+    <button class="btn btn-ac" onclick="paso1()">1. Cargar</button>
   </div>
 
-  <!-- PASO 1: Solicitudes cargadas -->
-  <div class="card" id="card1" style="display:none">
-    <div class="card-title">
-      Solicitudes en sheet SOLICITUDES
-      <span id="badge1" class="badge-pend">—</span>
-    </div>
-    <div class="card-body">
-      <div class="step-header">Para cada ítem PENDIENTE: elige APROBAR o RECHAZAR, luego ejecuta el paso 2</div>
-      <div id="listaSol"></div>
+  <!-- PASO 1 -->
+  <div class="card hidden" id="c1">
+    <div class="ctit">Solicitudes cargadas <span id="b1">—</span></div>
+    <div class="cbody">
+      <p class="nota">Elige APROBAR o RECHAZAR para cada ítem PENDIENTE. Luego presiona "2. Enviar".</p>
+      <div id="tbl1"></div>
     </div>
   </div>
 
-  <!-- PASO 2: Envío de decisiones -->
-  <div class="card" id="card2" style="display:none">
-    <div class="card-title">
-      Paso 2 · Enviar decisiones seleccionadas
-      <button class="btn" onclick="paso2()">Enviar</button>
-    </div>
-    <div class="card-body" id="decisionesPreview"></div>
+  <!-- PASO 2 -->
+  <div class="card hidden" id="c2">
+    <div class="ctit">Decisiones a enviar <button class="btn btn-ok" onclick="paso2()">2. Enviar</button></div>
+    <div class="cbody"><div id="prev2"><em class="nota">Sin decisiones aún.</em></div></div>
   </div>
 
-  <!-- PASO 3: Respuestas del script -->
-  <div class="card" id="card3" style="display:none">
-    <div class="card-title">Paso 3 · Respuesta del script por cada ítem</div>
-    <div id="logRespuestas"></div>
+  <!-- PASO 3 -->
+  <div class="card hidden" id="c3">
+    <div class="ctit">Respuesta del script por ítem</div>
+    <div id="log3"></div>
   </div>
 
-  <!-- PASO 4: Verificar resultado -->
-  <div class="card" id="card4" style="display:none">
-    <div class="card-title">
-      Paso 4 · Verificar estado actual en sheet
-      <button class="btn" onclick="paso4()">Recargar</button>
-    </div>
-    <div class="card-body">
-      <div class="raw" id="rawVerificacion">—</div>
-    </div>
+  <!-- PASO 4 -->
+  <div class="card hidden" id="c4">
+    <div class="ctit">Estado final en sheet <button class="btn btn-ac" onclick="paso4()">4. Verificar</button></div>
+    <div class="cbody"><pre class="raw" id="raw4">—</pre></div>
   </div>
 
-  <!-- Log general -->
+  <!-- LOG -->
   <div class="card">
-    <div class="card-title">Log de actividad</div>
-    <div id="logGeneral" style="max-height:300px;overflow-y:auto;"></div>
+    <div class="ctit">Log</div>
+    <div class="logbox" id="logG"></div>
   </div>
 </div>
 
 <script>
-  let solicitudes = [];
-  let decisiones  = {}; // { index: 'APROBADO' | 'RECHAZADO' | null }
+  var sols = [];
+  var decs = {}; // { idx: 'APROBADO' | 'RECHAZADO' | null }
 
-  function getURL() { return document.getElementById("urlInput").value.trim(); }
+  function url() { return document.getElementById('urlIn').value.trim(); }
 
-  function log(msg, tipo = "info") {
-    const d   = document.getElementById("logGeneral");
-    const now = new Date().toLocaleTimeString("es-CL");
-    const div = document.createElement("div");
-    div.className = "log-entry " + tipo;
-    div.innerHTML = `<span class="log-time">${now}</span>${msg}`;
+  function log(msg, tipo) {
+    var d   = document.getElementById('logG');
+    var now = new Date().toLocaleTimeString('es-CL');
+    var div = document.createElement('div');
+    div.className = 'le ' + (tipo || 'in');
+    div.innerHTML = '<span class="ltime">' + now + '</span>' + msg;
     d.appendChild(div);
     d.scrollTop = d.scrollHeight;
   }
 
-  function jsonp(url, cb) {
-    const name = "_cb_" + Date.now() + "_" + Math.random().toString(36).slice(2,6);
-    const timer = setTimeout(() => { delete window[name]; cb(null, "Timeout (10s)"); }, 10000);
-    window[name] = data => { clearTimeout(timer); delete window[name]; cb(data); };
-    const s = document.createElement("script");
-    const sep = url.includes("?") ? "&" : "?";
-    s.src = url + sep + "callback=" + name;
-    log("GET → " + s.src.replace(getURL(),"[SCRIPT]"), "info");
-    s.onerror = () => { clearTimeout(timer); delete window[name]; cb(null, "Error HTTP/red"); };
+  function logCard(cardId, msg, tipo) {
+    var d = document.getElementById(cardId);
+    var div = document.createElement('div');
+    div.className = 'le ' + (tipo || 'in');
+    div.innerHTML = '<span class="ltime">' + new Date().toLocaleTimeString('es-CL') + '</span>' + msg;
+    d.appendChild(div);
+  }
+
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+
+  function jsonp(u, cb) {
+    var name = '_dcb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
+    var timer = setTimeout(function() { delete window[name]; cb(null, 'Timeout 10s'); }, 10000);
+    window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
+    var s = document.createElement('script');
+    var sep = u.indexOf('?') > -1 ? '&' : '?';
+    s.src = u + sep + 'callback=' + name;
+    log('→ ' + s.src.replace(url(), '[SCRIPT]'), 'in');
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, 'Error HTTP'); };
     document.head.appendChild(s);
   }
 
-  // ── PASO 1: Cargar solicitudes ────────────────────────────────
+  // PASO 1
   function paso1() {
-    document.getElementById("card1").style.display = "block";
-    document.getElementById("badge1").className    = "badge-pend";
-    document.getElementById("badge1").textContent  = "cargando…";
-    document.getElementById("listaSol").innerHTML  = '<div class="spinner"></div> Conectando…';
-    log("Cargando solicitudes...", "info");
+    show('c1');
+    document.getElementById('tbl1').innerHTML = '<div class="nota"><div class="sp"></div> Conectando...</div>';
+    log('Cargando solicitudes...', 'in');
 
-    jsonp(getURL() + "?accion=listarSolicitudes", (data, err) => {
+    jsonp(url() + '?accion=listarSolicitudes', function(data, err) {
       if (!data || err) {
-        document.getElementById("listaSol").innerHTML = "<b style='color:red'>Error: " + (err||"sin respuesta") + "</b>";
-        document.getElementById("badge1").className   = "badge-err";
-        document.getElementById("badge1").textContent = "✗ Error";
-        log("ERROR al cargar: " + (err||JSON.stringify(data)), "err");
+        document.getElementById('tbl1').innerHTML = '<p style="color:var(--er)">Error: ' + (err || 'sin respuesta') + '</p>';
+        document.getElementById('b1').textContent = 'ERROR';
+        log('ERROR: ' + (err || JSON.stringify(data)), 'er');
         return;
       }
 
-      solicitudes = data.solicitudes || [];
-      log("Recibidos " + solicitudes.length + " registros", "ok");
-      log("Primer registro: " + JSON.stringify(solicitudes[0] || {}), "info");
+      sols = data.solicitudes || [];
+      log('OK. ' + sols.length + ' registros recibidos.', 'ok');
 
-      document.getElementById("badge1").className   = "badge-ok";
-      document.getElementById("badge1").textContent = "✓ " + solicitudes.length + " registros";
+      // Detectar si fila existe
+      var tieneFilas = sols.length > 0 && sols[0].fila !== undefined;
+      log("Campo 'fila' en respuesta: " + tieneFilas, tieneFilas ? 'ok' : 'wa');
+      if (!tieneFilas && sols.length > 0) {
+        log('⚠ fila=undefined → script desactualizado en Google', 'wa');
+      }
 
-      // Verificar si fila existe
-      const tieneFilas = solicitudes.every(s => s.fila !== undefined);
-      log("Campo 'fila' presente: " + tieneFilas + (tieneFilas ? "" : " ← PROBLEMA"), tieneFilas ? "ok" : "err");
+      // Primer registro completo para debug
+      if (sols.length > 0) {
+        log('Primer registro: ' + JSON.stringify(sols[0]), 'in');
+      }
 
-      renderSolicitudes();
-      document.getElementById("card2").style.display = "block";
-      actualizarDecisionesPreview();
+      document.getElementById('b1').textContent = sols.length + ' registros';
+
+      // Inicializar decisiones
+      decs = {};
+      for (var i = 0; i < sols.length; i++) {
+        decs[i] = sols[i].estado !== 'PENDIENTE' ? sols[i].estado : null;
+      }
+
+      renderTabla();
+      show('c2');
+      actualizarPreview();
     });
   }
 
-  function renderSolicitudes() {
-    const cont = document.getElementById("listaSol");
-    if (!solicitudes.length) { cont.innerHTML = "<em style='color:var(--muted)'>Sin solicitudes.</em>"; return; }
+  function renderTabla() {
+    var cont = document.getElementById('tbl1');
+    if (!sols.length) { cont.innerHTML = '<p class="nota">Sin registros.</p>'; return; }
 
-    // Headers
-    cont.innerHTML = `<div class="sol-row" style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase">
-      <span>ID Solicitud</span><span>Ítem / Lugar</span><span>Cant.</span><span>Estado actual</span><span>✓</span><span>✕</span>
-    </div>`;
+    var html = '<table><thead><tr><th>ID Solicitud</th><th>Ítem</th><th>Lugar</th><th>Cant</th><th>Estado</th><th>Decidir</th></tr></thead><tbody>';
+    for (var i = 0; i < sols.length; i++) {
+      var s    = sols[i];
+      var est  = s.estado || 'PENDIENTE';
+      var cls  = est === 'APROBADO' ? 'eA' : est === 'RECHAZADO' ? 'eR' : 'eP';
+      var pend = est === 'PENDIENTE';
+      var fila = s.fila !== undefined ? s.fila : 'undefined';
+      var dec  = decs[i];
+      var apOn = dec === 'APROBADO'  ? ' on' : '';
+      var reOn = dec === 'RECHAZADO' ? ' on' : '';
 
-    solicitudes.forEach((s, i) => {
-      if (!decisiones.hasOwnProperty(i)) decisiones[i] = null;
-      const row = document.createElement("div");
-      row.className = "sol-row";
-      row.id = "sol-row-" + i;
-      row.innerHTML =
-        `<div class="sol-id">${s.id || "?"}<br><span style="color:var(--muted);font-size:.65rem">fila:${s.fila ?? "undefined"}</span></div>` +
-        `<div><div class="sol-item">${s.item||"?"}</div><div class="sol-lugar">${s.lugar||"?"}</div></div>` +
-        `<div class="sol-cant">${s.cantidad||"?"}</div>` +
-        `<div><span class="sol-est est-${s.estado||"PENDIENTE"}" id="est-${i}">${s.estado||"?"}</span></div>` +
-        `<button class="btn-test ap" onclick="decidir(${i},'APROBADO')" id="ap-${i}">✓</button>` +
-        `<button class="btn-test re" onclick="decidir(${i},'RECHAZADO')" id="re-${i}">✕</button>`;
-      cont.appendChild(row);
-      colorBtns(i);
-    });
+      html += '<tr id="tr-' + i + '">';
+      html += '<td class="mono" style="font-size:.7rem">' + (s.id || '?') + '<br><span style="color:var(--m);font-size:.65rem">fila=' + fila + '</span></td>';
+      html += '<td style="font-weight:500">' + (s.item || '?') + '</td>';
+      html += '<td style="color:var(--m)">' + (s.lugar || '?') + '</td>';
+      html += '<td class="mono">' + (s.cantidad || '?') + '</td>';
+      html += '<td><span class="est-badge ' + cls + '" id="eb-' + i + '">' + est + '</span></td>';
+      if (pend) {
+        html += '<td><button class="bap' + apOn + '" id="bap-' + i + '" onclick="decidir(' + i + ',\'APROBADO\')">✓ Ap</button> ';
+        html += '<button class="bre' + reOn + '" id="bre-' + i + '" onclick="decidir(' + i + ',\'RECHAZADO\')">✕ Re</button></td>';
+      } else {
+        html += '<td style="font-size:.75rem;color:var(--m)">ya resuelto</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    cont.innerHTML = html;
   }
 
   function decidir(i, estado) {
-    decisiones[i] = decisiones[i] === estado ? null : estado;
-    colorBtns(i);
-    actualizarDecisionesPreview();
+    decs[i] = (decs[i] === estado) ? null : estado;
+    var apBtn = document.getElementById('bap-' + i);
+    var reBtn = document.getElementById('bre-' + i);
+    if (apBtn) { apBtn.className = 'bap' + (decs[i] === 'APROBADO'  ? ' on' : ''); }
+    if (reBtn) { reBtn.className = 'bre' + (decs[i] === 'RECHAZADO' ? ' on' : ''); }
+    actualizarPreview();
   }
 
-  function colorBtns(i) {
-    const ap = document.getElementById("ap-" + i);
-    const re = document.getElementById("re-" + i);
-    if (!ap) return;
-    ap.style.opacity = decisiones[i] === "APROBADO"  ? "1"   : "0.35";
-    re.style.opacity = decisiones[i] === "RECHAZADO" ? "1"   : "0.35";
+  function actualizarPreview() {
+    var prev  = document.getElementById('prev2');
+    var items = [];
+    for (var i = 0; i < sols.length; i++) {
+      if (decs[i] !== null && sols[i].estado === 'PENDIENTE') {
+        items.push({ i: i, d: decs[i], s: sols[i] });
+      }
+    }
+    if (!items.length) {
+      prev.innerHTML = '<p class="nota">Sin decisiones seleccionadas.</p>';
+      return;
+    }
+    var html = '';
+    for (var j = 0; j < items.length; j++) {
+      var it = items[j];
+      var color = it.d === 'APROBADO' ? 'var(--ok)' : 'var(--er)';
+      html += '<div style="margin-bottom:10px;font-size:.8rem">';
+      html += '<b style="color:' + color + '">[' + it.i + '] ' + it.d + '</b> → ' + (it.s.item || '?') + ' / ' + (it.s.lugar || '?') + '<br>';
+      html += '<span class="mono" style="font-size:.68rem;color:var(--m)">idSolicitud=' + (it.s.id||'?') + ' item=' + (it.s.item||'?') + ' lugar=' + (it.s.lugar||'?') + '</span>';
+      html += '</div>';
+    }
+    prev.innerHTML = html;
   }
 
-  function actualizarDecisionesPreview() {
-    const prev = document.getElementById("decisionesPreview");
-    const lista = Object.entries(decisiones)
-      .filter(([i, d]) => d !== null && solicitudes[i]?.estado === "PENDIENTE");
+  // PASO 2
+  function paso2() {
+    show('c3');
+    var log3 = document.getElementById('log3');
+    log3.innerHTML = '';
 
-    if (!lista.length) {
-      prev.innerHTML = "<em style='color:var(--muted);font-size:.82rem'>Sin decisiones seleccionadas.</em>";
+    var items = [];
+    for (var i = 0; i < sols.length; i++) {
+      if (decs[i] !== null && sols[i].estado === 'PENDIENTE') {
+        items.push({ i: i, d: decs[i], s: sols[i] });
+      }
+    }
+
+    if (!items.length) {
+      logCard('log3', 'Sin decisiones que enviar.', 'wa');
       return;
     }
 
-    prev.innerHTML = lista.map(([i, d]) => {
-      const s = solicitudes[i];
-      const params = new URLSearchParams({
-        accion:       "actualizarEstado",
-        idSolicitud:  s.id,
-        item:         s.item,
-        lugar:        s.lugar,
-        estado:       d,
-        supervisor:   "DIAGNOSTICO"
-      });
-      return `<div style="margin-bottom:8px;font-size:.8rem">
-        <b style="color:${d==="APROBADO"?"var(--ok)":"var(--err)"}">[${i}] ${d}</b> → ${s.item} (${s.lugar})<br>
-        <span style="font-family:monospace;font-size:.68rem;color:var(--muted)">?${params.toString()}</span>
-      </div>`;
-    }).join("");
+    log('Enviando ' + items.length + ' decisiones...', 'in');
+    enviarSiguiente(items, 0);
   }
 
-  // ── PASO 2: Enviar decisiones ─────────────────────────────────
-  async function paso2() {
-    const card3 = document.getElementById("card3");
-    const logEl = document.getElementById("logRespuestas");
-    card3.style.display = "block";
-    logEl.innerHTML = "";
-
-    const pendientes = Object.entries(decisiones)
-      .filter(([i, d]) => d !== null && solicitudes[parseInt(i)]?.estado === "PENDIENTE")
-      .map(([i, d]) => ({ i: parseInt(i), d, s: solicitudes[parseInt(i)] }));
-
-    if (!pendientes.length) { logEntry(logEl, "Sin decisiones para enviar.", "warn"); return; }
-
-    log("Enviando " + pendientes.length + " decisiones...", "info");
-
-    for (const { i, d, s } of pendientes) {
-      await new Promise(resolve => {
-        const params = new URLSearchParams({
-          accion:       "actualizarEstado",
-          idSolicitud:  s.id,
-          item:         s.item,
-          lugar:        s.lugar,
-          estado:       d,
-          supervisor:   "DIAGNOSTICO"
-        });
-        const url = getURL() + "?" + params.toString();
-        logEntry(logEl, `[${i}] Enviando ${d} → ${s.item} (${s.lugar})...`, "info");
-        log(`Enviando: item="${s.item}" lugar="${s.lugar}" estado="${d}"`, "info");
-
-        jsonp(url, (data, err) => {
-          if (!data || err) {
-            logEntry(logEl, `[${i}] ✗ ERROR: ${err || JSON.stringify(data)}`, "err");
-            log(`[${i}] ERROR: ${err}`, "err");
-          } else {
-            const ok = data.status === "ok";
-            logEntry(logEl, `[${i}] ${ok?"✓":"✗"} status=${data.status} actualizados=${data.actualizados||0} ${data.mensaje||""}`, ok?"ok":"err");
-            log(`[${i}] Respuesta: ${JSON.stringify(data)}`, ok?"ok":"err");
-          }
-          resolve();
-        });
-      });
+  function enviarSiguiente(items, idx) {
+    if (idx >= items.length) {
+      log('Envío completo. Verificando...', 'ok');
+      show('c4');
+      paso4();
+      return;
     }
 
-    log("Envío completo. Ejecuta paso 4 para verificar.", "ok");
-    document.getElementById("card4").style.display = "block";
-    paso4();
-  }
+    var it  = items[idx];
+    var s   = it.s;
+    var dec = it.d;
 
-  // ── PASO 4: Verificar estado actual ──────────────────────────
-  function paso4() {
-    const el = document.getElementById("rawVerificacion");
-    el.textContent = "Cargando…";
-    jsonp(getURL() + "?accion=listarSolicitudes", (data, err) => {
-      if (!data || err) { el.textContent = "Error: " + (err||"sin respuesta"); return; }
-      const ahora = (data.solicitudes || []).map(s =>
-        `${s.id} | ${s.item} | ${s.lugar} | ${s.estado} | ${s.supervisor||"—"}`
-      ).join("\n");
-      el.textContent = ahora || "(sin registros)";
-      log("Verificación completada.", "ok");
+    var params = 'accion=actualizarEstado' +
+      '&idSolicitud=' + encodeURIComponent(s.id || '') +
+      '&item='        + encodeURIComponent(s.item || '') +
+      '&lugar='       + encodeURIComponent(s.lugar || '') +
+      '&estado='      + encodeURIComponent(dec) +
+      '&supervisor='  + encodeURIComponent('DIAGNOSTICO');
+
+    logCard('log3', '[' + idx + '] Enviando ' + dec + ' → item="' + (s.item||'') + '" lugar="' + (s.lugar||'') + '"', 'in');
+    log('[' + idx + '] ' + dec + ' → ' + (s.item||'') + ' / ' + (s.lugar||''), 'in');
+
+    jsonp(url() + '?' + params, function(data, err) {
+      if (!data || err) {
+        logCard('log3', '[' + idx + '] ✗ ERROR: ' + (err || JSON.stringify(data)), 'er');
+        log('[' + idx + '] ERROR: ' + (err || '?'), 'er');
+      } else {
+        var ok  = data.status === 'ok';
+        var act = data.actualizados !== undefined ? data.actualizados : '?';
+        logCard('log3', '[' + idx + '] ' + (ok ? '✓' : '✗') + ' status=' + data.status + ' actualizados=' + act + (data.mensaje ? ' msg=' + data.mensaje : ''), ok ? 'ok' : 'er');
+        log('[' + idx + '] Respuesta: ' + JSON.stringify(data), ok ? 'ok' : 'er');
+
+        if (ok && act > 1) {
+          logCard('log3', '⚠ actualizados=' + act + ' → el script actualizó MÁS de 1 fila. Coincidencia múltiple en item+lugar.', 'wa');
+          log('⚠ PROBLEMA: actualizados=' + act + ' para 1 ítem → revisar matching en script', 'wa');
+        }
+      }
+      // Siguiente en 300ms para evitar conflictos de nombre en JSONP
+      setTimeout(function() { enviarSiguiente(items, idx + 1); }, 300);
     });
   }
 
-  function logEntry(cont, msg, tipo) {
-    const div = document.createElement("div");
-    div.className = "log-entry " + tipo;
-    div.innerHTML = `<span class="log-time">${new Date().toLocaleTimeString("es-CL")}</span>${msg}`;
-    cont.appendChild(div);
+  // PASO 4
+  function paso4() {
+    var el = document.getElementById('raw4');
+    el.textContent = 'Cargando...';
+    jsonp(url() + '?accion=listarSolicitudes', function(data, err) {
+      if (!data || err) { el.textContent = 'Error: ' + (err || '?'); return; }
+      var lista = data.solicitudes || [];
+      var txt = 'ID Solicitud          | Ítem          | Lugar         | Estado    | Supervisor\n';
+      txt += '─'.repeat(85) + '\n';
+      for (var i = 0; i < lista.length; i++) {
+        var s = lista[i];
+        txt += pad(s.id||'?', 22) + '| ' + pad(s.item||'?', 15) + '| ' + pad(s.lugar||'?', 15) + '| ' + pad(s.estado||'?', 11) + '| ' + (s.supervisor||'—') + '\n';
+      }
+      el.textContent = txt;
+      log('Verificación: ' + lista.length + ' registros en sheet.', 'ok');
+    });
+  }
+
+  function pad(str, n) {
+    str = String(str);
+    while (str.length < n) str += ' ';
+    return str.slice(0, n);
   }
 </script>
 </body>
