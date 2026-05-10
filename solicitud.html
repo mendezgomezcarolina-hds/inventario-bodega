@@ -310,10 +310,15 @@
     document.head.appendChild(s);
   }
 
-  // ── Imagen (envío sin respuesta, compatible 100% iOS) ─────────
+  // ── Envío vía JSONP (compatible iOS, garantiza que la petición se ejecuta) ────
   function enviarImagen(url) {
-    var img = new Image();
-    img.src = url;
+    var name  = "_jcb_" + Date.now() + "_" + (++_cbCount);
+    var timer = setTimeout(function() { delete window[name]; }, 8000);
+    window[name] = function() { clearTimeout(timer); delete window[name]; };
+    var s = document.createElement("script");
+    s.src = url + "&callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; };
+    document.head.appendChild(s);
   }
 
   // ── Cargar listas ─────────────────────────────────────────────
