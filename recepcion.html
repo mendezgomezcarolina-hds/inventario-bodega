@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recepción de Bodega</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#f0f4f8; --surface:#fff; --border:#d1dce8;
+      --accent:#854F0B; --accent-dk:#6b3d08;
+      --blue:#185FA5;
+      --text:#1e293b; --muted:#64748b;
+      --ok:#16a34a; --ok-bg:#dcfce7; --ok-br:#bbf7d0;
+      --er:#dc2626; --er-bg:#fee2e2; --er-br:#fecaca;
+      --warn:#d97706; --warn-bg:#fef3c7;
+      --edit:#7c3aed; --edit-bg:#f5f3ff; --edit-br:#ddd6fe;
+      --radius:10px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padding:24px 16px;}
+    .container{max-width:580px;margin:0 auto;}
+
+    a.back{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;color:var(--muted);text-decoration:none;margin-bottom:18px;}
+    a.back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    a.back:hover{color:var(--accent);}
+
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+    .hicon{width:40px;height:40px;background:var(--accent);border-radius:10px;display:grid;place-items:center;}
+    .hicon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .header h1{font-size:1.05rem;font-weight:600;color:var(--text);}
+    .header p{font-size:.75rem;color:var(--muted);margin-top:2px;}
+
+    .mes-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .mes-bar label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap;}
+    .mes-bar select{font-family:'DM Sans',sans-serif;font-size:.9rem;color:var(--text);background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none;flex:1;min-width:160px;}
+    .mes-bar select:focus{border-color:var(--accent);}
+    .btn-act{font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+    .btn-act svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .btn-act:hover{border-color:var(--accent);color:var(--accent);}
+
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;text-align:center;}
+    .stat-n{font-size:1.3rem;font-weight:600;color:var(--text);}
+    .stat-l{font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:2px;}
+    .stat.pend .stat-n{color:var(--warn);}
+    .stat.ok   .stat-n{color:var(--ok);}
+    .stat.er   .stat-n{color:var(--er);}
+
+    .sec-label{font-size:.7rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+
+    .sol-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+    .sol-head{padding:12px 14px;border-bottom:1px solid var(--border);}
+    .sol-id  {font-family:'DM Mono',monospace;font-size:.8rem;font-weight:500;color:var(--blue);margin-bottom:3px;}
+    .sol-meta{font-size:.75rem;color:var(--muted);}
+    .sol-foot{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .badge{font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:uppercase;}
+    .b-pend{background:var(--warn-bg);color:#92400e;}
+    .b-parc{background:#e0eaf5;color:var(--blue);}
+    .b-apro{background:var(--ok-bg);color:#15803d;}
+    .b-rech{background:var(--er-bg);color:#991b1b;}
+    .btn-eval{font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;padding:7px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);cursor:pointer;display:flex;align-items:center;gap:4px;}
+    .btn-eval:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-eval svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+    #vistaDetalle{display:none;}
+    .btn-back{font-family:'DM Sans',sans-serif;font-size:.78rem;color:var(--muted);background:none;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin-bottom:14px;padding:0;}
+    .btn-back svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .btn-back:hover{color:var(--accent);}
+
+    .det-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+    .det-head{padding:13px 16px;border-bottom:1px solid var(--border);}
+    .det-id  {font-family:'DM Mono',monospace;font-size:.82rem;font-weight:500;color:var(--blue);margin-bottom:3px;}
+    .det-meta{font-size:.75rem;color:var(--muted);}
+    .det-mes {display:inline-block;margin-top:5px;font-size:.7rem;font-weight:600;background:#FAEEDA;color:var(--accent);padding:2px 8px;border-radius:99px;}
+
+    .item-fila{padding:13px 16px;border-bottom:1px solid var(--border);}
+    .item-fila:last-of-type{border-bottom:none;}
+    .item-nom{font-size:.88rem;font-weight:500;color:var(--text);margin-bottom:2px;}
+    .item-sub{font-size:.72rem;color:var(--muted);margin-bottom:8px;}
+    .item-bot{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;}
+
+    .cant-grupo{display:flex;flex-direction:column;gap:3px;}
+    .cant-lbl{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
+    .cant-num{font-family:'DM Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);}
+    .cant-input{font-family:'DM Mono',monospace;font-size:.85rem;width:100%;padding:6px 8px;border:1.5px solid var(--edit);border-radius:6px;outline:none;color:var(--text);background:var(--edit-bg);}
+    .cant-input:focus{border-color:var(--edit);}
+
+    .item-acciones{display:flex;gap:5px;flex-shrink:0;}
+    .btn-ap,.btn-re{width:38px;height:38px;border-radius:8px;border:1px solid;font-size:.9rem;font-weight:700;cursor:pointer;display:grid;place-items:center;}
+    .btn-ap{border-color:var(--ok-br);background:var(--ok-bg);color:var(--ok);}
+    .btn-re{border-color:var(--er-br);background:var(--er-bg);color:var(--er);}
+    .btn-ap.on{background:var(--ok);color:#fff;border-color:var(--ok);}
+    .btn-re.on{background:var(--er);color:#fff;border-color:var(--er);}
+    .btn-ap:not(.on){opacity:.35;}
+    .btn-re:not(.on){opacity:.35;}
+
+    .det-foot{padding:12px 16px;background:#f8fafc;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .det-prog{font-size:.78rem;color:var(--muted);}
+    .det-prog strong{color:var(--text);}
+    .btn-guardar{font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;padding:9px 20px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:6px;}
+    .btn-guardar svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    .btn-guardar:hover{background:var(--accent-dk);}
+    .btn-guardar:disabled{opacity:.45;cursor:not-allowed;}
+
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+    .sp-lg{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading{text-align:center;padding:32px;color:var(--muted);}
+    .empty{text-align:center;padding:40px;color:var(--muted);font-size:.9rem;}
+
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);padding:11px 20px;border-radius:10px;font-size:.85rem;font-weight:500;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:99;white-space:nowrap;}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    #toast.ok  {background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok-br);}
+    #toast.fail{background:var(--er-bg);color:var(--er);border:1px solid var(--er-br);}
+    #toast.warn{background:var(--warn-bg);color:var(--warn);border:1px solid #fde68a;}
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <a class="back" href="index.html">
+    <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Volver al portal
+  </a>
+
+  <div class="header">
+    <div class="hicon">
+      <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8M10 12v4M14 12v4"/></svg>
+    </div>
+    <div>
+      <h1>Recepción de Bodega</h1>
+      <p>Dermatología · Hospital del Salvador</p>
+    </div>
+  </div>
+
+  <!-- Filtro mes -->
+  <div class="mes-bar">
+    <label>Mes</label>
+    <select id="selMes" onchange="cargarPedidos()">
+      <option value="">Todos los meses</option>
+    </select>
+    <button class="btn-act" onclick="cargarPedidos()">
+      <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      Actualizar
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat pend"><div class="stat-n" id="sP">—</div><div class="stat-l">Pendientes</div></div>
+    <div class="stat ok">  <div class="stat-n" id="sA">—</div><div class="stat-l">Aprobados</div></div>
+    <div class="stat er">  <div class="stat-n" id="sR">—</div><div class="stat-l">Rechazados</div></div>
+  </div>
+
+  <!-- Vista lista -->
+  <div id="vistaLista">
+    <div class="loading"><div class="sp-lg"></div></div>
+  </div>
+
+  <!-- Vista detalle -->
+  <div id="vistaDetalle">
+    <button class="btn-back" onclick="volverLista()">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Volver a pedidos
+    </button>
+    <div class="det-card">
+      <div class="det-head">
+        <div class="det-id"  id="dId"></div>
+        <div class="det-meta" id="dMeta"></div>
+        <span class="det-mes" id="dMes"></span>
+      </div>
+      <div id="dItems"></div>
+      <div class="det-foot">
+        <div class="det-prog" id="dProg"></div>
+        <button class="btn-guardar" id="btnGuardar" onclick="guardarDecisiones()">
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  var _cbN = 0;
+  var todosPedidos    = [];
+  var solicitudActual = [];
+  var decisiones      = {}; // { fila: { est, cant } }
+
+  function jsonp(url, cb) {
+    var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 10000);
+    window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
+    document.head.appendChild(s);
+  }
+
+  window.onload = function() { cargarPedidos(); };
+
+  // ── Poblar selector de meses ──────────────────────────────────
+  function poblarMeses(pedidos) {
+    var meses = {};
+    for (var i = 0; i < pedidos.length; i++) {
+      if (pedidos[i].mes) meses[pedidos[i].mes] = true;
+    }
+    var sel = document.getElementById("selMes");
+    var actual = sel.value;
+    sel.innerHTML = '<option value="">Todos los meses</option>';
+    var keys = Object.keys(meses).sort().reverse();
+    for (var j = 0; j < keys.length; j++) {
+      var o = document.createElement("option");
+      o.value = keys[j]; o.textContent = keys[j];
+      sel.appendChild(o);
+    }
+    if (actual) sel.value = actual;
+  }
+
+  // ── Cargar pedidos ────────────────────────────────────────────
+  function cargarPedidos() {
+    document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="sp-lg"></div></div>';
+    jsonp(SCRIPT_URL + "?accion=listarRecepcion&estado=PENDIENTE", function(data, err) {
+      if (!data || err) {
+        document.getElementById("vistaLista").innerHTML = '<div class="empty">Error de conexi\u00f3n.</div>';
+        return;
+      }
+      todosPedidos = data.pedidos || [];
+      poblarMeses(todosPedidos);
+      actualizarStats();
+      renderLista();
+    });
+  }
+
+  function actualizarStats() {
+    var mes    = document.getElementById("selMes").value;
+    var filtrados = mes ? todosPedidos.filter(function(p) { return p.mes === mes; }) : todosPedidos;
+    var grupos = agrupar(filtrados);
+    document.getElementById("sP").textContent = Object.keys(grupos).length;
+    document.getElementById("sA").textContent = filtrados.filter(function(p) { return (p.estado||"").toUpperCase() === "APROBADO"; }).length;
+    document.getElementById("sR").textContent = filtrados.filter(function(p) { return (p.estado||"").toUpperCase() === "RECHAZADO"; }).length;
+  }
+
+  function agrupar(lista) {
+    var g = {};
+    for (var i = 0; i < lista.length; i++) {
+      var p = lista[i];
+      if (!g[p.id]) g[p.id] = [];
+      g[p.id].push(p);
+    }
+    return g;
+  }
+
+  function renderLista() {
+    var cont = document.getElementById("vistaLista");
+    var mes  = document.getElementById("selMes").value;
+    var filtrados = mes ? todosPedidos.filter(function(p) { return p.mes === mes; }) : todosPedidos;
+    var grupos = agrupar(filtrados);
+    var ids    = Object.keys(grupos).reverse();
+
+    if (!ids.length) { cont.innerHTML = '<div class="empty">No hay pedidos pendientes para este mes.</div>'; return; }
+
+    var labelMes = mes || "Todos los meses";
+    cont.innerHTML = '<p class="sec-label">' + labelMes + ' \u2014 Pedidos pendientes</p>';
+
+    ids.forEach(function(id) {
+      var filas = grupos[id];
+      var f0    = filas[0];
+      var div   = document.createElement("div");
+      div.className = "sol-card";
+      div.innerHTML =
+        '<div class="sol-head">' +
+          '<div class="sol-id">' + id + '</div>' +
+          '<div class="sol-meta">' + (f0.responsable||"—") + " \u00b7 " + (f0.lugar||"—") + " \u00b7 " + filas.length + " \u00edtem" + (filas.length>1?"s":"") + '</div>' +
+        '</div>' +
+        '<div class="sol-foot">' +
+          '<span class="badge b-pend">PENDIENTE</span>' +
+          '<button class="btn-eval" onclick="abrirDetalle(\'' + id.replace(/'/g,"\\'") + '\')">' +
+            'Recepcionar <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M9 18l6-6-6-6"/></svg>' +
+          '</button>' +
+        '</div>';
+      cont.appendChild(div);
+    });
+  }
+
+  // ── Vista detalle ─────────────────────────────────────────────
+  function abrirDetalle(id) {
+    var mes = document.getElementById("selMes").value;
+    var filtrados = mes ? todosPedidos.filter(function(p) { return p.mes === mes; }) : todosPedidos;
+    var grupos = agrupar(filtrados);
+    solicitudActual = grupos[id] || [];
+    decisiones = {};
+
+    document.getElementById("vistaLista").style.display   = "none";
+    document.getElementById("vistaDetalle").style.display = "block";
+
+    var f0 = solicitudActual[0] || {};
+    document.getElementById("dId").textContent   = id;
+    document.getElementById("dMeta").textContent = (f0.responsable||"—") + " \u00b7 " + (f0.lugar||"—");
+    document.getElementById("dMes").textContent  = f0.mes || "";
+
+    var html = "";
+    for (var i = 0; i < solicitudActual.length; i++) {
+      var p = solicitudActual[i];
+      html +=
+        '<div class="item-fila">' +
+          '<div class="item-nom">' + (p.item||"—") + '</div>' +
+          '<div class="item-sub">C\u00f3d: ' + (p.codigo||"—") + '</div>' +
+          '<div class="item-bot">' +
+            '<div class="cant-grupo"><span class="cant-lbl">Solicitado</span><span class="cant-num">' + (p.cantSolicitada||"—") + '</span></div>' +
+            '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida||p.cantSolicitada||"") + '" id="cr-' + p.fila + '" /></div>' +
+            '<div class="item-acciones">' +
+              '<button class="btn-ap" id="ap-' + p.fila + '" onclick="togDec(' + p.fila + ',\'APROBADO\')">&#10003;</button>' +
+              '<button class="btn-re" id="re-' + p.fila + '" onclick="togDec(' + p.fila + ',\'RECHAZADO\')">&#10007;</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }
+    document.getElementById("dItems").innerHTML = html;
+    actualizarProg();
+  }
+
+  function togDec(fila, est) {
+    var ap = document.getElementById("ap-" + fila);
+    var re = document.getElementById("re-" + fila);
+    if (!ap || !re) return;
+    if (!decisiones[fila]) decisiones[fila] = { est: null };
+    decisiones[fila].est = decisiones[fila].est === est ? null : est;
+    ap.classList.toggle("on", decisiones[fila].est === "APROBADO");
+    re.classList.toggle("on", decisiones[fila].est === "RECHAZADO");
+    actualizarProg();
+  }
+
+  function actualizarProg() {
+    var total = solicitudActual.length;
+    var res   = 0;
+    for (var k in decisiones) { if (decisiones[k].est !== null) res++; }
+    document.getElementById("dProg").innerHTML = "<strong>" + res + " de " + total + "</strong> resueltos";
+    document.getElementById("btnGuardar").disabled = res === 0;
+  }
+
+  function volverLista() {
+    document.getElementById("vistaDetalle").style.display = "none";
+    document.getElementById("vistaLista").style.display   = "block";
+  }
+
+  // ── Guardar decisiones ────────────────────────────────────────
+  var _gIdx = 0; var _gItems = []; var _gErr = 0;
+
+  function guardarDecisiones() {
+    var items = [];
+    for (var i = 0; i < solicitudActual.length; i++) {
+      var p   = solicitudActual[i];
+      var dec = decisiones[p.fila];
+      if (dec && dec.est) {
+        var cantInput = document.getElementById("cr-" + p.fila);
+        items.push({ fila: p.fila, est: dec.est, cant: cantInput ? cantInput.value : p.cantSolicitada });
+      }
+    }
+    if (!items.length) { toast("Sin decisiones para guardar.", "warn"); return; }
+
+    var btn = document.getElementById("btnGuardar");
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Guardando\u2026';
+
+    _gIdx = 0; _gItems = items; _gErr = 0;
+    guardarUno();
+  }
+
+  function guardarUno() {
+    if (_gIdx >= _gItems.length) {
+      var btn = document.getElementById("btnGuardar");
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Guardar';
+      if (_gErr === 0) {
+        toast("\u2713 Guardado correctamente.", "ok");
+        setTimeout(function() { cargarPedidos(); volverLista(); }, 1200);
+      } else {
+        toast(_gErr + " error(es) al guardar.", "fail");
+        actualizarProg();
+      }
+      return;
+    }
+    var it  = _gItems[_gIdx];
+    var url = SCRIPT_URL + "?accion=actualizarRecepcion" +
+      "&fila="         + encodeURIComponent(it.fila) +
+      "&estado="       + encodeURIComponent(it.est) +
+      "&cantRecibida=" + encodeURIComponent(it.cant);
+
+    jsonp(url, function(data, err) {
+      if (!data || err || data.status !== "ok") _gErr++;
+      _gIdx++;
+      setTimeout(guardarUno, 300);
+    });
+  }
+
+  function toast(msg, tipo) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.className = "show " + tipo;
+    setTimeout(function() { t.className = ""; }, 3500);
+  }
+</script>
+</body>
+</html>

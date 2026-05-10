@@ -8,6 +8,7 @@ const SHEET_LUGARES       = "LUGAR";
 const SHEET_ITEMS         = "INSUMOS";
 const SHEET_COLABORADORES = "COLABORADORES";
 const SHEET_SOLICITUDES   = "SOLICITUDES";
+const SHEET_RECEPCION     = "RECEPCION_BODEGA";
 
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
@@ -19,6 +20,9 @@ function doGet(e) {
   if (accion === "solicitud")         return responder(escribirSolicitud(e),                                  callback);
   if (accion === "listarSolicitudes") return responder(listarSolicitudes(e),                                  callback);
   if (accion === "actualizarEstado")  return responder(actualizarEstado(e),                                   callback);
+
+  if (accion === "listarRecepcion")   return responder(listarRecepcion(e),    callback);
+  if (accion === "actualizarRecepcion") return responder(actualizarRecepcion(e), callback);
 
   return responder(escribir(e), callback);
 }
@@ -238,7 +242,145 @@ function actualizarEstado(e) {
   }
 }
 
-// ── Test manual ───────────────────────────────────────────────// ── Test manual ───────────────────────────────────────────────
+// ── Listar RECEPCION_BODEGA por mes y estado ─────────────────
+// Columnas esperadas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
+// F=CantSolicitada G=CantRecibida H=Responsable I=Fecha J=Estado
+function listarRecepcion(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RECEPCION);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", pedidos: [] };
+
+    const mes          = (e.parameter.mes    || "").trim();
+    const filtroEstado = (e.parameter.estado || "PENDIENTE").toUpperCase().trim();
+    const datos = sheet.getDataRange().getValues();
+
+    // Detectar si fila 1 es encabezado
+    const inicio = String(datos[0][0]).toUpperCase().indexOf("MES") === 0 || isNaN(datos[0][0]) ? 1 : 0;
+
+    const pedidos = [];
+    for (var i = inicio; i < datos.length; i++) {
+      const f = datos[i];
+      if (!f[1] || String(f[1]).trim() === "") continue;
+      const estadoFila = String(f[9] || "PENDIENTE").toUpperCase().trim();
+      const mesFila    = String(f[0] || "").trim();
+      if (filtroEstado && estadoFila !== filtroEstado) continue;
+      if (mes && mesFila !== mes) continue;
+      const fecha = f[8] instanceof Date ? f[8].toLocaleString("es-CL") : String(f[8] || "");
+      pedidos.push({
+        fila:            i + 1,
+        mes:             mesFila,
+        id:              String(f[1] || ""),
+        lugar:           String(f[2] || ""),
+        codigo:          String(f[3] || ""),
+        item:            String(f[4] || ""),
+        cantSolicitada:  String(f[5] || ""),
+        cantRecibida:    String(f[6] || ""),
+        responsable:     String(f[7] || ""),
+        fecha:           fecha,
+        estado:          String(f[9] || "PENDIENTE")
+      });
+    }
+    return { status: "ok", pedidos };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Actualizar recepcion: estado + cantidad recibida ──────────
+function actualizarRecepcion(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RECEPCION);
+    if (!sheet) throw new Error("Hoja RECEPCION_BODEGA no existe.");
+
+    const p     = e.parameter || {};
+    const fila  = parseInt(p.fila || "0");
+    const est   = (p.estado        || "").toUpperCase();
+    const cant  = p.cantRecibida   || "";
+
+    if (!fila || !est) throw new Error("Faltan fila o estado.");
+
+    sheet.getRange(fila, 7).setValue(cant);                              // col G = CantRecibida
+    sheet.getRange(fila, 10).setValue(est);                              // col J = Estado
+    sheet.getRange(fila, 11).setValue(new Date().toLocaleString("es-CL")); // col K = Fecha actualización
+
+    return { status: "ok", fila };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Test manual ───────────────────────────────────────────────// ── Listar RECEPCION_BODEGA por mes y estado ─────────────────
+// Columnas esperadas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
+// F=CantSolicitada G=CantRecibida H=Responsable I=Fecha J=Estado
+function listarRecepcion(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RECEPCION);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", pedidos: [] };
+
+    const mes          = (e.parameter.mes    || "").trim();
+    const filtroEstado = (e.parameter.estado || "PENDIENTE").toUpperCase().trim();
+    const datos = sheet.getDataRange().getValues();
+
+    // Detectar si fila 1 es encabezado
+    const inicio = String(datos[0][0]).toUpperCase().indexOf("MES") === 0 || isNaN(datos[0][0]) ? 1 : 0;
+
+    const pedidos = [];
+    for (var i = inicio; i < datos.length; i++) {
+      const f = datos[i];
+      if (!f[1] || String(f[1]).trim() === "") continue;
+      const estadoFila = String(f[9] || "PENDIENTE").toUpperCase().trim();
+      const mesFila    = String(f[0] || "").trim();
+      if (filtroEstado && estadoFila !== filtroEstado) continue;
+      if (mes && mesFila !== mes) continue;
+      const fecha = f[8] instanceof Date ? f[8].toLocaleString("es-CL") : String(f[8] || "");
+      pedidos.push({
+        fila:            i + 1,
+        mes:             mesFila,
+        id:              String(f[1] || ""),
+        lugar:           String(f[2] || ""),
+        codigo:          String(f[3] || ""),
+        item:            String(f[4] || ""),
+        cantSolicitada:  String(f[5] || ""),
+        cantRecibida:    String(f[6] || ""),
+        responsable:     String(f[7] || ""),
+        fecha:           fecha,
+        estado:          String(f[9] || "PENDIENTE")
+      });
+    }
+    return { status: "ok", pedidos };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Actualizar recepcion: estado + cantidad recibida ──────────
+function actualizarRecepcion(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RECEPCION);
+    if (!sheet) throw new Error("Hoja RECEPCION_BODEGA no existe.");
+
+    const p     = e.parameter || {};
+    const fila  = parseInt(p.fila || "0");
+    const est   = (p.estado        || "").toUpperCase();
+    const cant  = p.cantRecibida   || "";
+
+    if (!fila || !est) throw new Error("Faltan fila o estado.");
+
+    sheet.getRange(fila, 7).setValue(cant);                              // col G = CantRecibida
+    sheet.getRange(fila, 10).setValue(est);                              // col J = Estado
+    sheet.getRange(fila, 11).setValue(new Date().toLocaleString("es-CL")); // col K = Fecha actualización
+
+    return { status: "ok", fila };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Test manual ───────────────────────────────────────────────
 function testWrite() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_DATOS)
     || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
