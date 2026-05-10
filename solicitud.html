@@ -426,21 +426,12 @@
     if (!item || !cantidad || Number(cantidad) < 1) {
       mostrarToast("Selecciona insumo y cantidad mayor a 0.", "warn"); return;
     }
-    var codigoItem = item;
-    var descItem   = item;
-    // DEBUG
-    if (itemsData.length === 0) {
-      alert("itemsData VACIO - cargarItems no cargó datos");
-    } else {
-      alert("itemsData[0]: codigo=" + JSON.stringify(itemsData[0].codigo) + " tipo=" + typeof itemsData[0].codigo + "\nitem seleccionado: " + JSON.stringify(item) + " tipo=" + typeof item + "\nIgual: " + (String(itemsData[0].codigo) === String(item)));
-    }
-    for (var _i = 0; _i < itemsData.length; _i++) {
-      if (String(itemsData[_i].codigo) === String(item)) {
-        codigoItem = itemsData[_i].codigo;
-        descItem   = itemsData[_i].descripcion || item;
-        break;
-      }
-    }
+    // Leer codigo y descripcion directamente del texto de la opcion seleccionada
+    var selEl      = document.getElementById("item");
+    var optionText = selEl.options[selEl.selectedIndex].textContent || item;
+    var partes     = optionText.split(" — ");
+    var codigoItem = partes[0].trim() || item;
+    var descItem   = partes.length > 1 ? partes.slice(1).join(" — ").trim() : item;
     listaItems.push({ lugar: lugarSesion, item: descItem, codigo: codigoItem, cantidad: cantidad });
     renderLista();
     document.getElementById("cantidad").value = "";

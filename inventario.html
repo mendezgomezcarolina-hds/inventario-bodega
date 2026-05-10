@@ -459,15 +459,12 @@
     }
 
     // Buscar codigo y descripcion del item seleccionado
-    var codigoItem = item;
-    var descItem   = item;
-    for (var _i = 0; _i < itemsData.length; _i++) {
-      if (String(itemsData[_i].codigo) === String(item)) {
-        codigoItem = itemsData[_i].codigo;
-        descItem   = itemsData[_i].descripcion || item;
-        break;
-      }
-    }
+    // Leer codigo y descripcion directamente del texto de la opcion seleccionada
+    var selEl      = document.getElementById("item");
+    var optionText = selEl.options[selEl.selectedIndex].textContent || item;
+    var partes     = optionText.split(" — ");
+    var codigoItem = partes[0].trim() || item;
+    var descItem   = partes.length > 1 ? partes.slice(1).join(" — ").trim() : item;
     listaItems.push({ lugar: lugar, item: descItem, codigo: codigoItem, cantidad: cantidad, vencimiento: vencimiento });
     renderLista();
 
