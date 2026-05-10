@@ -168,19 +168,20 @@ function listarSolicitudes(e) {
 
     const solicitudes = filas
       .map((f, i) => ({ f, fila: i + 2 }))
-      .filter(({ f }) => f[0] !== "" && (!filtroEstado || f[7] === filtroEstado))
+      .filter(({ f }) => f[0] !== "" && (!filtroEstado || f[8] === filtroEstado))
       .map(({ f, fila }) => ({
         fila:         fila,
         id:           f[0],
         lugar:        f[1],
-        item:         f[2],
-        cantidad:     f[3],
-        responsable:  f[4],
-        idResp:       f[5],
-        fecha:        f[6] instanceof Date ? f[6].toLocaleString("es-CL") : f[6],
-        estado:       f[7],
-        fechaResol:   f[8] instanceof Date ? f[8].toLocaleString("es-CL") : (f[8] || ""),
-        supervisor:   f[9] || ""
+        codigo:       f[2],
+        item:         f[3],
+        cantidad:     f[4],
+        responsable:  f[5],
+        idResp:       f[6],
+        fecha:        f[7] instanceof Date ? f[7].toLocaleString("es-CL") : f[7],
+        estado:       f[8],
+        fechaResol:   f[9] instanceof Date ? f[9].toLocaleString("es-CL") : (f[9] || ""),
+        supervisor:   f[10] || ""
       }));
 
     return { status: "ok", solicitudes };
@@ -212,12 +213,12 @@ function actualizarEstado(e) {
 
     for (let i = 1; i < datos.length; i++) {
       const coincide = datos[i][0] === idBuscado &&
-                       datos[i][2] === itemBuscado &&
+                       datos[i][3] === itemBuscado &&   // col D = Insumo (descripcion)
                        (lugarBuscado === "" || datos[i][1] === lugarBuscado);
       if (coincide) {
-        sheet.getRange(i + 1, 8).setValue(nuevoEstado);
-        sheet.getRange(i + 1, 9).setValue(new Date().toLocaleString("es-CL"));
-        sheet.getRange(i + 1, 10).setValue(supervisor);
+        sheet.getRange(i + 1, 9).setValue(nuevoEstado);                          // col I = Estado
+        sheet.getRange(i + 1, 10).setValue(new Date().toLocaleString("es-CL")); // col J = Fecha Resol
+        sheet.getRange(i + 1, 11).setValue(supervisor);                          // col K = Supervisor
         actualizados++;
       }
     }
