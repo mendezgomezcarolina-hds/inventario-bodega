@@ -165,8 +165,10 @@ function listarSolicitudes(e) {
     const datos = sheet.getDataRange().getValues();
     // Auto-detectar si falta la fila de encabezados
     const primeraFila = datos[0];
-    const tieneEncabezado = String(primeraFila[0]).toUpperCase().indexOf("ID") === 0 ||
-                            String(primeraFila[0]).toUpperCase() === "ID SOLICITUD";
+    const primeraCelda = String(primeraFila[0]).toUpperCase().trim();
+    const tieneEncabezado = primeraCelda.indexOf("SOL-") !== 0 && // No es un ID de solicitud
+                            (primeraCelda.indexOf("N") === 0 || primeraCelda.indexOf("ID") === 0 ||
+                             primeraCelda === "" || isNaN(primeraFila[0]));
     if (!tieneEncabezado) {
       // Insertar encabezado en fila 1
       sheet.insertRowBefore(1);
@@ -196,10 +198,10 @@ function listarSolicitudes(e) {
         .map((f, i) => ({ f, fila: i + 2 }))
         .filter(({ f }) => f[0] !== "" && (!filtroEstado || String(f[estadoCol2]).toUpperCase() === filtroEstado))
         .map(({ f, fila }) => ({
-          fila: fila, id: get2(f,"ID SOLICITUD"), lugar: get2(f,"LUGAR"),
-          codigo: get2(f,"CÓDIGO","CODIGO"), item: get2(f,"INSUMO","ÍTEM","ITEM"),
+          fila: fila, id: get2(f,"ID SOLICITUD","N° SOLICITUD","N SOLICITUD"), lugar: get2(f,"LUGAR"),
+          codigo: get2(f,"CÓDIGO","CODIGO"), item: get2(f,"INSUMO","ÍTEM","ITEM","DESCRIPCIÓN","DESCRIPCION"),
           cantidad: get2(f,"CANTIDAD"), responsable: get2(f,"RESPONSABLE"),
-          idResp: get2(f,"ID RESPONSABLE"), fecha: get2(f,"FECHA SOLICITUD","FECHA/HORA"),
+          idResp: get2(f,"ID RESPONSABLE","ID"), fecha: get2(f,"FECHA SOLICITUD","FECHA/HORA"),
           estado: get2(f,"ESTADO"), fechaResol: get2(f,"FECHA RESOLUCIÓN","FECHA RESOLUCION"),
           supervisor: get2(f,"SUPERVISOR")
         }));
@@ -231,13 +233,13 @@ function listarSolicitudes(e) {
       .filter(({ f }) => f[0] !== "" && (!filtroEstado || String(f[estadoCol]).toUpperCase() === filtroEstado))
       .map(({ f, fila }) => ({
         fila:        fila,
-        id:          get(f, "ID SOLICITUD"),
+        id:          get(f, "ID SOLICITUD", "N° SOLICITUD", "N SOLICITUD", "SOLICITUD", "N° SOLICITUD"),
         lugar:       get(f, "LUGAR"),
         codigo:      get(f, "CÓDIGO", "CODIGO"),
-        item:        get(f, "INSUMO", "ÍTEM", "ITEM"),
+        item:        get(f, "INSUMO", "ÍTEM", "ITEM", "DESCRIPCIÓN", "DESCRIPCION", "DESCRIPCION"),
         cantidad:    get(f, "CANTIDAD"),
         responsable: get(f, "RESPONSABLE"),
-        idResp:      get(f, "ID RESPONSABLE"),
+        idResp:      get(f, "ID RESPONSABLE", "ID"),
         fecha:       get(f, "FECHA SOLICITUD", "FECHA/HORA"),
         estado:      get(f, "ESTADO"),
         fechaResol:  get(f, "FECHA RESOLUCIÓN", "FECHA RESOLUCION"),
@@ -278,8 +280,8 @@ function actualizarEstado(e) {
     const colEstado   = (colIdx["ESTADO"]             || 8) + 1; // 1-based para getRange
     const colFechaRes = (colIdx["FECHA RESOLUCIÓN"] !== undefined ? colIdx["FECHA RESOLUCIÓN"] : colIdx["FECHA RESOLUCION"] || 9) + 1;
     const colSuper    = (colIdx["SUPERVISOR"]          || 10) + 1;
-    const colItem     = colIdx["INSUMO"] !== undefined ? colIdx["INSUMO"] : (colIdx["ÍTEM"] || 2);
-    const colId       = colIdx["ID SOLICITUD"] || 0;
+    const colItem     = colIdx["INSUMO"] !== undefined ? colIdx["INSUMO"] : (colIdx["DESCRIPCIÓN"] !== undefined ? colIdx["DESCRIPCIÓN"] : (colIdx["DESCRIPCION"] !== undefined ? colIdx["DESCRIPCION"] : (colIdx["ÍTEM"] || 3)));
+    const colId       = colIdx["ID SOLICITUD"] !== undefined ? colIdx["ID SOLICITUD"] : (colIdx["N° SOLICITUD"] !== undefined ? colIdx["N° SOLICITUD"] : 0);
     const colLugar    = colIdx["LUGAR"] || 1;
 
     for (let i = 1; i < datos.length; i++) {
