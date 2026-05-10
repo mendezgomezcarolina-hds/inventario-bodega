@@ -172,7 +172,8 @@ function listarSolicitudes(e) {
   }
 }
 
-// ── Actualizar estado de ítem individual (por número de fila) ─
+// ── Actualizar estado por idSolicitud + item + lugar ─────────
+// No depende de número de fila - funciona con cualquier versión
 function actualizarEstado(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -180,34 +181,31 @@ function actualizarEstado(e) {
     if (!sheet) throw new Error("Hoja SOLICITUDES no existe.");
 
     const p           = e.parameter || {};
-    const nuevoEstado = (p.estado || "").toUpperCase();
-    const supervisor  = p.supervisor || "";
-    const fila        = parseInt(p.fila || "0");
+    const nuevoEstado = (p.estado       || "").toUpperCase();
+    const supervisor  = p.supervisor    || "";
+    const idBuscado   = p.idSolicitud   || "";
+    const itemBuscado = p.item          || "";
+    const lugarBuscado= p.lugar         || "";
 
-    if (!nuevoEstado) throw new Error("Falta parámetro estado.");
+    if (!nuevoEstado || !idBuscado || !itemBuscado)
+      throw new Error("Faltan parámetros: estado, idSolicitud, item.");
 
-    // Modo 1: fila específica (ítem individual)
-    if (fila > 1) {
-      sheet.getRange(fila, 8).setValue(nuevoEstado);
-      sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL"));
-      sheet.getRange(fila, 10).setValue(supervisor);
-      return { status: "ok", actualizados: 1 };
-    }
-
-    // Modo 2: por idSolicitud (todos los ítems del grupo)
-    const idBuscado = p.idSolicitud || "";
-    if (!idBuscado) throw new Error("Falta fila o idSolicitud.");
     const datos = sheet.getDataRange().getValues();
     let actualizados = 0;
+
     for (let i = 1; i < datos.length; i++) {
-      if (datos[i][0] === idBuscado) {
+      const coincide = datos[i][0] === idBuscado &&
+                       datos[i][2] === itemBuscado &&
+                       (lugarBuscado === "" || datos[i][1] === lugarBuscado);
+      if (coincide) {
         sheet.getRange(i + 1, 8).setValue(nuevoEstado);
         sheet.getRange(i + 1, 9).setValue(new Date().toLocaleString("es-CL"));
         sheet.getRange(i + 1, 10).setValue(supervisor);
         actualizados++;
       }
     }
-    if (actualizados === 0) throw new Error("ID no encontrado: " + idBuscado);
+
+    if (actualizados === 0) throw new Error("Fila no encontrada.");
     return { status: "ok", actualizados };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };

@@ -325,8 +325,8 @@
     const grupos = agrupar(todasSolicitudes);
     solicitudActual = grupos[id];
     decisionesActuales = {};
-    solicitudActual.forEach(f => {
-      decisionesActuales[f.fila] = f.estado !== "PENDIENTE" ? f.estado : null;
+    solicitudActual.forEach((f, i) => {
+      decisionesActuales[i] = f.estado !== "PENDIENTE" ? f.estado : null;
     });
 
     document.getElementById("vistaLista").style.display   = "none";
@@ -350,16 +350,16 @@
     const rechN    = Object.values(decisionesActuales).filter(v => v === "RECHAZADO").length;
     const sinN     = total - resueltos;
 
-    const itemsHTML = solicitudActual.map(f => {
+    const itemsHTML = solicitudActual.map((f, i) => {
       const resuelto = f.estado !== "PENDIENTE";
-      const dec = decisionesActuales[f.fila];
+      const dec = decisionesActuales[i];
 
       const controles = resuelto
         ? `<div class="resuelto-lbl">${f.estado}<br>${f.supervisor || ""}</div>`
         : `<div class="toggle-group">
-            <button class="t-btn ap ${dec==="APROBADO"?"on":""}" onclick="toggleDecision(${f.fila},'APROBADO')">✓ Aprobar</button>
+            <button class="t-btn ap ${dec==="APROBADO"?"on":""}" onclick="toggleDecision(${i},'APROBADO')">✓ Aprobar</button>
             <div class="t-sep"></div>
-            <button class="t-btn re ${dec==="RECHAZADO"?"on":""}" onclick="toggleDecision(${f.fila},'RECHAZADO')">✕ Rechazar</button>
+            <button class="t-btn re ${dec==="RECHAZADO"?"on":""}" onclick="toggleDecision(${i},'RECHAZADO')">✕ Rechazar</button>
           </div>`;
 
       return `<div class="item-det">
@@ -408,8 +408,8 @@
   }
 
   function decidirTodos(estado) {
-    solicitudActual.forEach(f => {
-      if (f.estado === "PENDIENTE") decisionesActuales[f.fila] = estado;
+    solicitudActual.forEach((f, i) => {
+      if (f.estado === "PENDIENTE") decisionesActuales[i] = estado;
     });
     renderDetalle();
   }
@@ -424,9 +424,10 @@
     }
     document.getElementById("colabSel").classList.remove("error");
 
-    const pendientesConDecision = solicitudActual.filter(f =>
-      f.estado === "PENDIENTE" && decisionesActuales[f.fila] !== null
-    );
+    // Recopilar decisiones pendientes con su índice
+    const pendientesConDecision = solicitudActual
+      .map((f, i) => ({ f, i }))
+      .filter(({ f, i }) => f.estado === "PENDIENTE" && decisionesActuales[i] !== null);
 
     if (!pendientesConDecision.length) {
       mostrarToast("No hay decisiones nuevas para enviar.", "warn");
@@ -438,23 +439,30 @@
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
     let errores = 0;
-    for (const f of pendientesConDecision) {
+    for (const { f, i } of pendientesConDecision) {
+      const decision = decisionesActuales[i];
       await new Promise(resolve => {
-        jsonp(SCRIPT_URL + "?accion=actualizarEstado&fila=" + f.fila +
-          "&estado=" + decisionesActuales[f.fila] + "&supervisor=" + encodeURIComponent(supervisor),
-          (data, err) => {
-            if (!data || data.status !== "ok" || err) errores++;
-            else {
-              // Actualizar localmente
-              const item = todasSolicitudes.find(s => s.fila === f.fila);
-              if (item) {
-                item.estado     = decisionesActuales[f.fila];
-                item.supervisor = supervisor;
-                item.fechaResol = new Date().toLocaleString("es-CL");
-              }
-            }
-            resolve();
-          });
+        const params = new URLSearchParams({
+          accion:       "actualizarEstado",
+          idSolicitud:  f.id,
+          item:         f.item,
+          lugar:        f.lugar,
+          estado:       decision,
+          supervisor:   supervisor
+        });
+        jsonp(SCRIPT_URL + "?" + params.toString(), (data, err) => {
+          if (!data || data.status !== "ok" || err) {
+            errores++;
+          } else {
+            // Actualizar localmente
+            f.estado     = decision;
+            f.supervisor = supervisor;
+            f.fechaResol = new Date().toLocaleString("es-CL");
+            const orig = todasSolicitudes.find(s => s.id === f.id && s.item === f.item && s.lugar === f.lugar);
+            if (orig) { orig.estado = decision; orig.supervisor = supervisor; orig.fechaResol = f.fechaResol; }
+          }
+          resolve();
+        });
       });
     }
 
