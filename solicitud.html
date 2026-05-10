@@ -262,90 +262,114 @@
 </div>
 
 <script>
-  let SCRIPT_URL = localStorage.getItem("inv_script_url") || "";
-  let responsableSesion = "", responsableIdSesion = "", lugarSesion = "";
-  let colaboradoresData = [], listaItems = [];
-  let idSolicitud = "";
+  var SCRIPT_URL = localStorage.getItem("inv_script_url") ||
+    "https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec";
 
-  window.onload = () => {
+  var responsableSesion = "";
+  var responsableIdSesion = "";
+  var lugarSesion = "";
+  var colaboradoresData = [];
+  var listaItems = [];
+  var idSolicitud = "";
+  var _cbCount = 0;
+
+  window.onload = function() {
     if (!SCRIPT_URL) pedirURL();
     else { cargarColaboradores(); cargarLugares(); cargarItems(); }
   };
 
   function pedirURL() {
-    const url = prompt("Pega la URL del Apps Script:", SCRIPT_URL);
-    if (url && url.startsWith("https://")) {
-      SCRIPT_URL = url.trim();
+    var u = prompt("Pega la URL del Apps Script:", SCRIPT_URL);
+    if (u && u.indexOf("https://") === 0) {
+      SCRIPT_URL = u.trim();
       localStorage.setItem("inv_script_url", SCRIPT_URL);
       cargarColaboradores(); cargarLugares(); cargarItems();
     }
   }
 
   function generarId() {
-    const ahora = new Date();
-    return "SOL-" + ahora.getFullYear().toString().slice(-2)
-      + String(ahora.getMonth()+1).padStart(2,"0")
-      + String(ahora.getDate()).padStart(2,"0") + "-"
-      + String(ahora.getHours()).padStart(2,"0")
-      + String(ahora.getMinutes()).padStart(2,"0")
-      + String(ahora.getSeconds()).padStart(2,"0");
+    var d = new Date();
+    return "SOL-" +
+      String(d.getFullYear()).slice(-2) +
+      pad2(d.getMonth()+1) +
+      pad2(d.getDate()) + "-" +
+      pad2(d.getHours()) +
+      pad2(d.getMinutes()) +
+      pad2(d.getSeconds());
+  }
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  // ── JSONP helper ──────────────────────────────────────────────
+  function jsonp(url, cb) {
+    var name  = "_jcb_" + Date.now() + "_" + (++_cbCount);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 10000);
+    window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
+    document.head.appendChild(s);
   }
 
-  async function cargarColaboradores() {
-    const sel = document.getElementById("responsable");
-    try {
-      const res  = await fetch(SCRIPT_URL + "?accion=colaboradores");
-      const data = await res.json();
-      if (data.status === "ok" && data.colaboradores.length > 0) {
-        colaboradoresData = data.colaboradores;
-        sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-        data.colaboradores.forEach(c => {
-          const o = document.createElement("option");
-          o.value = c.nombre;
-          o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
-          sel.appendChild(o);
-        });
-      } else { sel.innerHTML = '<option value="" disabled selected>Sin datos</option>'; }
-    } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
+  // ── Imagen (envío sin respuesta, compatible 100% iOS) ─────────
+  function enviarImagen(url) {
+    var img = new Image();
+    img.src = url;
   }
 
-  async function cargarLugares() {
-    const sel = document.getElementById("lugar");
-    try {
-      const res  = await fetch(SCRIPT_URL + "?accion=lugares");
-      const data = await res.json();
-      if (data.status === "ok" && data.lugares.length > 0) {
-        sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-        data.lugares.forEach(l => {
-          const o = document.createElement("option");
-          o.value = l; o.textContent = l; sel.appendChild(o);
-        });
-      } else { sel.innerHTML = '<option value="" disabled selected>Sin lugares</option>'; }
-    } catch { sel.innerHTML = '<option value="" disabled selected>Error</option>'; }
+  // ── Cargar listas ─────────────────────────────────────────────
+  function cargarColaboradores() {
+    var sel = document.getElementById("responsable");
+    jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
+      if (!data || err) { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return; }
+      colaboradoresData = data.colaboradores || [];
+      sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+      for (var i = 0; i < colaboradoresData.length; i++) {
+        var c = colaboradoresData[i];
+        var o = document.createElement("option");
+        o.value = c.nombre;
+        o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
+        sel.appendChild(o);
+      }
+    });
   }
 
-  async function cargarItems() {
-    const sel = document.getElementById("item");
-    try {
-      const res  = await fetch(SCRIPT_URL + "?accion=items");
-      const data = await res.json();
-      if (data.status === "ok" && data.items.length > 0) {
-        sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-        data.items.forEach(i => {
-          const o = document.createElement("option");
-          o.value = i; o.textContent = i; sel.appendChild(o);
-        });
-      } else { sel.innerHTML = '<option value="" disabled selected>Sin insumos</option>'; }
-    } catch { sel.innerHTML = '<option value="" disabled selected>Error</option>'; }
+  function cargarLugares() {
+    var sel = document.getElementById("lugar");
+    jsonp(SCRIPT_URL + "?accion=lugares", function(data, err) {
+      if (!data || err) { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return; }
+      sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+      var lista = data.lugares || [];
+      for (var i = 0; i < lista.length; i++) {
+        var o = document.createElement("option");
+        o.value = lista[i]; o.textContent = lista[i]; sel.appendChild(o);
+      }
+    });
   }
 
+  function cargarItems() {
+    var sel = document.getElementById("item");
+    jsonp(SCRIPT_URL + "?accion=items", function(data, err) {
+      if (!data || err) { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return; }
+      sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+      var lista = data.items || [];
+      for (var i = 0; i < lista.length; i++) {
+        var o = document.createElement("option");
+        o.value = lista[i]; o.textContent = lista[i]; sel.appendChild(o);
+      }
+    });
+  }
+
+  // ── Sesión responsable ────────────────────────────────────────
   function confirmarResponsable() {
-    const nombre = document.getElementById("responsable").value;
+    var nombre = document.getElementById("responsable").value;
     if (!nombre) { mostrarToast("Selecciona un responsable.", "warn"); return; }
     responsableSesion = nombre;
-    const colab = colaboradoresData.find(c => c.nombre === nombre);
+    var colab = null;
+    for (var i = 0; i < colaboradoresData.length; i++) {
+      if (colaboradoresData[i].nombre === nombre) { colab = colaboradoresData[i]; break; }
+    }
     responsableIdSesion = colab ? colab.id : "";
-    const txt = responsableIdSesion ? nombre + " — " + responsableIdSesion : nombre;
+    var txt = responsableIdSesion ? nombre + " — " + responsableIdSesion : nombre;
     document.getElementById("responsableBadgeTxt").textContent = txt;
     document.getElementById("responsableSesionWrap").style.display = "none";
     document.getElementById("responsableBadgeWrap").style.display  = "block";
@@ -354,22 +378,22 @@
 
   function cambiarResponsable() {
     responsableSesion = ""; responsableIdSesion = ""; lugarSesion = "";
-    document.getElementById("responsableBadgeWrap").style.display = "none";
-    document.getElementById("lugarBadgeWrap").style.display       = "none";
-    document.getElementById("inputItemWrap").style.display        = "none";
-    document.getElementById("divider").style.display              = "none";
-    document.getElementById("lugarSesionWrap").style.display      = "none";
+    document.getElementById("responsableBadgeWrap").style.display  = "none";
+    document.getElementById("lugarBadgeWrap").style.display        = "none";
+    document.getElementById("inputItemWrap").style.display         = "none";
+    document.getElementById("divider").style.display               = "none";
+    document.getElementById("lugarSesionWrap").style.display       = "none";
     document.getElementById("responsableSesionWrap").style.display = "block";
     limpiarLista();
   }
 
   function confirmarLugar() {
-    const sel = document.getElementById("lugar").value;
+    var sel = document.getElementById("lugar").value;
     if (!sel) { mostrarToast("Selecciona un lugar.", "warn"); return; }
     lugarSesion = sel;
     idSolicitud = generarId();
-    document.getElementById("lugarBadgeTxt").textContent = sel;
-    document.getElementById("idSolicitudTxt").textContent = idSolicitud;
+    document.getElementById("lugarBadgeTxt").textContent   = sel;
+    document.getElementById("idSolicitudTxt").textContent  = idSolicitud;
     document.getElementById("lugarSesionWrap").style.display  = "none";
     document.getElementById("lugarBadgeWrap").style.display   = "block";
     document.getElementById("inputItemWrap").style.display    = "block";
@@ -386,105 +410,123 @@
     limpiarLista();
   }
 
+  // ── Lista local ───────────────────────────────────────────────
   function agregarALista() {
-    const item     = document.getElementById("item").value;
-    const cantidad = document.getElementById("cantidad").value.trim();
+    var item     = document.getElementById("item").value;
+    var cantidad = document.getElementById("cantidad").value;
     if (!item || !cantidad || Number(cantidad) < 1) {
       mostrarToast("Selecciona insumo y cantidad mayor a 0.", "warn"); return;
     }
-    listaItems.push({ lugar: lugarSesion, item, cantidad });
+    listaItems.push({ lugar: lugarSesion, item: item, cantidad: cantidad });
     renderLista();
     document.getElementById("cantidad").value = "";
     document.getElementById("item").focus();
   }
 
   function renderLista() {
-    const cont  = document.getElementById("lista");
-    const wrap  = document.getElementById("listaWrap");
-    const count = document.getElementById("listaCount");
+    var cont  = document.getElementById("lista");
+    var wrap  = document.getElementById("listaWrap");
+    var count = document.getElementById("listaCount");
     count.textContent = listaItems.length + (listaItems.length === 1 ? " insumo" : " insumos");
     wrap.style.display = listaItems.length ? "block" : "none";
     cont.innerHTML = "";
-    listaItems.forEach((e, i) => {
-      const d = document.createElement("div");
+    for (var i = 0; i < listaItems.length; i++) {
+      var e = listaItems[i];
+      var d = document.createElement("div");
       d.className = "item-row";
       d.innerHTML =
-        `<span class="lugar-txt">${e.lugar}</span>` +
-        `<span class="item-txt">${e.item}</span>` +
-        `<span class="cant-txt">${e.cantidad}</span>` +
-        `<button class="btn-del" onclick="eliminarItem(${i})">` +
-          `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>` +
-        `</button>`;
+        '<span class="lugar-txt">' + e.lugar + '</span>' +
+        '<span class="item-txt">' + e.item + '</span>' +
+        '<span class="cant-txt">' + e.cantidad + '</span>' +
+        '<button class="btn-del" onclick="eliminarItem(' + i + ')">' +
+          '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+        '</button>';
       cont.appendChild(d);
-    });
+    }
   }
 
   function eliminarItem(i) { listaItems.splice(i, 1); renderLista(); }
   function limpiarLista()  { listaItems = []; renderLista(); }
 
-  async function enviarTodo() {
+  // ── Enviar (secuencial con imagen — compatible iOS) ───────────
+  var _envioIdx    = 0;
+  var _envioErrores = 0;
+
+  function enviarTodo() {
     if (!listaItems.length) { mostrarToast("Agrega al menos un insumo.", "warn"); return; }
     if (!SCRIPT_URL) { pedirURL(); return; }
 
-    const btn = document.getElementById("btnEnviar");
+    var btn = document.getElementById("btnEnviar");
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
-    let errores = 0;
-    for (const entry of listaItems) {
-      try {
-        const params = new URLSearchParams({
-          accion: "solicitud",
-          ...entry,
-          usuario:      responsableSesion,
-          usuarioId:    responsableIdSesion,
-          idSolicitud:  idSolicitud
-        });
-        await fetch(SCRIPT_URL + "?" + params.toString(), { method:"GET", mode:"no-cors" });
-      } catch { errores++; }
-    }
+    _envioIdx     = 0;
+    _envioErrores = 0;
+    enviarSiguiente();
+  }
 
-    btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
+  function enviarSiguiente() {
+    if (_envioIdx >= listaItems.length) {
+      // Fin
+      var btn = document.getElementById("btnEnviar");
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
 
-    if (errores === 0) {
       document.getElementById("idConfirmado").textContent = idSolicitud;
       document.getElementById("listaWrap").style.display     = "none";
       document.getElementById("inputItemWrap").style.display = "none";
       document.getElementById("divider").style.display       = "none";
       document.getElementById("estadoOk").style.display      = "block";
-    } else {
-      mostrarToast("Error al enviar. Intenta nuevamente.", "fail");
+      return;
     }
+
+    var entry = listaItems[_envioIdx];
+    var url   = SCRIPT_URL +
+      "?accion=solicitud" +
+      "&lugar="       + encodeURIComponent(entry.lugar) +
+      "&item="        + encodeURIComponent(entry.item) +
+      "&cantidad="    + encodeURIComponent(entry.cantidad) +
+      "&usuario="     + encodeURIComponent(responsableSesion) +
+      "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
+      "&idSolicitud=" + encodeURIComponent(idSolicitud);
+
+    enviarImagen(url);
+    _envioIdx++;
+    setTimeout(enviarSiguiente, 400); // pausa entre ítems
   }
 
   function nuevaSolicitud() {
     listaItems = []; idSolicitud = "";
-    document.getElementById("estadoOk").style.display         = "none";
+    document.getElementById("estadoOk").style.display             = "none";
     document.getElementById("responsableBadgeWrap").style.display = "none";
-    document.getElementById("lugarBadgeWrap").style.display   = "none";
+    document.getElementById("lugarBadgeWrap").style.display       = "none";
     document.getElementById("responsableSesionWrap").style.display = "block";
-    document.getElementById("lugarSesionWrap").style.display  = "none";
-    document.getElementById("inputItemWrap").style.display    = "none";
-    document.getElementById("divider").style.display          = "none";
+    document.getElementById("lugarSesionWrap").style.display      = "none";
+    document.getElementById("inputItemWrap").style.display        = "none";
+    document.getElementById("divider").style.display              = "none";
     renderLista();
     responsableSesion = ""; responsableIdSesion = ""; lugarSesion = "";
   }
 
   function mostrarToast(msg, tipo) {
-    const t = document.getElementById("toast");
+    var t = document.getElementById("toast");
     t.textContent = msg; t.className = "show " + tipo;
-    setTimeout(() => { t.className = ""; }, 3500);
+    setTimeout(function() { t.className = ""; }, 3500);
   }
 
   function copiarURL() {
-    const url = "https://script.google.com/macros/s/AKfycbwMJMtfl_zuuMleHhb0dBVz68Jjfyg_UdAaH_vcFncnvnulFg6A8xHHRbecvB9fngYLhA/exec";
-    navigator.clipboard.writeText(url)
-      .then(() => mostrarToast("URL copiada.", "ok"))
-      .catch(() => mostrarToast("Copia la URL manualmente.", "warn"));
+    var url = SCRIPT_URL;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(
+        function() { mostrarToast("URL copiada.", "ok"); },
+        function() { mostrarToast("Copia la URL manualmente.", "warn"); }
+      );
+    } else {
+      mostrarToast("Copia la URL manualmente.", "warn");
+    }
   }
 
-  document.addEventListener("keydown", e => {
+  document.addEventListener("keydown", function(e) {
     if (e.key === "Enter" && document.activeElement.id === "cantidad") agregarALista();
   });
 </script>
