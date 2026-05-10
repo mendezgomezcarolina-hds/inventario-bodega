@@ -61,7 +61,7 @@ function leerItems() {
     const datos = sheet.getDataRange().getValues();
     const items = datos
       .filter(f => f[0] !== "" && f[0] != null)
-      .map(f => ({ codigo: f[0], descripcion: f[1] || "" }));
+      .map(f => ({ codigo: String(f[0]), descripcion: String(f[1] || "") }));
     return { status: "ok", items };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };

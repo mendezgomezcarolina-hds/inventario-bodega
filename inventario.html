@@ -462,7 +462,7 @@
     var codigoItem = item;
     var descItem   = item;
     for (var _i = 0; _i < itemsData.length; _i++) {
-      if (itemsData[_i].codigo === item) {
+      if (String(itemsData[_i].codigo) === String(item)) {
         codigoItem = itemsData[_i].codigo;
         descItem   = itemsData[_i].descripcion || item;
         break;
