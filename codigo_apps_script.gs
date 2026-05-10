@@ -163,6 +163,49 @@ function listarSolicitudes(e) {
 
     const filtroEstado = (e.parameter.estado || "").toUpperCase();
     const datos = sheet.getDataRange().getValues();
+    // Auto-detectar si falta la fila de encabezados
+    const primeraFila = datos[0];
+    const tieneEncabezado = String(primeraFila[0]).toUpperCase().indexOf("ID") === 0 ||
+                            String(primeraFila[0]).toUpperCase() === "ID SOLICITUD";
+    if (!tieneEncabezado) {
+      // Insertar encabezado en fila 1
+      sheet.insertRowBefore(1);
+      sheet.getRange(1, 1, 1, 11).setValues([[
+        "ID Solicitud","Lugar","Código","Insumo","Cantidad",
+        "Responsable","ID Responsable","Fecha Solicitud",
+        "Estado","Fecha Resolución","Supervisor"
+      ]]);
+      // Recargar datos con el nuevo encabezado
+      const datosFrescos = sheet.getDataRange().getValues();
+      const encab = datosFrescos[0];
+      const filas2 = datosFrescos.slice(1);
+      // Remapear con encabezados correctos
+      const col2 = {};
+      encab.forEach((h, i) => { col2[String(h).trim().toUpperCase()] = i; });
+      const get2 = (f, ...nombres) => {
+        for (const n of nombres) {
+          if (col2[n] !== undefined) {
+            const v = f[col2[n]];
+            return v instanceof Date ? v.toLocaleString("es-CL") : String(v || "");
+          }
+        }
+        return "";
+      };
+      const estadoCol2 = col2["ESTADO"] !== undefined ? col2["ESTADO"] : 8;
+      const solicitudes2 = filas2
+        .map((f, i) => ({ f, fila: i + 2 }))
+        .filter(({ f }) => f[0] !== "" && (!filtroEstado || String(f[estadoCol2]).toUpperCase() === filtroEstado))
+        .map(({ f, fila }) => ({
+          fila: fila, id: get2(f,"ID SOLICITUD"), lugar: get2(f,"LUGAR"),
+          codigo: get2(f,"CÓDIGO","CODIGO"), item: get2(f,"INSUMO","ÍTEM","ITEM"),
+          cantidad: get2(f,"CANTIDAD"), responsable: get2(f,"RESPONSABLE"),
+          idResp: get2(f,"ID RESPONSABLE"), fecha: get2(f,"FECHA SOLICITUD","FECHA/HORA"),
+          estado: get2(f,"ESTADO"), fechaResol: get2(f,"FECHA RESOLUCIÓN","FECHA RESOLUCION"),
+          supervisor: get2(f,"SUPERVISOR")
+        }));
+      return { status: "ok", solicitudes: solicitudes2 };
+    }
+
     const encab = datos[0];
 
     // Mapear columnas por nombre de encabezado (robusto ante cambios)
