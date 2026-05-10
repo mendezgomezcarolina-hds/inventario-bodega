@@ -154,7 +154,7 @@ function escribirSolicitud(e) {
   }
 }
 
-// ── Listar solicitudes (con filtro opcional de estado) ────────
+// ── Listar solicitudes — mapeo dinámico por encabezados ───────
 function listarSolicitudes(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -164,24 +164,41 @@ function listarSolicitudes(e) {
     const filtroEstado = (e.parameter.estado || "").toUpperCase();
     const datos = sheet.getDataRange().getValues();
     const encab = datos[0];
+
+    // Mapear columnas por nombre de encabezado (robusto ante cambios)
+    const col = {};
+    encab.forEach((h, i) => { col[String(h).trim().toUpperCase()] = i; });
+
+    // Aliases para compatibilidad con encabezados en español/variantes
+    const get = (f, ...nombres) => {
+      for (const n of nombres) {
+        if (col[n] !== undefined) {
+          const v = f[col[n]];
+          return v instanceof Date ? v.toLocaleString("es-CL") : (v || "");
+        }
+      }
+      return "";
+    };
+
     const filas = datos.slice(1);
+    const estadoCol = col["ESTADO"] !== undefined ? col["ESTADO"] : 7;
 
     const solicitudes = filas
       .map((f, i) => ({ f, fila: i + 2 }))
-      .filter(({ f }) => f[0] !== "" && (!filtroEstado || f[8] === filtroEstado))
+      .filter(({ f }) => f[0] !== "" && (!filtroEstado || String(f[estadoCol]).toUpperCase() === filtroEstado))
       .map(({ f, fila }) => ({
-        fila:         fila,
-        id:           f[0],
-        lugar:        f[1],
-        codigo:       f[2],
-        item:         f[3],
-        cantidad:     f[4],
-        responsable:  f[5],
-        idResp:       f[6],
-        fecha:        f[7] instanceof Date ? f[7].toLocaleString("es-CL") : f[7],
-        estado:       f[8],
-        fechaResol:   f[9] instanceof Date ? f[9].toLocaleString("es-CL") : (f[9] || ""),
-        supervisor:   f[10] || ""
+        fila:        fila,
+        id:          get(f, "ID SOLICITUD"),
+        lugar:       get(f, "LUGAR"),
+        codigo:      get(f, "CÓDIGO", "CODIGO"),
+        item:        get(f, "INSUMO", "ÍTEM", "ITEM"),
+        cantidad:    get(f, "CANTIDAD"),
+        responsable: get(f, "RESPONSABLE"),
+        idResp:      get(f, "ID RESPONSABLE"),
+        fecha:       get(f, "FECHA SOLICITUD", "FECHA/HORA"),
+        estado:      get(f, "ESTADO"),
+        fechaResol:  get(f, "FECHA RESOLUCIÓN", "FECHA RESOLUCION"),
+        supervisor:  get(f, "SUPERVISOR")
       }));
 
     return { status: "ok", solicitudes };
@@ -211,14 +228,25 @@ function actualizarEstado(e) {
     const datos = sheet.getDataRange().getValues();
     let actualizados = 0;
 
+    // Detectar columnas por encabezado
+    const encab = datos[0];
+    const colIdx = {};
+    encab.forEach((h, i) => { colIdx[String(h).trim().toUpperCase()] = i; });
+    const colEstado   = (colIdx["ESTADO"]             || 8) + 1; // 1-based para getRange
+    const colFechaRes = (colIdx["FECHA RESOLUCIÓN"] !== undefined ? colIdx["FECHA RESOLUCIÓN"] : colIdx["FECHA RESOLUCION"] || 9) + 1;
+    const colSuper    = (colIdx["SUPERVISOR"]          || 10) + 1;
+    const colItem     = colIdx["INSUMO"] !== undefined ? colIdx["INSUMO"] : (colIdx["ÍTEM"] || 2);
+    const colId       = colIdx["ID SOLICITUD"] || 0;
+    const colLugar    = colIdx["LUGAR"] || 1;
+
     for (let i = 1; i < datos.length; i++) {
-      const coincide = datos[i][0] === idBuscado &&
-                       datos[i][3] === itemBuscado &&   // col D = Insumo (descripcion)
-                       (lugarBuscado === "" || datos[i][1] === lugarBuscado);
+      const coincide = datos[i][colId] === idBuscado &&
+                       datos[i][colItem] === itemBuscado &&
+                       (lugarBuscado === "" || datos[i][colLugar] === lugarBuscado);
       if (coincide) {
-        sheet.getRange(i + 1, 9).setValue(nuevoEstado);                          // col I = Estado
-        sheet.getRange(i + 1, 10).setValue(new Date().toLocaleString("es-CL")); // col J = Fecha Resol
-        sheet.getRange(i + 1, 11).setValue(supervisor);                          // col K = Supervisor
+        sheet.getRange(i + 1, colEstado).setValue(nuevoEstado);
+        sheet.getRange(i + 1, colFechaRes).setValue(new Date().toLocaleString("es-CL"));
+        sheet.getRange(i + 1, colSuper).setValue(supervisor);
         actualizados++;
       }
     }
