@@ -236,6 +236,12 @@
   </div>
 
   <!-- Confirmación enviado -->
+  <!-- DEBUG - remover después -->
+  <div id="debugBox" style="display:none;margin-top:12px;background:#1e293b;border-radius:8px;padding:12px;">
+    <p style="font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:6px;">URL enviada (debug)</p>
+    <p id="debugUrl" style="font-family:monospace;font-size:.6rem;color:#7dd3fc;word-break:break-all;line-height:1.5;"></p>
+  </div>
+
   <div class="estado-ok" id="estadoOk">
     <div class="icon">✅</div>
     <h2>Solicitud enviada correctamente</h2>
@@ -494,6 +500,11 @@
       "&usuario="     + encodeURIComponent(responsableSesion) +
       "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
       "&idSolicitud=" + encodeURIComponent(idSolicitud);
+
+    // DEBUG: mostrar URL que se va a enviar
+    var dbx = document.getElementById("debugBox");
+    var dbu = document.getElementById("debugUrl");
+    if (dbx && dbu) { dbx.style.display = "block"; dbu.textContent += url + "\n\n"; }
 
     enviarImagen(url);
     _envioIdx++;
