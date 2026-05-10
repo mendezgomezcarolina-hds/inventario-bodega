@@ -270,6 +270,7 @@
   var lugarSesion = "";
   var colaboradoresData = [];
   var listaItems = [];
+  var itemsData  = []; // [{codigo, descripcion}]
   var idSolicitud = "";
   var _cbCount = 0;
 
@@ -350,8 +351,6 @@
       }
     });
   }
-
-  var itemsData = []; // [{codigo, descripcion}]
 
   function cargarItems() {
     var sel = document.getElementById("item");

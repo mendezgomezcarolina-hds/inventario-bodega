@@ -310,6 +310,7 @@
 <script>
   var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzrUduRrkFk4GzVTNefxzQe6NwM3o0nKcZMgpfm7sk3QEwrTHH_O2gQhQLOEjfQJwe/exec"; // URL fija
   let listaItems = []; // [{lugar, item, cantidad}]
+  let itemsData  = []; // [{codigo, descripcion}]
 
   window.onload = () => {
     if (!SCRIPT_URL) pedirURL();
@@ -347,8 +348,6 @@
       }
     } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
   }
-
-  var itemsData = [];
 
   function cargarItems() {
     var sel = document.getElementById("item");
