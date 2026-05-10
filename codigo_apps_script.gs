@@ -154,7 +154,9 @@ function escribirSolicitud(e) {
   }
 }
 
-// ── Listar solicitudes — mapeo dinámico por encabezados ───────
+// ── Listar solicitudes ───────────────────────────────────────
+// Columnas fijas: A=N°SOL B=LUGAR C=CÓDIGO D=DESCRIPCIÓN
+// E=CANTIDAD F=RESPONSABLE G=ID H=FECHA/HORA I=ESTADO J=FECHA_RESOL K=SUPERVISOR
 function listarSolicitudes(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -163,88 +165,33 @@ function listarSolicitudes(e) {
 
     const filtroEstado = (e.parameter.estado || "").toUpperCase();
     const datos = sheet.getDataRange().getValues();
-    // Auto-detectar si falta la fila de encabezados
-    const primeraFila = datos[0];
-    const primeraCelda = String(primeraFila[0]).toUpperCase().trim();
-    const tieneEncabezado = primeraCelda.indexOf("SOL-") !== 0 && // No es un ID de solicitud
-                            (primeraCelda.indexOf("N") === 0 || primeraCelda.indexOf("ID") === 0 ||
-                             primeraCelda === "" || isNaN(primeraFila[0]));
-    if (!tieneEncabezado) {
-      // Insertar encabezado en fila 1
-      sheet.insertRowBefore(1);
-      sheet.getRange(1, 1, 1, 11).setValues([[
-        "ID Solicitud","Lugar","Código","Insumo","Cantidad",
-        "Responsable","ID Responsable","Fecha Solicitud",
-        "Estado","Fecha Resolución","Supervisor"
-      ]]);
-      // Recargar datos con el nuevo encabezado
-      const datosFrescos = sheet.getDataRange().getValues();
-      const encab = datosFrescos[0];
-      const filas2 = datosFrescos.slice(1);
-      // Remapear con encabezados correctos
-      const col2 = {};
-      encab.forEach((h, i) => { col2[String(h).trim().toUpperCase()] = i; });
-      const get2 = (f, ...nombres) => {
-        for (const n of nombres) {
-          if (col2[n] !== undefined) {
-            const v = f[col2[n]];
-            return v instanceof Date ? v.toLocaleString("es-CL") : String(v || "");
-          }
-        }
-        return "";
-      };
-      const estadoCol2 = col2["ESTADO"] !== undefined ? col2["ESTADO"] : 8;
-      const solicitudes2 = filas2
-        .map((f, i) => ({ f, fila: i + 2 }))
-        .filter(({ f }) => f[0] !== "" && (!filtroEstado || String(f[estadoCol2]).toUpperCase() === filtroEstado))
-        .map(({ f, fila }) => ({
-          fila: fila, id: get2(f,"ID SOLICITUD","N° SOLICITUD","N SOLICITUD"), lugar: get2(f,"LUGAR"),
-          codigo: get2(f,"CÓDIGO","CODIGO"), item: get2(f,"INSUMO","ÍTEM","ITEM","DESCRIPCIÓN","DESCRIPCION"),
-          cantidad: get2(f,"CANTIDAD"), responsable: get2(f,"RESPONSABLE"),
-          idResp: get2(f,"ID RESPONSABLE","ID"), fecha: get2(f,"FECHA SOLICITUD","FECHA/HORA"),
-          estado: get2(f,"ESTADO"), fechaResol: get2(f,"FECHA RESOLUCIÓN","FECHA RESOLUCION"),
-          supervisor: get2(f,"SUPERVISOR")
-        }));
-      return { status: "ok", solicitudes: solicitudes2 };
+
+    // Detectar si fila 1 es encabezado (no empieza con SOL-)
+    const inicio = String(datos[0][0]).indexOf("SOL-") === 0 ? 0 : 1;
+
+    const solicitudes = [];
+    for (var i = inicio; i < datos.length; i++) {
+      const f = datos[i];
+      if (!f[0] || String(f[0]).trim() === "") continue;
+      const estado = String(f[8] || "").trim().toUpperCase();
+      if (filtroEstado && estado !== filtroEstado) continue;
+      const fechaH = f[7] instanceof Date ? f[7].toLocaleString("es-CL") : String(f[7] || "");
+      const fechaR = f[9] instanceof Date ? f[9].toLocaleString("es-CL") : String(f[9] || "");
+      solicitudes.push({
+        fila:        i + 1,
+        id:          String(f[0] || ""),
+        lugar:       String(f[1] || ""),
+        codigo:      String(f[2] || ""),
+        item:        String(f[3] || ""),
+        cantidad:    String(f[4] || ""),
+        responsable: String(f[5] || ""),
+        idResp:      String(f[6] || ""),
+        fecha:       fechaH,
+        estado:      String(f[8] || ""),
+        fechaResol:  fechaR,
+        supervisor:  String(f[10] || "")
+      });
     }
-
-    const encab = datos[0];
-
-    // Mapear columnas por nombre de encabezado (robusto ante cambios)
-    const col = {};
-    encab.forEach((h, i) => { col[String(h).trim().toUpperCase()] = i; });
-
-    // Aliases para compatibilidad con encabezados en español/variantes
-    const get = (f, ...nombres) => {
-      for (const n of nombres) {
-        if (col[n] !== undefined) {
-          const v = f[col[n]];
-          return v instanceof Date ? v.toLocaleString("es-CL") : (v || "");
-        }
-      }
-      return "";
-    };
-
-    const filas = datos.slice(1);
-    const estadoCol = col["ESTADO"] !== undefined ? col["ESTADO"] : 7;
-
-    const solicitudes = filas
-      .map((f, i) => ({ f, fila: i + 2 }))
-      .filter(({ f }) => f[0] !== "" && (!filtroEstado || String(f[estadoCol]).toUpperCase() === filtroEstado))
-      .map(({ f, fila }) => ({
-        fila:        fila,
-        id:          get(f, "ID SOLICITUD", "N° SOLICITUD", "N SOLICITUD", "SOLICITUD", "N° SOLICITUD"),
-        lugar:       get(f, "LUGAR"),
-        codigo:      get(f, "CÓDIGO", "CODIGO"),
-        item:        get(f, "INSUMO", "ÍTEM", "ITEM", "DESCRIPCIÓN", "DESCRIPCION", "DESCRIPCION"),
-        cantidad:    get(f, "CANTIDAD"),
-        responsable: get(f, "RESPONSABLE"),
-        idResp:      get(f, "ID RESPONSABLE", "ID"),
-        fecha:       get(f, "FECHA SOLICITUD", "FECHA/HORA"),
-        estado:      get(f, "ESTADO"),
-        fechaResol:  get(f, "FECHA RESOLUCIÓN", "FECHA RESOLUCION"),
-        supervisor:  get(f, "SUPERVISOR")
-      }));
 
     return { status: "ok", solicitudes };
   } catch(err) {
@@ -252,8 +199,7 @@ function listarSolicitudes(e) {
   }
 }
 
-// ── Actualizar estado por idSolicitud + item + lugar ─────────
-// No depende de número de fila - funciona con cualquier versión
+// ── Actualizar estado ───────────────────────────────────────
 function actualizarEstado(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -261,49 +207,38 @@ function actualizarEstado(e) {
     if (!sheet) throw new Error("Hoja SOLICITUDES no existe.");
 
     const p           = e.parameter || {};
-    const nuevoEstado = (p.estado       || "").toUpperCase();
-    const supervisor  = p.supervisor    || "";
-    const idBuscado   = p.idSolicitud   || "";
-    const itemBuscado = p.item          || "";
-    const lugarBuscado= p.lugar         || "";
+    const nuevoEstado = (p.estado      || "").toUpperCase();
+    const supervisor  = p.supervisor   || "";
+    const idBuscado   = p.idSolicitud  || "";
+    const itemBuscado = p.item         || "";
+    const lugarBusc   = p.lugar        || "";
 
-    if (!nuevoEstado || !idBuscado || !itemBuscado)
-      throw new Error("Faltan parámetros: estado, idSolicitud, item.");
+    if (!nuevoEstado || !idBuscado) throw new Error("Faltan parámetros.");
 
     const datos = sheet.getDataRange().getValues();
     let actualizados = 0;
 
-    // Detectar columnas por encabezado
-    const encab = datos[0];
-    const colIdx = {};
-    encab.forEach((h, i) => { colIdx[String(h).trim().toUpperCase()] = i; });
-    const colEstado   = (colIdx["ESTADO"]             || 8) + 1; // 1-based para getRange
-    const colFechaRes = (colIdx["FECHA RESOLUCIÓN"] !== undefined ? colIdx["FECHA RESOLUCIÓN"] : colIdx["FECHA RESOLUCION"] || 9) + 1;
-    const colSuper    = (colIdx["SUPERVISOR"]          || 10) + 1;
-    const colItem     = colIdx["INSUMO"] !== undefined ? colIdx["INSUMO"] : (colIdx["DESCRIPCIÓN"] !== undefined ? colIdx["DESCRIPCIÓN"] : (colIdx["DESCRIPCION"] !== undefined ? colIdx["DESCRIPCION"] : (colIdx["ÍTEM"] || 3)));
-    const colId       = colIdx["ID SOLICITUD"] !== undefined ? colIdx["ID SOLICITUD"] : (colIdx["N° SOLICITUD"] !== undefined ? colIdx["N° SOLICITUD"] : 0);
-    const colLugar    = colIdx["LUGAR"] || 1;
-
-    for (let i = 1; i < datos.length; i++) {
-      const coincide = datos[i][colId] === idBuscado &&
-                       datos[i][colItem] === itemBuscado &&
-                       (lugarBuscado === "" || datos[i][colLugar] === lugarBuscado);
+    for (let i = 0; i < datos.length; i++) {
+      const f = datos[i];
+      const coincide = String(f[0]) === idBuscado &&
+                       (!itemBuscado || String(f[3]) === itemBuscado) &&
+                       (!lugarBusc   || String(f[1]) === lugarBusc);
       if (coincide) {
-        sheet.getRange(i + 1, colEstado).setValue(nuevoEstado);
-        sheet.getRange(i + 1, colFechaRes).setValue(new Date().toLocaleString("es-CL"));
-        sheet.getRange(i + 1, colSuper).setValue(supervisor);
+        sheet.getRange(i + 1, 9).setValue(nuevoEstado);   // col I = ESTADO
+        sheet.getRange(i + 1, 10).setValue(new Date().toLocaleString("es-CL")); // col J
+        sheet.getRange(i + 1, 11).setValue(supervisor);   // col K
         actualizados++;
       }
     }
 
-    if (actualizados === 0) throw new Error("Fila no encontrada.");
+    if (actualizados === 0) throw new Error("Fila no encontrada: " + idBuscado + " / " + itemBuscado);
     return { status: "ok", actualizados };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
 }
 
-// ── Test manual ───────────────────────────────────────────────
+// ── Test manual ───────────────────────────────────────────────// ── Test manual ───────────────────────────────────────────────
 function testWrite() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_DATOS)
     || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
