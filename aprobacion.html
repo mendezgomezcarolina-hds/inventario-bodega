@@ -268,9 +268,9 @@
 
   function estadoGrupo(filas) {
     const estados = filas.map(function(f) { return f.estado; });
-    if (estados.every(function(e) { return e === "APROBADO"; }))  return "APROBADO";
-    if (estados.every(function(e) { return e === "RECHAZADO"; })) return "RECHAZADO";
-    if (estados.every(function(e) { return e === "PENDIENTE"; })) return "PENDIENTE";
+    if (estados.every(function(e) { return (e||"").toUpperCase().trim() === "APROBADO"; }))  return "APROBADO";
+    if (estados.every(function(e) { return (e||"").toUpperCase().trim() === "RECHAZADO"; })) return "RECHAZADO";
+    if (estados.every(function(e) { return (e||"").toUpperCase().trim() === "PENDIENTE"; })) return "PENDIENTE";
     return "PARCIAL";
   }
 
@@ -327,7 +327,8 @@
     solicitudActual = grupos[id];
     decisionesActuales = {};
     solicitudActual.forEach(function(f, i) {
-      decisionesActuales[i] = f.estado !== "PENDIENTE" ? f.estado : null;
+      var est = (f.estado || "").toString().trim().toUpperCase();
+      decisionesActuales[i] = est !== "PENDIENTE" && est !== "" ? f.estado : null;
     });
 
     document.getElementById("vistaLista").style.display   = "none";
@@ -410,7 +411,7 @@
 
   function decidirTodos(estado) {
     solicitudActual.forEach(function(f, i) {
-      if (f.estado === "PENDIENTE") decisionesActuales[i] = estado;
+      if ((f.estado||"").toString().trim().toUpperCase() === "PENDIENTE") decisionesActuales[i] = estado;
     });
     renderDetalle();
   }
