@@ -273,8 +273,9 @@
         <input id="cantidad" type="number" min="0" placeholder="0" />
       </div>
       <div class="field">
-        <label>Vencimiento</label>
+        <label>Vencimiento <span style="font-weight:400;color:#94a3b8;font-size:.7rem;text-transform:none;letter-spacing:0">(opcional)</span></label>
         <input id="vencimiento" type="date" />
+        <p style="font-size:.7rem;color:#94a3b8;margin-top:-6px;margin-bottom:4px">Dejar en blanco si no aplica.</p>
       </div>
       <button class="btn-add" onclick="agregarALista()" title="Agregar a la lista">+</button>
     </div>
@@ -461,8 +462,8 @@
     const cantidad   = document.getElementById("cantidad").value.trim();
     const vencimiento = document.getElementById("vencimiento").value;
 
-    if (!lugar || !item || !cantidad || Number(cantidad) < 0 || !vencimiento) {
-      mostrarToast("Completa Ítem, Cantidad y Vencimiento.", "warn");
+    if (!lugar || !item || !cantidad || Number(cantidad) < 0) {
+      mostrarToast("Completa Ítem y Cantidad.", "warn");
       return;
     }
 
@@ -473,7 +474,7 @@
     var partes     = optionText.split(" — ");
     var codigoItem = partes[0].trim() || item;
     var descItem   = partes.length > 1 ? partes.slice(1).join(" — ").trim() : item;
-    listaItems.push({ lugar: lugar, item: descItem, codigo: codigoItem, cantidad: cantidad, vencimiento: vencimiento });
+    listaItems.push({ lugar: lugar, item: descItem, codigo: codigoItem, cantidad: cantidad, vencimiento: vencimiento || "no aplica" });
     renderLista();
 
     // Resetea solo cantidad, mantiene lugar e ítem para agilizar ingreso
@@ -498,7 +499,7 @@
         `<span class="lugar-txt">${entry.lugar}</span>` +
         `<span class="item-txt">${entry.item}</span>` +
         `<span class="cant-txt">${entry.cantidad}</span>` +
-        `<span style="font-size:.72rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap;">${fmtFecha(entry.vencimiento)}</span>` +
+        (entry.vencimiento && entry.vencimiento !== "no aplica" ? `<span style="font-size:.72rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap;">${fmtFecha(entry.vencimiento)}</span>` : `<span style="font-size:.72rem;background:#f1f5f9;color:#94a3b8;border-radius:4px;padding:2px 6px;font-style:italic">Sin vencimiento</span>`) +
         `<button class="btn-del" onclick="eliminarItem(${idx})" title="Eliminar">` +
           `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>` +
         `</button>`;
