@@ -274,19 +274,21 @@ function actualizarRecepcion(e) {
     sheet.getRange(fila, 8).setValue(est);
     sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL"));
 
+    const fechaVenc = p.fechaVencimiento || "";
+
     // Si APROBADO → registrar INGRESO en MOVIMIENTOS
     if (est === "APROBADO") {
       let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
       if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
       if (movSheet.getLastRow() === 0)
-        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad"]);
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento"]);
       movSheet.appendRow([
         new Date().toLocaleString("es-CL"), "INGRESO",
-        nSol, mes, lugar, codigo, descr, cant
+        nSol, mes, lugar, codigo, descr, cant, fechaVenc
       ]);
     }
 
-    return { status: "ok", fila, movimiento: est === "APROBADO" ? "ESCRITO" : "OMITIDO_NO_APROBADO", est: est };
+    return { status: "ok", fila };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
