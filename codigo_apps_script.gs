@@ -286,7 +286,7 @@ function actualizarRecepcion(e) {
       ]);
     }
 
-    return { status: "ok", fila };
+    return { status: "ok", fila, movimiento: est === "APROBADO" ? "ESCRITO" : "OMITIDO_NO_APROBADO", est: est };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
