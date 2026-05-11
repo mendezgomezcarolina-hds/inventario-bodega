@@ -183,6 +183,13 @@
 
 </div>
 <div id="toast"></div>
+<div id="debugPanel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#7dd3fc;font-family:monospace;font-size:11px;padding:10px 14px;max-height:200px;overflow-y:auto;z-index:9999;">
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+    <b style="color:#f8fafc">DEBUG</b>
+    <button onclick="document.getElementById('debugPanel').style.display='none'" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:12px;">✕</button>
+  </div>
+  <div id="debugLog"></div>
+</div>
 
 <script>
   var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
@@ -354,17 +361,34 @@
   // ── Guardar decisiones ────────────────────────────────────────
   var _gIdx = 0; var _gItems = []; var _gErr = 0;
 
+  function dbg(msg) {
+    var p = document.getElementById("debugPanel");
+    var l = document.getElementById("debugLog");
+    p.style.display = "block";
+    var d = document.createElement("div");
+    d.textContent = new Date().toLocaleTimeString("es-CL") + " " + msg;
+    l.appendChild(d);
+    p.scrollTop = p.scrollHeight;
+  }
+
   function guardarDecisiones() {
+    dbg("guardarDecisiones() llamado");
+    dbg("solicitudActual.length: " + solicitudActual.length);
+    dbg("decisiones: " + JSON.stringify(decisiones));
     var items = [];
     for (var i = 0; i < solicitudActual.length; i++) {
       var p   = solicitudActual[i];
-      var dec = decisiones[parseInt(p.fila)];
+      var key = parseInt(p.fila);
+      var dec = decisiones[key];
+      dbg("fila=" + p.fila + " key=" + key + " dec=" + JSON.stringify(dec));
       if (dec && dec.est) {
         var cantInput = document.getElementById("cr-" + p.fila);
-        items.push({ fila: p.fila, est: dec.est, cant: cantInput ? cantInput.value : p.cantSolicitada });
+        var cant = cantInput ? cantInput.value : p.cantSolicitada;
+        dbg("→ AGREGANDO item fila=" + p.fila + " est=" + dec.est + " cant=" + cant);
+        items.push({ fila: p.fila, est: dec.est, cant: cant });
       }
     }
-    if (!items.length) { toast("Sin decisiones para guardar.", "warn"); return; }
+    if (!items.length) { toast("Sin decisiones para guardar.", "warn"); dbg("→ ITEMS VACIO - nada que enviar"); return; }
 
     var btn = document.getElementById("btnGuardar");
     btn.disabled = true;
@@ -394,7 +418,9 @@
       "&estado="       + encodeURIComponent(it.est) +
       "&cantRecibida=" + encodeURIComponent(it.cant);
 
+    dbg("→ URL: " + url.replace(SCRIPT_URL, "[SCRIPT]"));
     jsonp(url, function(data, err) {
+      dbg("← Resp: " + (err || JSON.stringify(data)));
       if (!data || err || data.status !== "ok") _gErr++;
       _gIdx++;
       setTimeout(guardarUno, 300);
