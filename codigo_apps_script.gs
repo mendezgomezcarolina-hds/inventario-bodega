@@ -323,3 +323,43 @@ function testWrite() {
   sheet.appendRow(["TEST","TEST","1","","", new Date().toLocaleString("es-CL"),"Test",""]);
   Logger.log("OK → " + sheet.getName());
 }
+
+// ── Test MOVIMIENTOS (ejecutar directo desde el editor) ───────
+function testMovimientos() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    Logger.log("1. Spreadsheet: " + ss.getName());
+    
+    // Intentar obtener o crear hoja MOVIMIENTOS
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    Logger.log("2. Hoja MOVIMIENTOS existe: " + (movSheet !== null));
+    
+    if (!movSheet) {
+      movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+      Logger.log("3. Hoja creada OK");
+    }
+    
+    // Intentar escribir una fila de prueba
+    if (movSheet.getLastRow() === 0) {
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad"]);
+      Logger.log("4. Encabezados escritos");
+    }
+    
+    movSheet.appendRow([
+      new Date().toLocaleString("es-CL"),
+      "TEST-INGRESO",
+      "S_TEST",
+      "JUNIO",
+      "BODEGA TEST",
+      "9999999",
+      "ITEM DE PRUEBA",
+      "99"
+    ]);
+    
+    Logger.log("5. Fila de prueba escrita OK. Total filas: " + movSheet.getLastRow());
+    
+  } catch(err) {
+    Logger.log("ERROR: " + err.toString());
+  }
+}
