@@ -9,6 +9,7 @@ const SHEET_ITEMS         = "INSUMOS";
 const SHEET_COLABORADORES = "COLABORADORES";
 const SHEET_SOLICITUDES   = "SOLICITUDES";
 const SHEET_RECEPCION     = "RECEPCION_BODEGA";
+const SHEET_MOVIMIENTOS   = "MOVIMIENTOS";
 
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
@@ -292,22 +293,53 @@ function listarRecepcion(e) {
 }
 
 // ── Actualizar recepcion: estado + cantidad recibida ──────────
+// Si APROBADO → escribe también en MOVIMIENTOS como INGRESO
 function actualizarRecepcion(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_RECEPCION);
     if (!sheet) throw new Error("Hoja RECEPCION_BODEGA no existe.");
 
-    const p     = e.parameter || {};
-    const fila  = parseInt(p.fila || "0");
-    const est   = (p.estado        || "").toUpperCase();
-    const cant  = p.cantRecibida   || "";
+    const p    = e.parameter || {};
+    const fila = parseInt(p.fila || "0");
+    const est  = (p.estado       || "").toUpperCase();
+    const cant = p.cantRecibida  || "";
 
     if (!fila || !est) throw new Error("Faltan fila o estado.");
 
-    sheet.getRange(fila, 7).setValue(cant);                              // col G = CantRecibida
-    sheet.getRange(fila, 8).setValue(est);                               // col H = Estado
-    sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL")); // col I = Fecha/Hora
+    // Leer datos de la fila para MOVIMIENTOS
+    const filaDatos = sheet.getRange(fila, 1, 1, 9).getValues()[0];
+    const mes       = String(filaDatos[0] || "");
+    const nSol      = String(filaDatos[1] || "");
+    const lugar     = String(filaDatos[2] || "");
+    const codigo    = String(filaDatos[3] || "");
+    const descr     = String(filaDatos[4] || "");
+
+    // Actualizar RECEPCION_BODEGA
+    sheet.getRange(fila, 7).setValue(cant);
+    sheet.getRange(fila, 8).setValue(est);
+    sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL"));
+
+    // Si APROBADO → registrar INGRESO en MOVIMIENTOS
+    if (est === "APROBADO") {
+      let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+
+      if (movSheet.getLastRow() === 0) {
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad"]);
+      }
+
+      movSheet.appendRow([
+        new Date().toLocaleString("es-CL"),
+        "INGRESO",
+        nSol,
+        mes,
+        lugar,
+        codigo,
+        descr,
+        cant
+      ]);
+    }
 
     return { status: "ok", fila };
   } catch(err) {
@@ -365,22 +397,53 @@ function listarRecepcion(e) {
 }
 
 // ── Actualizar recepcion: estado + cantidad recibida ──────────
+// Si APROBADO → escribe también en MOVIMIENTOS como INGRESO
 function actualizarRecepcion(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(SHEET_RECEPCION);
     if (!sheet) throw new Error("Hoja RECEPCION_BODEGA no existe.");
 
-    const p     = e.parameter || {};
-    const fila  = parseInt(p.fila || "0");
-    const est   = (p.estado        || "").toUpperCase();
-    const cant  = p.cantRecibida   || "";
+    const p    = e.parameter || {};
+    const fila = parseInt(p.fila || "0");
+    const est  = (p.estado       || "").toUpperCase();
+    const cant = p.cantRecibida  || "";
 
     if (!fila || !est) throw new Error("Faltan fila o estado.");
 
-    sheet.getRange(fila, 7).setValue(cant);                              // col G = CantRecibida
-    sheet.getRange(fila, 8).setValue(est);                               // col H = Estado
-    sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL")); // col I = Fecha/Hora
+    // Leer datos de la fila para MOVIMIENTOS
+    const filaDatos = sheet.getRange(fila, 1, 1, 9).getValues()[0];
+    const mes       = String(filaDatos[0] || "");
+    const nSol      = String(filaDatos[1] || "");
+    const lugar     = String(filaDatos[2] || "");
+    const codigo    = String(filaDatos[3] || "");
+    const descr     = String(filaDatos[4] || "");
+
+    // Actualizar RECEPCION_BODEGA
+    sheet.getRange(fila, 7).setValue(cant);
+    sheet.getRange(fila, 8).setValue(est);
+    sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL"));
+
+    // Si APROBADO → registrar INGRESO en MOVIMIENTOS
+    if (est === "APROBADO") {
+      let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+
+      if (movSheet.getLastRow() === 0) {
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad"]);
+      }
+
+      movSheet.appendRow([
+        new Date().toLocaleString("es-CL"),
+        "INGRESO",
+        nSol,
+        mes,
+        lugar,
+        codigo,
+        descr,
+        cant
+      ]);
+    }
 
     return { status: "ok", fila };
   } catch(err) {
