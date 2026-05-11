@@ -327,13 +327,14 @@
   }
 
   function togDec(fila, est) {
-    var ap = document.getElementById("ap-" + fila);
-    var re = document.getElementById("re-" + fila);
+    var filaNum = parseInt(fila); // fuerza número para clave consistente
+    var ap = document.getElementById("ap-" + filaNum);
+    var re = document.getElementById("re-" + filaNum);
     if (!ap || !re) return;
-    if (!decisiones[fila]) decisiones[fila] = { est: null };
-    decisiones[fila].est = decisiones[fila].est === est ? null : est;
-    ap.classList.toggle("on", decisiones[fila].est === "APROBADO");
-    re.classList.toggle("on", decisiones[fila].est === "RECHAZADO");
+    if (!decisiones[filaNum]) decisiones[filaNum] = { est: null };
+    decisiones[filaNum].est = decisiones[filaNum].est === est ? null : est;
+    ap.classList.toggle("on", decisiones[filaNum].est === "APROBADO");
+    re.classList.toggle("on", decisiones[filaNum].est === "RECHAZADO");
     actualizarProg();
   }
 
@@ -357,7 +358,7 @@
     var items = [];
     for (var i = 0; i < solicitudActual.length; i++) {
       var p   = solicitudActual[i];
-      var dec = decisiones[p.fila];
+      var dec = decisiones[parseInt(p.fila)];
       if (dec && dec.est) {
         var cantInput = document.getElementById("cr-" + p.fila);
         items.push({ fila: p.fila, est: dec.est, cant: cantInput ? cantInput.value : p.cantSolicitada });
