@@ -23,6 +23,7 @@ function doGet(e) {
   if (accion === "actualizarEstado")  return responder(actualizarEstado(e),                                   callback);
 
   if (accion === "listarRecepcion")   return responder(listarRecepcion(e),    callback);
+  if (accion === "listarMovimientos")  return responder(listarMovimientos(),   callback);
   if (accion === "actualizarRecepcion") return responder(actualizarRecepcion(e), callback);
 
   return responder(escribir(e), callback);
@@ -347,6 +348,32 @@ function actualizarRecepcion(e) {
   }
 }
 
+// ── Listar MOVIMIENTOS ───────────────────────────────────────
+function listarMovimientos() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!sheet || sheet.getLastRow() === 0) return { status: "ok", movimientos: [], total: 0 };
+    const datos = sheet.getDataRange().getValues();
+    const inicio = String(datos[0][0]).toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    const movimientos = datos.slice(inicio).map(function(f) {
+      return {
+        fecha:       f[0] instanceof Date ? f[0].toLocaleString("es-CL") : String(f[0]||""),
+        tipo:        String(f[1]||""),
+        nSol:        String(f[2]||""),
+        mes:         String(f[3]||""),
+        lugar:       String(f[4]||""),
+        codigo:      String(f[5]||""),
+        descripcion: String(f[6]||""),
+        cantidad:    String(f[7]||"")
+      };
+    });
+    return { status: "ok", total: movimientos.length, movimientos: movimientos };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 // ── Test manual ───────────────────────────────────────────────// ── Listar RECEPCION_BODEGA por mes ──────────────────────────
 // Columnas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
 //           F=CantSolicitada G=CantRecibida H=Estado I=Fecha/Hora
@@ -446,6 +473,32 @@ function actualizarRecepcion(e) {
     }
 
     return { status: "ok", fila };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Listar MOVIMIENTOS ───────────────────────────────────────
+function listarMovimientos() {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!sheet || sheet.getLastRow() === 0) return { status: "ok", movimientos: [], total: 0 };
+    const datos = sheet.getDataRange().getValues();
+    const inicio = String(datos[0][0]).toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    const movimientos = datos.slice(inicio).map(function(f) {
+      return {
+        fecha:       f[0] instanceof Date ? f[0].toLocaleString("es-CL") : String(f[0]||""),
+        tipo:        String(f[1]||""),
+        nSol:        String(f[2]||""),
+        mes:         String(f[3]||""),
+        lugar:       String(f[4]||""),
+        codigo:      String(f[5]||""),
+        descripcion: String(f[6]||""),
+        cantidad:    String(f[7]||"")
+      };
+    });
+    return { status: "ok", total: movimientos.length, movimientos: movimientos };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }

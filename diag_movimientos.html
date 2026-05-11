@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Diagnóstico MOVIMIENTOS</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#f0f4f8;--s:#fff;--b:#d1dce8;--ac:#1a6fbd;--t:#1e293b;--m:#64748b;--ok:#16a34a;--er:#dc2626;--wa:#d97706;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);padding:24px 16px;}
+    .wrap{max-width:640px;margin:0 auto;}
+    h1{font-size:1rem;font-weight:600;color:var(--t);margin-bottom:4px;}
+    p.sub{font-size:.78rem;color:var(--m);margin-bottom:20px;}
+    .card{background:var(--s);border:1px solid var(--b);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+    .ctit{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--m);padding:10px 16px;border-bottom:1px solid var(--b);display:flex;justify-content:space-between;align-items:center;}
+    .cbody{padding:14px 16px;}
+    .btn{padding:8px 16px;background:var(--ac);color:#fff;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;}
+    .btn:hover{background:#134f8a;}
+    .btn.ok{background:var(--ok);}
+    pre{font-family:'DM Mono',monospace;font-size:.72rem;background:#f8fafc;border:1px solid var(--b);border-radius:6px;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow-y:auto;color:var(--t);line-height:1.6;margin-top:8px;}
+    .le{font-size:.8rem;padding:6px 0;border-bottom:0.5px solid var(--b);display:flex;gap:8px;align-items:flex-start;}
+    .le:last-child{border-bottom:none;}
+    .le.ok{color:var(--ok);} .le.er{color:var(--er);} .le.wa{color:var(--wa);} .le.in{color:var(--ac);}
+    .lt{font-size:.68rem;color:var(--m);white-space:nowrap;margin-top:1px;}
+    label{font-size:.75rem;font-weight:600;color:var(--m);display:block;margin-bottom:5px;}
+    input,select{font-family:'DM Sans',sans-serif;font-size:.88rem;background:#f8fafc;border:1.5px solid var(--b);border-radius:8px;padding:8px 12px;width:100%;outline:none;margin-bottom:10px;}
+    input:focus,select:focus{border-color:var(--ac);}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--b);border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Diagnóstico — Escritura en MOVIMIENTOS</h1>
+  <p class="sub">Prueba directamente el endpoint <code>actualizarRecepcion</code> con APROBADO y verifica si escribe en MOVIMIENTOS.</p>
+
+  <!-- TEST 1: Simular aprobación -->
+  <div class="card">
+    <div class="ctit">Test 1 — Simular aprobación de un ítem <button class="btn ok" onclick="testAprobar()">Ejecutar</button></div>
+    <div class="cbody">
+      <p style="font-size:.8rem;color:var(--m);margin-bottom:12px">Envía una solicitud de actualización con estado=APROBADO a la fila que indiques. Esto debería escribir en MOVIMIENTOS.</p>
+      <div class="grid">
+        <div>
+          <label>Número de fila en RECEPCION_BODEGA</label>
+          <input id="filaTest" type="number" value="2" min="1"/>
+        </div>
+        <div>
+          <label>Cantidad recibida</label>
+          <input id="cantTest" type="number" value="5" min="0"/>
+        </div>
+      </div>
+      <div id="res1"><pre style="color:var(--m)">Sin ejecutar aún…</pre></div>
+    </div>
+  </div>
+
+  <!-- TEST 2: Leer MOVIMIENTOS -->
+  <div class="card">
+    <div class="ctit">Test 2 — Leer hoja MOVIMIENTOS <button class="btn" onclick="testLeerMovimientos()">Ejecutar</button></div>
+    <div class="cbody">
+      <p style="font-size:.8rem;color:var(--m);margin-bottom:10px">Trae todos los registros de MOVIMIENTOS para confirmar si existen.</p>
+      <div id="res2"><pre style="color:var(--m)">Sin ejecutar aún…</pre></div>
+    </div>
+  </div>
+
+  <!-- TEST 3: Leer fila específica de RECEPCION -->
+  <div class="card">
+    <div class="ctit">Test 3 — Verificar fila en RECEPCION_BODEGA <button class="btn" onclick="testLeerFila()">Ejecutar</button></div>
+    <div class="cbody">
+      <p style="font-size:.8rem;color:var(--m);margin-bottom:10px">Trae los pedidos de RECEPCION_BODEGA para ver qué datos tiene la fila 2 (y confirmar que el script lee lo correcto).</p>
+      <div id="res3"><pre style="color:var(--m)">Sin ejecutar aún…</pre></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="ctit">Log de actividad</div>
+    <div id="logG" style="padding:8px 16px;max-height:300px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<script>
+  var URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  var _n = 0;
+
+  function jsonp(url, cb) {
+    var name  = "_d_" + Date.now() + "_" + (++_n);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout 10s"); }, 10000);
+    window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    log("\u2192 " + s.src.replace(URL, "[SCRIPT]"), "in");
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error HTTP"); };
+    document.head.appendChild(s);
+  }
+
+  function log(msg, tipo) {
+    var d = document.getElementById("logG");
+    var div = document.createElement("div");
+    div.className = "le " + (tipo||"in");
+    div.innerHTML = '<span class="lt">' + new Date().toLocaleTimeString("es-CL") + '</span>' + msg;
+    d.appendChild(div);
+    d.scrollTop = d.scrollHeight;
+  }
+
+  function mostrar(elId, data, err) {
+    var el = document.getElementById(elId);
+    if (err) {
+      el.innerHTML = '<pre style="color:var(--er)">ERROR: ' + err + '</pre>';
+      log("ERROR: " + err, "er");
+    } else {
+      var ok = data && data.status === "ok";
+      var color = ok ? "var(--ok)" : "var(--er)";
+      el.innerHTML = '<pre style="border-color:' + color + '">' + JSON.stringify(data, null, 2) + '</pre>';
+      log((ok ? "\u2713 OK" : "\u2717 Error") + ": " + JSON.stringify(data).slice(0,80), ok ? "ok" : "er");
+    }
+  }
+
+  function testAprobar() {
+    var fila = document.getElementById("filaTest").value;
+    var cant = document.getElementById("cantTest").value;
+    document.getElementById("res1").innerHTML = '<div style="padding:8px"><div class="spinner"></div> Enviando\u2026</div>';
+    log("Enviando actualizarRecepcion fila=" + fila + " estado=APROBADO cant=" + cant, "in");
+
+    var url = URL + "?accion=actualizarRecepcion" +
+      "&fila="        + encodeURIComponent(fila) +
+      "&estado=APROBADO" +
+      "&cantRecibida=" + encodeURIComponent(cant);
+
+    jsonp(url, function(data, err) {
+      mostrar("res1", data, err);
+      if (!err && data && data.status === "ok") {
+        log("\u2713 Recepcion actualizada. Ahora ejecuta Test 2 para ver si se escribio en MOVIMIENTOS.", "ok");
+      }
+    });
+  }
+
+  function testLeerMovimientos() {
+    document.getElementById("res2").innerHTML = '<div style="padding:8px"><div class="spinner"></div> Leyendo\u2026</div>';
+    log("Leyendo MOVIMIENTOS via listarMovimientos...", "in");
+
+    // Intentar con accion=listarMovimientos primero
+    jsonp(URL + "?accion=listarMovimientos", function(data, err) {
+      if (data && data.status === "ok") {
+        mostrar("res2", data, null);
+      } else {
+        // Si no existe ese endpoint, mostrar el error informativo
+        log("listarMovimientos no existe en el script - verificar si se escribio manualmente en el sheet", "wa");
+        mostrar("res2", data || {status:"error", mensaje: err || "Endpoint no disponible"}, null);
+      }
+    });
+  }
+
+  function testLeerFila() {
+    document.getElementById("res3").innerHTML = '<div style="padding:8px"><div class="spinner"></div> Leyendo\u2026</div>';
+    log("Leyendo RECEPCION_BODEGA...", "in");
+    jsonp(URL + "?accion=listarRecepcion&estado=", function(data, err) {
+      if (!err && data && data.pedidos) {
+        log("Pedidos encontrados: " + data.pedidos.length, "ok");
+        if (data.pedidos.length > 0) {
+          log("Primer pedido fila=" + data.pedidos[0].fila + " id=" + data.pedidos[0].id + " estado=" + data.pedidos[0].estado, "in");
+        }
+      }
+      mostrar("res3", data, err);
+    });
+  }
+</script>
+</body>
+</html>
