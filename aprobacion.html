@@ -179,6 +179,8 @@
 <div id="toast"></div>
 
 <script>
+  var supervisorNombre = "";
+  var supervisorId     = "";
   var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
   var _cbN = 0;
   var todasSolicitudes = [];
@@ -195,7 +197,49 @@
     document.head.appendChild(s);
   }
 
-  window.onload = function() { cargarSolicitudes(); };
+  window.onload = function() { cargarColaboradoresAcceso(); };
+
+  function cargarColaboradoresAcceso() {
+    jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
+      var sel = document.getElementById("accColaborador");
+      if (!data || err || !data.colaboradores) {
+        sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
+      for (var i = 0; i < data.colaboradores.length; i++) {
+        var c = data.colaboradores[i];
+        var o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.nombre;
+        sel.appendChild(o);
+      }
+    });
+  }
+
+  function verificarAcceso() {
+    var sel = document.getElementById("accColaborador");
+    var id  = sel.value;
+    var nom = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
+    var err = document.getElementById("accError");
+    if (!id) { err.style.display = "block"; err.textContent = "Selecciona tu nombre."; return; }
+    err.style.display = "none";
+    document.getElementById("btnAcceder").textContent = "Verificando…";
+    jsonp(SCRIPT_URL + "?accion=verificarAcceso&id=" + encodeURIComponent(id), function(data, e2) {
+      document.getElementById("btnAcceder").textContent = "Acceder";
+      if (!data || e2 || data.status !== "ok") {
+        err.style.display = "block"; err.textContent = "Error al verificar. Intenta nuevamente."; return;
+      }
+      if (!data.acceso) {
+        err.style.display = "block"; err.textContent = "No tienes acceso a este panel."; return;
+      }
+      supervisorNombre = data.nombre || nom;
+      supervisorId     = id;
+      document.getElementById("pantallaAcceso").style.display = "none";
+      document.getElementById("panelPrincipal").style.display = "block";
+      cargarSolicitudes();
+    });
+  }
 
   function cargarSolicitudes() {
     document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="sp-lg"></div></div>';
@@ -427,5 +471,6 @@
     setTimeout(function() { t.className = ""; }, 3500);
   }
 </script>
+  </div><!-- /panelPrincipal -->
 </body>
 </html>

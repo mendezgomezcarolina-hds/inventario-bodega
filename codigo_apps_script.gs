@@ -25,6 +25,7 @@ function doGet(e) {
   if (accion === "listarRecepcion")     return responder(listarRecepcion(e),                        callback);
   if (accion === "actualizarRecepcion") return responder(actualizarRecepcion(e),                    callback);
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
+  if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
 
   return responder(escribir(e), callback);
 }
@@ -373,6 +374,36 @@ function listarMovimientos() {
       cantidad:    String(f[7]||"")
     }));
     return { status: "ok", total: movimientos.length, movimientos };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Verificar acceso al panel de aprobación ─────────────────
+// Lee hoja ACCESOS: col A=Nombre, col B=ID, col C=si/no
+function verificarAcceso(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ACCESOS");
+    if (!sheet) return { status: "error", mensaje: "Hoja ACCESOS no existe." };
+    var p     = e.parameter || {};
+    var idBuscado = String(p.id || "").trim();
+    if (!idBuscado) return { status: "error", mensaje: "Sin ID." };
+    var datos = sheet.getDataRange().getValues();
+    for (var i = 0; i < datos.length; i++) {
+      var fila = datos[i];
+      var id   = String(fila[1] || "").trim();
+      if (id === idBuscado) {
+        var acceso = String(fila[2] || "").trim().toLowerCase();
+        return {
+          status:   "ok",
+          nombre:   String(fila[0] || ""),
+          id:       id,
+          acceso:   acceso === "si"
+        };
+      }
+    }
+    return { status: "ok", acceso: false, mensaje: "Responsable no encontrado." };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
