@@ -353,18 +353,46 @@
   }
 
   function cargarItems() {
+    cargarItemsPorLugar(lugarSesion);
+  }
+
+  function poblarSelectItems(sel) {
+    sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
+    for (var i = 0; i < itemsData.length; i++) {
+      var it = itemsData[i];
+      var o  = document.createElement("option");
+      o.value = it.codigo;
+      o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
+      sel.appendChild(o);
+    }
+  }
+
+  function cargarItemsPorLugar(lugar) {
     var sel = document.getElementById("item");
-    jsonp(SCRIPT_URL + "?accion=items", function(data, err) {
-      if (!data || err) { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return; }
-      itemsData = data.items || [];
-      sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-      for (var i = 0; i < itemsData.length; i++) {
-        var it = itemsData[i];
-        var o  = document.createElement("option");
-        o.value = it.codigo;
-        o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
-        sel.appendChild(o);
+    sel.innerHTML = '<option value="" disabled selected>Cargando…</option>';
+    var url = lugar
+      ? SCRIPT_URL + "?accion=itemsPorLugar&lugar=" + encodeURIComponent(lugar)
+      : SCRIPT_URL + "?accion=items";
+    jsonp(url, function(data, err) {
+      // Si falla o no tiene items por lugar, usar fallback generico
+      if (!data || err || data.status !== "ok" || !data.items || !data.items.length) {
+        if (lugar && (!data || data.status !== "ok")) {
+          // Fallback: cargar desde INSUMOS generico
+          jsonp(SCRIPT_URL + "?accion=items", function(d2, e2) {
+            if (!d2 || e2 || d2.status !== "ok") {
+              sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
+              return;
+            }
+            itemsData = d2.items || [];
+            poblarSelectItems(sel);
+          });
+          return;
+        }
+        sel.innerHTML = '<option value="" disabled selected>Sin insumos disponibles</option>';
+        return;
       }
+      itemsData = data.items || [];
+      poblarSelectItems(sel);
     });
   }
 
@@ -407,6 +435,7 @@
     document.getElementById("lugarBadgeWrap").style.display   = "block";
     document.getElementById("inputItemWrap").style.display    = "block";
     document.getElementById("divider").style.display          = "block";
+    cargarItemsPorLugar(lugarSesion);
     document.getElementById("item").focus();
   }
 
@@ -435,6 +464,7 @@
     listaItems.push({ lugar: lugarSesion, item: descItem, codigo: codigoItem, cantidad: cantidad });
     renderLista();
     document.getElementById("cantidad").value = "";
+    cargarItemsPorLugar(lugarSesion);
     document.getElementById("item").focus();
   }
 

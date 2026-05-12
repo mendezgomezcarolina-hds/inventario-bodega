@@ -17,6 +17,7 @@ function doGet(e) {
 
   if (accion === "lugares")             return responder(leerColumnaA(SHEET_LUGARES, "lugares", 1), callback);
   if (accion === "items")               return responder(leerItems(),                               callback);
+  if (accion === "itemsPorLugar")       return responder(leerItemsPorLugar(e),                      callback);
   if (accion === "colaboradores")       return responder(leerColaboradores(),                       callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
@@ -68,6 +69,43 @@ function leerItems() {
       .filter(f => f[0] !== "" && f[0] != null)
       .map(f => ({ codigo: String(f[0]), descripcion: String(f[1] || "") }));
     return { status: "ok", items };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Leer items por lugar (hoja con nombre del lugar) ────────
+// Col A = Código, Col B = Descripción
+function leerItemsPorLugar(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var lugar = (e.parameter.lugar || "").trim();
+    var sheet = null;
+
+    if (lugar) {
+      sheet = ss.getSheetByName(lugar);
+      if (!sheet) {
+        var hojas = ss.getSheets();
+        for (var i = 0; i < hojas.length; i++) {
+          if (hojas[i].getName().toUpperCase() === lugar.toUpperCase()) {
+            sheet = hojas[i];
+            break;
+          }
+        }
+      }
+    }
+
+    if (!sheet) sheet = ss.getSheetByName(SHEET_ITEMS) || ss.getSheets()[2];
+
+    var datos = sheet.getDataRange().getValues();
+    var items = [];
+    for (var j = 0; j < datos.length; j++) {
+      var cod  = String(datos[j][0]).trim();
+      var desc = String(datos[j][1] || "").trim();
+      if (!cod || cod.toUpperCase() === "CODIGO" || cod.toUpperCase() === "C\u00d3DIGO") continue;
+      items.push({ codigo: cod, descripcion: desc });
+    }
+    return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
