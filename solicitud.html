@@ -123,6 +123,13 @@
     .btn-submit svg { width:16px; height:16px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .spinner { width:16px; height:16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
+    #itemLista .ri { padding:9px 12px; font-size:.82rem; cursor:pointer; border-bottom:0.5px solid var(--border); }
+    #itemLista .ri:last-child { border-bottom:none; }
+    #itemLista .ri:hover { background:#EBF3FC; }
+    #itemLista .ri-cod { font-family:'DM Mono',monospace; font-size:.68rem; color:var(--accent); font-weight:500; display:block; margin-bottom:1px; }
+    #itemLista .ri-nom { color:var(--text); }
+    #itemLista .ri-nom mark { background:#fef08a; border-radius:2px; font-weight:600; color:var(--text); padding:0 1px; }
+    #itemLista .ri-empty { padding:12px; text-align:center; font-size:.82rem; color:var(--muted); }
     #toast { margin-top:14px; padding:11px 16px; border-radius:var(--radius); font-size:.87rem; font-weight:500; text-align:center; opacity:0; transform:translateY(-5px); transition:opacity .22s,transform .22s; pointer-events:none; }
     #toast.show { opacity:1; transform:translateY(0); }
     #toast.ok   { background:#dcfce7; color:var(--success); border:1px solid #bbf7d0; }
@@ -204,9 +211,27 @@
   <div id="inputItemWrap" style="display:none">
     <p class="section-label">Paso 3 — Agregar insumo</p>
     <div class="input-row">
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>Insumo</label>
-        <select id="item"><option value="" disabled selected>Cargando…</option></select>
+        <div style="display:flex;gap:7px;align-items:center;">
+          <input type="text" id="itemQ" placeholder="Escribe nombre o código…"
+            autocomplete="off" oninput="filtrarItems()" onfocus="abrirLista()"
+            style="flex:1;font-family:'DM Sans',sans-serif;font-size:.9rem;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;"/>
+          <button type="button" onclick="toggleLista()"
+            style="width:42px;height:42px;background:var(--accent);border:none;border-radius:var(--radius);cursor:pointer;display:grid;place-items:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </button>
+        </div>
+        <div id="itemLista" style="display:none;position:absolute;left:0;right:0;z-index:100;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;"></div>
+        <div id="itemBadge" style="display:none;margin-top:6px;background:#dcfce7;border:1px solid #bbf7d0;border-radius:var(--radius);padding:7px 12px;display:none;align-items:center;justify-content:space-between;">
+          <div>
+            <div id="itemBadgeNom" style="font-size:.85rem;font-weight:500;color:#15803d;"></div>
+            <div id="itemBadgeCod" style="font-family:'DM Mono',monospace;font-size:.7rem;color:#15803d;opacity:.7;margin-top:1px;"></div>
+          </div>
+          <button type="button" onclick="limpiarItem()" style="font-size:.75rem;background:none;border:none;cursor:pointer;color:#15803d;font-family:'DM Sans',sans-serif;">&#10005; cambiar</button>
+        </div>
+        <!-- campo oculto para compatibilidad con el resto del código -->
+        <select id="item" style="display:none;"><option value="" disabled selected></option></select>
       </div>
       <div class="field">
         <label>Cantidad</label>
@@ -270,7 +295,10 @@
   var lugarSesion = "";
   var colaboradoresData = [];
   var listaItems = [];
-  var itemsData  = []; // [{codigo, descripcion}]
+  var itemsData    = []; // [{codigo, descripcion}]
+  var listaAbierta = false;
+  var itemSelCodigo = "";
+  var itemSelDesc   = "";
   var idSolicitud = "";
   var _cbCount = 0;
 
@@ -354,6 +382,71 @@
 
   function cargarItems() {
     cargarItemsPorLugar(lugarSesion);
+  }
+
+  function toggleLista() {
+    listaAbierta ? cerrarLista() : abrirLista();
+  }
+
+  function abrirLista() {
+    listaAbierta = true;
+    filtrarItems();
+    document.getElementById("itemLista").style.display = "block";
+  }
+
+  function cerrarLista() {
+    listaAbierta = false;
+    document.getElementById("itemLista").style.display = "none";
+  }
+
+  function filtrarItems() {
+    var q     = document.getElementById("itemQ").value.toUpperCase().trim();
+    var lista = document.getElementById("itemLista");
+    lista.innerHTML = "";
+    lista.style.display = "block";
+    listaAbierta = true;
+    var fuente = q
+      ? itemsData.filter(function(it){ return it.descripcion.toUpperCase().indexOf(q)>-1 || String(it.codigo).indexOf(q)>-1; })
+      : itemsData;
+    if (!fuente.length) {
+      lista.innerHTML = '<div class="ri-empty">Sin resultados</div>';
+      return;
+    }
+    for (var i=0; i<fuente.length; i++) {
+      var it = fuente[i];
+      var nomHtml = q ? it.descripcion.replace(new RegExp(q,"gi"),function(m){return"<mark>"+m+"</mark>";}) : it.descripcion;
+      var codHtml = q && String(it.codigo).toUpperCase().indexOf(q)>-1 ? String(it.codigo).replace(new RegExp(q,"gi"),function(m){return"<mark>"+m+"</mark>";}) : String(it.codigo);
+      var div = document.createElement("div");
+      div.className = "ri";
+      div.innerHTML = '<span class="ri-cod">'+codHtml+'</span><span class="ri-nom">'+nomHtml+'</span>';
+      (function(item){ div.onclick = function(){ seleccionarItem(item); }; })(it);
+      lista.appendChild(div);
+    }
+  }
+
+  function seleccionarItem(it) {
+    itemSelCodigo = String(it.codigo);
+    itemSelDesc   = it.descripcion;
+    // Actualizar select oculto para compatibilidad
+    var sel = document.getElementById("item");
+    sel.innerHTML = '<option value="'+itemSelCodigo+'" selected>'+itemSelDesc+'</option>';
+    sel.value = itemSelCodigo;
+    // Mostrar badge
+    document.getElementById("itemQ").value = "";
+    cerrarLista();
+    var badge = document.getElementById("itemBadge");
+    badge.style.display = "flex";
+    document.getElementById("itemBadgeNom").textContent = itemSelDesc;
+    document.getElementById("itemBadgeCod").textContent = itemSelCodigo;
+  }
+
+  function limpiarItem() {
+    itemSelCodigo = ""; itemSelDesc = "";
+    document.getElementById("item").innerHTML = '<option value="" disabled selected></option>';
+    document.getElementById("item").value = "";
+    document.getElementById("itemBadge").style.display = "none";
+    document.getElementById("itemQ").value = "";
+    cerrarLista();
   }
 
   function poblarSelectItems(sel) {
@@ -450,7 +543,7 @@
 
   // ── Lista local ───────────────────────────────────────────────
   function agregarALista() {
-    var item     = document.getElementById("item").value;
+    var item     = itemSelCodigo || document.getElementById("item").value;
     var cantidad = document.getElementById("cantidad").value;
     if (!item || !cantidad || Number(cantidad) < 1) {
       mostrarToast("Selecciona insumo y cantidad mayor a 0.", "warn"); return;
@@ -464,6 +557,7 @@
     listaItems.push({ lugar: lugarSesion, item: descItem, codigo: codigoItem, cantidad: cantidad });
     renderLista();
     document.getElementById("cantidad").value = "";
+    limpiarItem();
     cargarItemsPorLugar(lugarSesion);
     document.getElementById("item").focus();
   }
@@ -491,7 +585,7 @@
   }
 
   function eliminarItem(i) { listaItems.splice(i, 1); renderLista(); }
-  function limpiarLista()  { listaItems = []; renderLista(); }
+  function limpiarLista()  { listaItems = []; renderLista(); limpiarItem(); }
 
   // ── Enviar (secuencial con imagen — compatible iOS) ───────────
   var _envioIdx    = 0;
