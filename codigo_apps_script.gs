@@ -75,26 +75,48 @@ function leerItems() {
 }
 
 // ── Leer items por lugar (hoja con nombre del lugar) ────────
-// Col A = Código, Col B = Descripción
+// Mapa explícito para nombres que difieren del nombre de hoja
+var MAPA_LUGAR_SHEET = {
+  "TOMA DE MUESTRAS":    "TOMA_MUESTRAS",
+  "BOX MEDICOS":         "BOX_MEDICOS",
+  "PABELLON":            "PABELLON",
+  "PABELLÓN":            "PABELLON",
+  "AREA TECNICA DERMA":  "AREA_TECNICA",
+  "ÁREA TÉCNICA DERMA":  "AREA_TECNICA",
+  "OFICINA SECRETARIA":  "OFICINA_ADMIN",
+  "OFICINA ADMINISTRATIVA": "OFICINA_ADMIN"
+};
+
 function leerItemsPorLugar(e) {
   try {
-    var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var lugar = (e.parameter.lugar || "").trim();
-    var sheet = null;
+    var ss     = SpreadsheetApp.getActiveSpreadsheet();
+    var lugar  = (e.parameter.lugar || "").trim();
+    var sheet  = null;
 
     if (lugar) {
-      sheet = ss.getSheetByName(lugar);
+      // 1. Buscar en mapa explícito
+      var lugarUp   = lugar.toUpperCase();
+      var nombreHoja = MAPA_LUGAR_SHEET[lugarUp] || MAPA_LUGAR_SHEET[lugar] || null;
+
+      if (nombreHoja) {
+        sheet = ss.getSheetByName(nombreHoja);
+      }
+
+      // 2. Exacto
+      if (!sheet) sheet = ss.getSheetByName(lugar);
+
+      // 3. Insensible a mayúsculas/acentos
       if (!sheet) {
         var hojas = ss.getSheets();
         for (var i = 0; i < hojas.length; i++) {
-          if (hojas[i].getName().toUpperCase() === lugar.toUpperCase()) {
-            sheet = hojas[i];
-            break;
+          if (hojas[i].getName().toUpperCase() === lugarUp) {
+            sheet = hojas[i]; break;
           }
         }
       }
     }
 
+    // 4. Fallback INSUMOS
     if (!sheet) sheet = ss.getSheetByName(SHEET_ITEMS) || ss.getSheets()[2];
 
     var datos = sheet.getDataRange().getValues();
@@ -102,7 +124,7 @@ function leerItemsPorLugar(e) {
     for (var j = 0; j < datos.length; j++) {
       var cod  = String(datos[j][0]).trim();
       var desc = String(datos[j][1] || "").trim();
-      if (!cod || cod.toUpperCase() === "CODIGO" || cod.toUpperCase() === "C\u00d3DIGO") continue;
+      if (!cod || cod.toUpperCase() === "CODIGO" || cod.toUpperCase() === "CÓDIGO") continue;
       items.push({ codigo: cod, descripcion: desc });
     }
     return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };
