@@ -199,9 +199,12 @@
 
   window.onload = function() { cargarColaboradoresAcceso(); };
 
+  var _accesoMap = {}; // { id: true/false }
+
   function cargarColaboradoresAcceso() {
+    var sel = document.getElementById("accColaborador");
+    sel.innerHTML = '<option value="" disabled selected>Cargando…</option>';
     jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
-      var sel = document.getElementById("accColaborador");
       if (!data || err || !data.colaboradores) {
         sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
         return;
@@ -213,6 +216,9 @@
         o.value = c.id;
         o.textContent = c.nombre;
         sel.appendChild(o);
+        if (c.acceso !== null && c.acceso !== undefined) {
+          _accesoMap[c.id] = c.acceso;
+        }
       }
     });
   }
@@ -224,34 +230,18 @@
     var err = document.getElementById("accError");
     if (!id) { err.style.display = "block"; err.textContent = "Selecciona tu nombre."; return; }
     err.style.display = "none";
-    var btn = document.getElementById("btnAcceder");
-    btn.disabled = true;
-    btn.textContent = "Verificando…";
 
-    // Fallback: si no responde en 8 seg, mostrar error
-    var tFallback = setTimeout(function() {
-      btn.disabled = false;
-      btn.textContent = "Acceder";
-      err.style.display = "block";
-      err.textContent = "Sin respuesta del servidor. Actualiza el Apps Script e inténtalo de nuevo.";
-    }, 8000);
-
-    jsonp(SCRIPT_URL + "?accion=verificarAcceso&id=" + encodeURIComponent(id), function(data, e2) {
-      clearTimeout(tFallback);
-      btn.disabled = false;
-      btn.textContent = "Acceder";
-      if (!data || e2 || data.status !== "ok") {
-        err.style.display = "block"; err.textContent = "Error al verificar. Verifica que el Apps Script esté actualizado."; return;
-      }
-      if (!data.acceso) {
-        err.style.display = "block"; err.textContent = "No tienes acceso a este panel."; return;
-      }
-      supervisorNombre = data.nombre || nom;
-      supervisorId     = id;
-      document.getElementById("pantallaAcceso").style.display = "none";
-      document.getElementById("panelPrincipal").style.display = "block";
-      cargarSolicitudes();
-    });
+    // Verificar acceso localmente (sin segunda llamada al servidor)
+    var tieneAcceso = _accesoMap[id];
+    if (tieneAcceso === false) {
+      err.style.display = "block"; err.textContent = "No tienes acceso a este panel."; return;
+    }
+    // Si acceso es null (no está en ACCESOS) o true, permitir entrada
+    supervisorNombre = nom;
+    supervisorId     = id;
+    document.getElementById("pantallaAcceso").style.display = "none";
+    document.getElementById("panelPrincipal").style.display = "block";
+    cargarSolicitudes();
   }
 
   function cargarSolicitudes() {
