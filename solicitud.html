@@ -543,23 +543,17 @@
 
   // ── Lista local ───────────────────────────────────────────────
   function agregarALista() {
-    var item     = itemSelCodigo || document.getElementById("item").value;
     var cantidad = document.getElementById("cantidad").value;
-    if (!item || !cantidad || Number(cantidad) < 1) {
-      mostrarToast("Selecciona insumo y cantidad mayor a 0.", "warn"); return;
+    if (!itemSelCodigo) {
+      mostrarToast("Selecciona un insumo de la lista primero.", "warn"); return;
     }
-    // Leer codigo y descripcion directamente del texto de la opcion seleccionada
-    var selEl      = document.getElementById("item");
-    var optionText = selEl.options[selEl.selectedIndex].textContent || item;
-    var partes     = optionText.split(" — ");
-    var codigoItem = partes[0].trim() || item;
-    var descItem   = partes.length > 1 ? partes.slice(1).join(" — ").trim() : item;
-    listaItems.push({ lugar: lugarSesion, item: descItem, codigo: codigoItem, cantidad: cantidad });
+    if (!cantidad || Number(cantidad) < 1) {
+      mostrarToast("Ingresa una cantidad mayor a 0.", "warn"); return;
+    }
+    listaItems.push({ lugar: lugarSesion, item: itemSelDesc, codigo: itemSelCodigo, cantidad: cantidad });
     renderLista();
     document.getElementById("cantidad").value = "";
     limpiarItem();
-    cargarItemsPorLugar(lugarSesion);
-    document.getElementById("item").focus();
   }
 
   function renderLista() {
@@ -625,7 +619,7 @@
       "&lugar="       + encodeURIComponent(entry.lugar) +
       "&item="        + encodeURIComponent(entry.item) +
       "&codigo="      + encodeURIComponent(entry.codigo || entry.item) +
-      "&descripcion=" + encodeURIComponent(entry.item) +
+      "&descripcion=" + encodeURIComponent(entry.item || entry.codigo) +
       "&cantidad="    + encodeURIComponent(entry.cantidad) +
       "&usuario="     + encodeURIComponent(responsableSesion) +
       "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
