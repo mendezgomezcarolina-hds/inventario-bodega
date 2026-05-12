@@ -217,18 +217,31 @@
     });
   }
 
-  function verificarAcceso() {
+  function chkAcceso() {
     var sel = document.getElementById("accColaborador");
     var id  = sel.value;
     var nom = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
     var err = document.getElementById("accError");
     if (!id) { err.style.display = "block"; err.textContent = "Selecciona tu nombre."; return; }
     err.style.display = "none";
-    document.getElementById("btnAcceder").textContent = "Verificando…";
+    var btn = document.getElementById("btnAcceder");
+    btn.disabled = true;
+    btn.textContent = "Verificando…";
+
+    // Fallback: si no responde en 8 seg, mostrar error
+    var tFallback = setTimeout(function() {
+      btn.disabled = false;
+      btn.textContent = "Acceder";
+      err.style.display = "block";
+      err.textContent = "Sin respuesta del servidor. Actualiza el Apps Script e inténtalo de nuevo.";
+    }, 8000);
+
     jsonp(SCRIPT_URL + "?accion=verificarAcceso&id=" + encodeURIComponent(id), function(data, e2) {
-      document.getElementById("btnAcceder").textContent = "Acceder";
+      clearTimeout(tFallback);
+      btn.disabled = false;
+      btn.textContent = "Acceder";
       if (!data || e2 || data.status !== "ok") {
-        err.style.display = "block"; err.textContent = "Error al verificar. Intenta nuevamente."; return;
+        err.style.display = "block"; err.textContent = "Error al verificar. Verifica que el Apps Script esté actualizado."; return;
       }
       if (!data.acceso) {
         err.style.display = "block"; err.textContent = "No tienes acceso a este panel."; return;
