@@ -19,6 +19,7 @@ function doGet(e) {
   if (accion === "items")               return responder(leerItems(),                               callback);
   if (accion === "itemsPorLugar")       return responder(leerItemsPorLugar(e),                      callback);
   if (accion === "colaboradores")       return responder(leerColaboradores(),                       callback);
+  if (accion === "accesos")             return responder(leerAccesos(),                            callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
   if (accion === "actualizarEstado")    return responder(actualizarEstado(e),                       callback);
@@ -46,37 +47,36 @@ function responder(obj, callback) {
 }
 
 // ── Leer colaboradores: columna A (Nombre) + B (ID) ──────────
-// Incluye campo acceso=true/false leyendo la hoja ACCESOS col C
 function leerColaboradores() {
   try {
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(SHEET_COLABORADORES) || ss.getSheets()[3];
     var datos = sheet.getDataRange().getValues();
-
-    // Cargar mapa de accesos desde hoja ACCESOS (col A=Nombre, col B=ID, col C=si/no)
-    var mapaAcceso = {};
-    var accSheet = ss.getSheetByName("ACCESOS");
-    if (accSheet) {
-      var accDatos = accSheet.getDataRange().getValues();
-      for (var i = 0; i < accDatos.length; i++) {
-        var id  = String(accDatos[i][1] || "").trim();
-        var val = String(accDatos[i][2] || "").trim().toLowerCase();
-        if (id) mapaAcceso[id] = (val === "si");
-      }
-    }
-
     var colaboradores = [];
-    for (var j = 0; j < datos.length; j++) {
-      var f = datos[j];
-      if (!f[0] && !f[1]) continue;
-      var cid = String(f[1] || "").trim();
-      colaboradores.push({
-        nombre: String(f[0] || ""),
-        id:     cid,
-        acceso: mapaAcceso.hasOwnProperty(cid) ? mapaAcceso[cid] : null
-      });
+    for (var i = 0; i < datos.length; i++) {
+      if (!datos[i][0]) continue;
+      colaboradores.push({ nombre: String(datos[i][0]), id: String(datos[i][1] || "") });
     }
     return { status: "ok", colaboradores: colaboradores };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Leer accesos: IDs con acceso=si en hoja ACCESOS (col B=ID, col C=si/no) ──
+function leerAccesos() {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ACCESOS");
+    if (!sheet) return { status: "ok", ids: [] };
+    var datos = sheet.getDataRange().getValues();
+    var ids   = [];
+    for (var i = 0; i < datos.length; i++) {
+      var id  = String(datos[i][1] || "").trim();
+      var acc = String(datos[i][2] || "").trim().toLowerCase();
+      if (id && acc === "si") ids.push(id);
+    }
+    return { status: "ok", ids: ids };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
