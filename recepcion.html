@@ -78,7 +78,7 @@
     .item-fila:last-of-type{border-bottom:none;}
     .item-nom{font-size:.88rem;font-weight:500;color:var(--text);margin-bottom:2px;}
     .item-sub{font-size:.72rem;color:var(--muted);margin-bottom:8px;}
-    .item-bot{display:grid;grid-template-columns:60px 60px 1fr auto;gap:8px;align-items:end;}
+    .item-bot{display:grid;grid-template-columns:60px 70px 1fr auto;gap:8px;align-items:end;}
 
     .cant-grupo{display:flex;flex-direction:column;gap:3px;}
     .cant-lbl{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
@@ -316,6 +316,7 @@
           '<div class="item-bot">' +
             '<div class="cant-grupo"><span class="cant-lbl">Solicitado</span><span class="cant-num">' + (p.cantSolicitada||"—") + '</span></div>' +
             '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida||p.cantSolicitada||"") + '" id="cr-' + p.fila + '" /></div>' +
+            '<div class="cant-grupo"><span class="cant-lbl">Vencimiento</span><input class="date-input" type="date" id="venc-' + p.fila + '" /></div>' +
             '<div class="item-acciones">' +
               '<button class="btn-ap" id="ap-' + p.fila + '" onclick="togDec(' + p.fila + ',\'APROBADO\')">&#10003;</button>' +
               '<button class="btn-re" id="re-' + p.fila + '" onclick="togDec(' + p.fila + ',\'RECHAZADO\')">&#10007;</button>' +
