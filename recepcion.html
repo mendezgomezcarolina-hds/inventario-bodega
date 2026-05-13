@@ -315,7 +315,7 @@
           '<div class="item-sub">C\u00f3d: ' + (p.codigo||"—") + '</div>' +
           '<div class="item-bot">' +
             '<div class="cant-grupo"><span class="cant-lbl">Solicitado</span><span class="cant-num">' + (p.cantSolicitada||"—") + '</span></div>' +
-            '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida||p.cantSolicitada||"") + '" id="cr-' + p.fila + '" /></div>' +
+            '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida || String(p.cantSolicitada||"").replace(/[^0-9]/g,"")) + '" id="cr-' + p.fila + '" /></div>' +
             '<div class="cant-grupo"><span class="cant-lbl">Vencimiento</span><input class="date-input" type="date" id="venc-' + p.fila + '" /></div>' +
             '<div class="item-acciones">' +
               '<button class="btn-ap" id="ap-' + p.fila + '" onclick="togDec(' + p.fila + ',\'APROBADO\')">&#10003;</button>' +
@@ -365,7 +365,7 @@
         var cantInput = document.getElementById("cr-" + p.fila);
         var cant = cantInput ? cantInput.value : p.cantSolicitada;
         var vencInput = document.getElementById("venc-" + p.fila);
-        var venc = vencInput ? vencInput.value : "";
+        var venc = (vencInput && vencInput.value) ? vencInput.value : "no aplica";
         items.push({ fila: p.fila, est: dec.est, cant: cant, venc: venc });
       }
     }
@@ -398,7 +398,7 @@
       "&fila="             + encodeURIComponent(it.fila) +
       "&estado="           + encodeURIComponent(it.est) +
       "&cantRecibida="     + encodeURIComponent(it.cant) +
-      "&fechaVencimiento=" + encodeURIComponent(it.venc || "");
+      "&fechaVencimiento=" + encodeURIComponent(it.venc || "no aplica");
 
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") _gErr++;
