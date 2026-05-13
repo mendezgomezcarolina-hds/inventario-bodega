@@ -169,22 +169,18 @@
     </div>
   </div>
 
-  <!-- PASO 1: Responsable -->
-  <div id="responsableSesionWrap">
-    <p class="section-label">Paso 1 — Responsable</p>
-    <div class="session-select">
-      <div class="field">
-        <label>Responsable</label>
-        <select id="responsable"><option value="" disabled selected>Cargando…</option></select>
-      </div>
-      <button class="btn-confirm" onclick="confirmarResponsable()">✓</button>
-    </div>
-  </div>
-  <div id="responsableBadgeWrap" style="display:none">
+  <!-- Responsable desde sesión (automático) -->
+  <div style="margin-bottom:16px;">
     <p class="section-label">Responsable</p>
-    <div class="badge-session badge-green">
-      <span id="responsableBadgeTxt"></span>
-      <button onclick="cambiarResponsable()">Cambiar</button>
+    <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:8px;padding:9px 14px;">
+      <div style="width:32px;height:32px;background:#0F6E56;border-radius:50%;display:grid;place-items:center;flex-shrink:0;">
+        <svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:.88rem;font-weight:600;color:#15803d;" id="responsableBadgeTxt">—</div>
+        <div style="font-size:.68rem;color:#15803d;font-family:'DM Mono',monospace;" id="responsableIdTxt">—</div>
+      </div>
+      <span style="font-size:.65rem;font-weight:700;background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:99px;border:1px solid #bbf7d0;">✓ Sesión activa</span>
     </div>
   </div>
 
@@ -303,8 +299,16 @@
   var _cbCount = 0;
 
   window.onload = function() {
+    var sess = null;
+    try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e) {}
+    if (!sess) { window.location.replace("login.html"); return; }
+    responsableSesion   = sess.nombre || "";
+    responsableIdSesion = sess.id     || "";
+    document.getElementById("responsableBadgeTxt").textContent = responsableSesion;
+    document.getElementById("responsableIdTxt").textContent    = responsableIdSesion;
+    document.getElementById("lugarSesionWrap").style.display   = "block";
     if (!SCRIPT_URL) pedirURL();
-    else { cargarColaboradores(); cargarLugares(); cargarItems(); }
+    else { cargarLugares(); cargarItems(); }
   };
 
   function pedirURL() {
@@ -312,7 +316,7 @@
     if (u && u.indexOf("https://") === 0) {
       SCRIPT_URL = u.trim();
       localStorage.setItem("inv_script_url", SCRIPT_URL);
-      cargarColaboradores(); cargarLugares(); cargarItems();
+      cargarLugares(); cargarItems();
     }
   }
 
@@ -351,21 +355,7 @@
   }
 
   // ── Cargar listas ─────────────────────────────────────────────
-  function cargarColaboradores() {
-    var sel = document.getElementById("responsable");
-    jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
-      if (!data || err) { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return; }
-      colaboradoresData = data.colaboradores || [];
-      sel.innerHTML = '<option value="" disabled selected>Selecciona…</option>';
-      for (var i = 0; i < colaboradoresData.length; i++) {
-        var c = colaboradoresData[i];
-        var o = document.createElement("option");
-        o.value = c.nombre;
-        o.textContent = c.id ? c.nombre + " — " + c.id : c.nombre;
-        sel.appendChild(o);
-      }
-    });
-  }
+
 
   function cargarLugares() {
     var sel = document.getElementById("lugar");
@@ -489,22 +479,7 @@
     });
   }
 
-  // ── Sesión responsable ────────────────────────────────────────
-  function confirmarResponsable() {
-    var nombre = document.getElementById("responsable").value;
-    if (!nombre) { mostrarToast("Selecciona un responsable.", "warn"); return; }
-    responsableSesion = nombre;
-    var colab = null;
-    for (var i = 0; i < colaboradoresData.length; i++) {
-      if (colaboradoresData[i].nombre === nombre) { colab = colaboradoresData[i]; break; }
-    }
-    responsableIdSesion = colab ? colab.id : "";
-    var txt = responsableIdSesion ? nombre + " — " + responsableIdSesion : nombre;
-    document.getElementById("responsableBadgeTxt").textContent = txt;
-    document.getElementById("responsableSesionWrap").style.display = "none";
-    document.getElementById("responsableBadgeWrap").style.display  = "block";
-    document.getElementById("lugarSesionWrap").style.display       = "block";
-  }
+  // ── Sesión responsable (desde login) ────────────────────────
 
   function cambiarResponsable() {
     responsableSesion = ""; responsableIdSesion = ""; lugarSesion = "";
