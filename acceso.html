@@ -90,6 +90,7 @@
   var sess = null;
   try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e){}
   if (!sess) { window.location.replace("login.html"); }
+  if (sess && sess.id !== "15579172-1") { window.location.replace("index.html"); }
 
   function jsonp(url, cb) {
     var name = "_ac_" + Date.now() + "_" + (++_n);

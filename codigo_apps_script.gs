@@ -648,18 +648,19 @@ function login(e) {
 
 // ── Leer accesos de un usuario desde hoja ACCESOS ────────────
 function leerAccesosUsuario(ss, id) {
+  var ADMIN_ID = "15579172-1";
+  if (id === ADMIN_ID) return [1,1,1,1,1,1]; // Admin siempre con acceso total
   var sheet = ss.getSheetByName("ACCESOS");
   if (!sheet || sheet.getLastRow() <= 1) return [1,1,1,1,1,1];
   var datos = sheet.getDataRange().getValues();
   for (var i = 1; i < datos.length; i++) {
     if (String(datos[i][1] || "").trim() === id) {
-      // Columnas C-H (índices 2-7) = 6 paneles
       var acc = [];
       for (var j = 2; j < 8; j++) acc.push(String(datos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
       return acc;
     }
   }
-  return [1,1,1,1,1,1]; // Si no tiene fila en ACCESOS → acceso completo
+  return [1,1,1,1,1,1];
 }
 
 // ── Obtener todos los accesos para panel admin ────────────────
