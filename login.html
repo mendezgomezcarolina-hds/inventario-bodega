@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <title>Ingresar — Bodega Dermatología HDS</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#f0f4f8;--s:#fff;--b:#d1dce8;--ac:#185FA5;--t:#1e293b;--m:#64748b;--er:#dc2626;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+    .card{background:var(--s);border:1px solid var(--b);border-radius:16px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,.06);}
+    .top{text-align:center;margin-bottom:24px;}
+    .logo{width:52px;height:52px;background:var(--ac);border-radius:14px;display:grid;place-items:center;margin:0 auto 14px;}
+    .logo svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+    h1{font-size:1.05rem;font-weight:600;color:var(--t);}
+    .sub{font-size:.75rem;color:var(--m);margin-top:4px;}
+    .field{margin-bottom:14px;}
+    label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--m);display:block;margin-bottom:5px;}
+    input{font-family:'DM Mono',monospace;font-size:.95rem;width:100%;padding:10px 12px;border:1.5px solid var(--b);border-radius:9px;background:var(--bg);color:var(--t);outline:none;letter-spacing:.05em;}
+    input:focus{border-color:var(--ac);background:#EBF3FC;}
+    input::placeholder{font-family:'DM Sans',sans-serif;color:#94a3b8;font-size:.82rem;letter-spacing:0;}
+    .hint{font-size:.68rem;color:#94a3b8;margin-top:4px;}
+    .pw-wrap{position:relative;}
+    .pw-wrap input{padding-right:42px;}
+    .eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--m);background:none;border:none;padding:0;}
+    .eye svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+    .btn{width:100%;padding:11px;background:var(--ac);color:#fff;font-family:'DM Sans',sans-serif;font-size:.92rem;font-weight:600;border:none;border-radius:9px;cursor:pointer;margin-top:4px;}
+    .btn:disabled{opacity:.6;cursor:default;}
+    .err{margin-top:10px;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:.78rem;color:var(--er);text-align:center;}
+    .ok-box{margin-top:10px;background:#dcfce7;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center;}
+    .ok-box .nom{font-size:.9rem;font-weight:600;color:#15803d;}
+    .ok-box .sub2{font-size:.72rem;color:#15803d;margin-top:2px;}
+    .footer{text-align:center;margin-top:20px;font-size:.68rem;color:#94a3b8;}
+    .footer strong{color:#64748b;font-weight:500;}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    </div>
+    <h1>Bodega Dermatología</h1>
+    <p class="sub">Hospital del Salvador · SSMO · Ingresa para continuar</p>
+  </div>
+
+  <div class="field">
+    <label>RUT</label>
+    <input type="text" id="rut" placeholder="12345678-9" autocomplete="username" maxlength="12"/>
+    <p class="hint">Con guión y dígito verificador</p>
+  </div>
+
+  <div class="field">
+    <label>Contraseña</label>
+    <div class="pw-wrap">
+      <input type="password" id="pwd" placeholder="••••" autocomplete="current-password" maxlength="20"/>
+      <button class="eye" onclick="togglePwd()" type="button">
+        <svg id="eyeIcon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <button class="btn" id="btnLogin" onclick="doLogin()">Ingresar</button>
+  <div id="msg"></div>
+  <div class="footer">Desarrollado por <strong>Carolina Méndez Gómez</strong> · EU Supervisora · 2026</div>
+</div>
+
+<script>
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  var _n = 0;
+
+  // Si ya hay sesión activa, redirigir al portal
+  if (localStorage.getItem("bodega_user")) {
+    window.location.replace("index.html");
+  }
+
+  function jsonp(url, cb) {
+    var name  = "_lg_" + Date.now() + "_" + (++_n);
+    var timer = setTimeout(function(){ delete window[name]; cb(null, "Timeout"); }, 12000);
+    window[name] = function(d){ clearTimeout(timer); delete window[name]; cb(d, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function(){ clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
+    document.head.appendChild(s);
+  }
+
+  function togglePwd() {
+    var inp = document.getElementById("pwd");
+    var ico = document.getElementById("eyeIcon");
+    if (inp.type === "password") {
+      inp.type = "text";
+      ico.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    } else {
+      inp.type = "password";
+      ico.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+    }
+  }
+
+  function doLogin() {
+    var rut = document.getElementById("rut").value.trim();
+    var pwd = document.getElementById("pwd").value.trim();
+    var msg = document.getElementById("msg");
+    var btn = document.getElementById("btnLogin");
+    msg.innerHTML = "";
+    if (!rut || !pwd) {
+      msg.innerHTML = '<div class="err">Ingresa tu RUT y contraseña.</div>'; return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Verificando...';
+    jsonp(SCRIPT_URL + "?accion=login&rut=" + encodeURIComponent(rut) + "&pwd=" + encodeURIComponent(pwd), function(data, err) {
+      btn.disabled = false;
+      btn.textContent = "Ingresar";
+      if (err || !data) {
+        msg.innerHTML = '<div class="err">Error de conexión. Intenta nuevamente.</div>'; return;
+      }
+      if (data.status !== "ok") {
+        msg.innerHTML = '<div class="err">RUT o contraseña incorrectos.</div>'; return;
+      }
+      // Guardar sesión
+      localStorage.setItem("bodega_user", JSON.stringify({
+        nombre: data.nombre,
+        id:     data.id,
+        accesos: data.accesos
+      }));
+      msg.innerHTML = '<div class="ok-box"><div class="nom">✓ Bienvenida, ' + data.nombre + '</div><div class="sub2">Ingresando al portal…</div></div>';
+      setTimeout(function(){ window.location.replace("index.html"); }, 800);
+    });
+  }
+
+  document.addEventListener("keydown", function(e){ if (e.key === "Enter") doLogin(); });
+</script>
+</body>
+</html>

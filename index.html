@@ -139,5 +139,28 @@
   
 </div>
 
+<script>
+  // Session guard
+  (function(){
+    var sess = null;
+    try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e){}
+    if (!sess) { window.location.replace("login.html"); return; }
+    // Show welcome
+    var nom = sess.nombre || "";
+    var el = document.getElementById("welcome");
+    if (el) el.textContent = "Bienvenida, " + nom.split(" ")[0];
+    // Apply access control: accesos[0..5] maps to modules
+    var hrefs = ["recepcion_lugar.html","stock.html","inventario.html","solicitud.html","recepcion.html","aprobacion.html"];
+    var acc = sess.accesos || [];
+    for (var i = 0; i < hrefs.length; i++) {
+      var link = document.querySelector('a[href="' + hrefs[i] + '"]');
+      if (link) link.style.display = (acc[i] ? "" : "none");
+    }
+  })();
+  function cerrarSesion() {
+    localStorage.removeItem("bodega_user");
+    window.location.replace("login.html");
+  }
+</script>
 </body>
 </html>

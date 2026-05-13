@@ -24,6 +24,9 @@ function doGet(e) {
   if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
   if (accion === "registrarEgreso")          return responder(registrarEgreso(e),                      callback);
   if (accion === "listarSolicitudesPorLugar") return responder(listarSolicitudesPorLugar(e),             callback);
+  if (accion === "login")                     return responder(login(e),                               callback);
+  if (accion === "obtenerAccesos")            return responder(obtenerAccesos(e),                      callback);
+  if (accion === "guardarAccesos")            return responder(guardarAccesos(e),                      callback);
   if (accion === "recepcionarSolicitud")      return responder(recepcionarSolicitud(e),                  callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
@@ -612,6 +615,121 @@ function recepcionarSolicitud(e) {
       ]);
     }
     return { status: "ok", fila: fila };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Login ────────────────────────────────────────────────────
+function login(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("COLABORADORES");
+    if (!sheet) throw new Error("Hoja COLABORADORES no existe.");
+    var p   = e.parameter || {};
+    var rut = String(p.rut || "").trim();
+    var pwd = String(p.pwd || "").trim();
+    if (!rut || !pwd) return { status: "error", mensaje: "Faltan credenciales." };
+    var datos = sheet.getDataRange().getValues();
+    for (var i = 0; i < datos.length; i++) {
+      var fRut = String(datos[i][1] || "").trim();
+      var fPwd = String(datos[i][2] || "").trim();
+      if (fRut === rut && fPwd === pwd) {
+        // Leer accesos desde hoja ACCESOS
+        var accesos = leerAccesosUsuario(ss, fRut);
+        return { status: "ok", nombre: String(datos[i][0] || ""), id: fRut, accesos: accesos };
+      }
+    }
+    return { status: "error", mensaje: "Credenciales incorrectas." };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Leer accesos de un usuario desde hoja ACCESOS ────────────
+function leerAccesosUsuario(ss, id) {
+  var sheet = ss.getSheetByName("ACCESOS");
+  if (!sheet || sheet.getLastRow() <= 1) return [1,1,1,1,1,1];
+  var datos = sheet.getDataRange().getValues();
+  for (var i = 1; i < datos.length; i++) {
+    if (String(datos[i][1] || "").trim() === id) {
+      // Columnas C-H (índices 2-7) = 6 paneles
+      var acc = [];
+      for (var j = 2; j < 8; j++) acc.push(String(datos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+      return acc;
+    }
+  }
+  return [1,1,1,1,1,1]; // Si no tiene fila en ACCESOS → acceso completo
+}
+
+// ── Obtener todos los accesos para panel admin ────────────────
+function obtenerAccesos(e) {
+  try {
+    var ss     = SpreadsheetApp.getActiveSpreadsheet();
+    var colabs = ss.getSheetByName("COLABORADORES");
+    var accs   = ss.getSheetByName("ACCESOS");
+    if (!colabs) throw new Error("Hoja COLABORADORES no existe.");
+    var colDatos = colabs.getDataRange().getValues();
+    // Construir mapa de accesos por ID
+    var mapaAccesos = {};
+    if (accs && accs.getLastRow() > 1) {
+      var accDatos = accs.getDataRange().getValues();
+      for (var i = 1; i < accDatos.length; i++) {
+        var id  = String(accDatos[i][1] || "").trim();
+        var acc = [];
+        for (var j = 2; j < 8; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+        mapaAccesos[id] = acc;
+      }
+    }
+    var colaboradores = [];
+    for (var i = 0; i < colDatos.length; i++) {
+      if (!colDatos[i][0] || !colDatos[i][1]) continue;
+      var id = String(colDatos[i][1]).trim();
+      colaboradores.push({
+        nombre:  String(colDatos[i][0]).trim(),
+        id:      id,
+        accesos: mapaAccesos[id] || [1,1,1,1,1,1]
+      });
+    }
+    return { status: "ok", colaboradores: colaboradores };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Guardar accesos desde panel admin ────────────────────────
+function guardarAccesos(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ACCESOS");
+    if (!sheet) sheet = ss.insertSheet("ACCESOS");
+    var p     = e.parameter || {};
+    var datos = JSON.parse(decodeURIComponent(p.datos || "[]"));
+    // Limpiar y reescribir desde fila 2
+    var lastRow = sheet.getLastRow();
+    if (lastRow >= 2) sheet.getRange(2, 1, lastRow - 1, 8).clearContent();
+    // Encabezados si faltan
+    if (lastRow < 1) sheet.getRange(1,1,1,8).setValues([["Responsable","ID","Recep. por Lugar","Stock por Lugar","Captura Inventario","Solicitud Insumos","Recep. Bodega","Aprobación Solic."]]);
+    // También cargar nombres desde COLABORADORES para la columna A
+    var colabs  = ss.getSheetByName("COLABORADORES");
+    var mapaNom = {};
+    if (colabs) {
+      var cd = colabs.getDataRange().getValues();
+      for (var i = 0; i < cd.length; i++) mapaNom[String(cd[i][1]).trim()] = String(cd[i][0]).trim();
+    }
+    var filas = [];
+    for (var i = 0; i < datos.length; i++) {
+      var d   = datos[i];
+      var acc = d.accesos || [0,0,0,0,0,0];
+      filas.push([
+        mapaNom[d.id] || d.id, d.id,
+        acc[0] ? "si" : "no", acc[1] ? "si" : "no",
+        acc[2] ? "si" : "no", acc[3] ? "si" : "no",
+        acc[4] ? "si" : "no", acc[5] ? "si" : "no"
+      ]);
+    }
+    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 8).setValues(filas);
+    return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
