@@ -117,27 +117,8 @@
 </head>
 <body>
 
-<!-- ── Pantalla de acceso ──────────────────────────────────── -->
-<div id="pantallaAcceso" style="max-width:400px;margin:40px auto;padding:0 16px;">
-  <div style="text-align:center;margin-bottom:24px;">
-    <div style="width:52px;height:52px;background:#185FA5;border-radius:14px;display:grid;place-items:center;margin:0 auto 14px;">
-      <svg width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-    </div>
-    <h2 style="font-size:1.1rem;font-weight:600;color:#1e293b;">Aprobación de Solicitudes</h2>
-    <p style="font-size:.78rem;color:#64748b;margin-top:5px;">Acceso restringido · Identifícate para continuar</p>
-  </div>
-  <div style="background:#fff;border:1px solid #d1dce8;border-radius:14px;padding:22px;">
-    <label style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#64748b;display:block;margin-bottom:6px;">Responsable</label>
-    <select id="accColaborador" style="font-family:inherit;font-size:.92rem;width:100%;padding:10px 12px;border:1.5px solid #d1dce8;border-radius:8px;background:#f0f4f8;color:#1e293b;outline:none;margin-bottom:16px;">
-      <option value="" disabled selected>Cargando...</option>
-    </select>
-    <button id="btnAcceder" onclick="chkAcceso()" style="width:100%;padding:11px;background:#185FA5;color:#fff;font-family:inherit;font-size:.92rem;font-weight:600;border:none;border-radius:9px;cursor:pointer;">Acceder</button>
-    <div id="accError" style="display:none;margin-top:10px;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:10px 12px;font-size:.82rem;color:#dc2626;text-align:center;"></div>
-  </div>
-</div>
-
 <!-- ── Panel principal ─────────────────────────────────────── -->
-<div id="panelPrincipal" style="display:none;">
+<div id="panelPrincipal">
 <div class="container">
 
   <a class="back" href="index.html">
@@ -219,65 +200,14 @@
     document.head.appendChild(s);
   }
 
-  window.onload = function() { cargarColaboradoresAcceso(); };
-
-  var _idsConAcceso = []; // IDs permitidos desde hoja ACCESOS
-  var _colabCargados = false;
-  var _accesosCargados = false;
-
-  function cargarColaboradoresAcceso() {
-    var sel = document.getElementById("accColaborador");
-    sel.innerHTML = '<option value="" disabled selected>Cargando…</option>';
-
-    // Llamada 1: colaboradores
-    jsonp(SCRIPT_URL + "?accion=colaboradores", function(data, err) {
-      if (!data || err || !data.colaboradores) {
-        sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
-        return;
-      }
-      sel.innerHTML = '<option value="" disabled selected>Selecciona tu nombre…</option>';
-      for (var i = 0; i < data.colaboradores.length; i++) {
-        var c = data.colaboradores[i];
-        var o = document.createElement("option");
-        o.value = c.id;
-        o.textContent = c.nombre;
-        sel.appendChild(o);
-      }
-      _colabCargados = true;
-    });
-
-    // Llamada 2: accesos (en paralelo)
-    jsonp(SCRIPT_URL + "?accion=accesos", function(data2, err2) {
-      if (data2 && data2.ids) _idsConAcceso = data2.ids;
-      _accesosCargados = true;
-    });
-  }
-
-  function chkAcceso() {
-    var sel = document.getElementById("accColaborador");
-    var id  = sel.value;
-    var nom = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "";
-    var err = document.getElementById("accError");
-    if (!id) { err.style.display = "block"; err.textContent = "Selecciona tu nombre."; return; }
-    err.style.display = "none";
-
-    // Si accesos aun no cargaron, permitir entrada (evita bloqueos)
-    if (_accesosCargados && _idsConAcceso.length > 0) {
-      var permitido = false;
-      for (var i = 0; i < _idsConAcceso.length; i++) {
-        if (_idsConAcceso[i] === id) { permitido = true; break; }
-      }
-      if (!permitido) {
-        err.style.display = "block"; err.textContent = "No tienes acceso a este panel."; return;
-      }
-    }
-
-    supervisorNombre = nom;
-    supervisorId     = id;
-    document.getElementById("pantallaAcceso").style.display = "none";
-    document.getElementById("panelPrincipal").style.display = "block";
+  window.onload = function() {
+    var sess = null;
+    try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e) {}
+    if (!sess) { window.location.replace("login.html"); return; }
+    supervisorNombre = sess.nombre || "";
+    supervisorId     = sess.id     || "";
     cargarSolicitudes();
-  }
+  };
 
   function cargarSolicitudes() {
     document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="sp-lg"></div></div>';
