@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+  <title>Recepción por Lugar — Dermatología HDS</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#f0f4f8;--s:#fff;--border:#d1dce8;--text:#1e293b;--muted:#64748b;--accent:#0F6E56;--blue:#185FA5;--er:#dc2626;--ok:#16a34a;--radius:10px;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padding:20px 16px 40px;}
+    .container{max-width:520px;margin:0 auto;}
+    .back{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);text-decoration:none;margin-bottom:18px;}
+    .back i{font-size:14px;}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+    .hic{width:42px;height:42px;background:var(--accent);border-radius:11px;display:grid;place-items:center;flex-shrink:0;}
+    .hic i{font-size:20px;color:#fff;}
+    .htxt h1{font-size:1rem;font-weight:600;color:var(--text);}
+    .htxt p{font-size:.72rem;color:var(--muted);margin-top:2px;}
+    .lugar-card{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+    .lugar-card i{font-size:16px;color:var(--muted);}
+    .lugar-card select{flex:1;font-family:'DM Sans',sans-serif;font-size:.9rem;border:none;background:transparent;color:var(--text);outline:none;}
+    .tabs{display:flex;gap:6px;margin-bottom:14px;}
+    .tab{padding:6px 14px;border-radius:99px;font-size:.75rem;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--s);color:var(--muted);}
+    .tab.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .sol-card{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;}
+    .sol-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .sol-id{font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600;color:var(--blue);}
+    .sol-meta{font-size:.7rem;color:var(--muted);margin-top:2px;}
+    .sol-badge{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap;}
+    .sb-pend{background:#fef3c7;color:#92400e;}
+    .sb-rec{background:#dcfce7;color:#15803d;}
+    .btn-rec{font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:600;padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;white-space:nowrap;}
+    .items-wrap{padding:10px 14px;}
+    .item-fila{padding:10px 0;border-bottom:0.5px solid var(--border);}
+    .item-fila:last-child{border-bottom:none;}
+    .item-nom{font-size:.85rem;font-weight:500;color:var(--text);margin-bottom:1px;}
+    .item-sub{font-size:.7rem;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:8px;}
+    .item-bot{display:grid;grid-template-columns:60px 70px 1fr auto;gap:8px;align-items:end;}
+    .cg{display:flex;flex-direction:column;gap:3px;}
+    .cl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
+    .cn{font-family:'DM Mono',monospace;font-size:.9rem;font-weight:700;color:var(--text);}
+    .ci{font-family:'DM Mono',monospace;font-size:.82rem;width:100%;padding:5px 7px;border:1.5px solid #7c3aed;border-radius:5px;background:#f5f3ff;color:var(--text);outline:none;}
+    .cd{font-size:.78rem;width:100%;padding:5px 7px;border:1.5px solid var(--accent);border-radius:5px;background:#E1F5EE;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;}
+    .bts{display:flex;gap:4px;}
+    .bap{width:32px;height:32px;border-radius:6px;border:1.5px solid #bbf7d0;background:#dcfce7;color:#15803d;font-size:13px;font-weight:700;cursor:pointer;}
+    .bre{width:32px;height:32px;border-radius:6px;border:1.5px solid #fecaca;background:#fee2e2;color:#dc2626;font-size:13px;font-weight:700;cursor:pointer;}
+    .bap.on{background:#16a34a;color:#fff;border-color:#16a34a;}
+    .bre.on{background:#dc2626;color:#fff;border-color:#dc2626;}
+    .sol-foot{padding:10px 14px;background:#f8fafc;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .prog{font-size:.72rem;color:var(--muted);}
+    .btn-guardar{font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;}
+    .btn-guardar:disabled{opacity:.5;cursor:default;}
+    .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:.85rem;}
+    .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:99px;font-size:.82rem;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:200;}
+    #toast.show{opacity:1;}
+    #toast.ok{background:#15803d;}
+    #toast.warn{background:#92400e;}
+    #toast.er{background:#dc2626;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="back"><i class="ti ti-arrow-left"></i> Volver al portal</a>
+  <div class="header">
+    <div class="hic"><i class="ti ti-building-warehouse"></i></div>
+    <div class="htxt"><h1>Recepción por Lugar</h1><p>Desde solicitudes aprobadas · Dermatología HDS</p></div>
+  </div>
+
+  <div class="lugar-card">
+    <i class="ti ti-map-pin"></i>
+    <select id="selLugar" onchange="cargarSolicitudes()">
+      <option value="">Selecciona un lugar...</option>
+    </select>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" id="tabPend" onclick="setTab('PENDIENTE')">Pendientes</div>
+    <div class="tab" id="tabRec"  onclick="setTab('RECEPCIONADO')">Recepcionadas</div>
+  </div>
+
+  <div id="listaSolicitudes"><div class="empty">Selecciona un lugar para comenzar.</div></div>
+</div>
+<div id="toast"></div>
+
+<script>
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  var tabActual   = "PENDIENTE";
+  var solicitudes = [];
+  var decisiones  = {};
+  var _n = 0;
+
+  function jsonp(url, cb) {
+    var name  = "_rl_" + Date.now() + "_" + (++_n);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 12000);
+    window[name] = function(d) { clearTimeout(timer); delete window[name]; cb(d, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error"); };
+    document.head.appendChild(s);
+  }
+
+  function toast(msg, tipo) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.className = "show " + (tipo||"");
+    setTimeout(function() { t.className = ""; }, 3000);
+  }
+
+  // Cargar lugares
+  window.onload = function() {
+    jsonp(SCRIPT_URL + "?accion=lugares", function(data, err) {
+      var sel = document.getElementById("selLugar");
+      if (!data || err || !data.lugares) return;
+      for (var i = 0; i < data.lugares.length; i++) {
+        var o = document.createElement("option");
+        o.value = data.lugares[i];
+        o.textContent = data.lugares[i];
+        sel.appendChild(o);
+      }
+    });
+  };
+
+  function setTab(t) {
+    tabActual = t;
+    document.getElementById("tabPend").className = "tab" + (t === "PENDIENTE"     ? " on" : "");
+    document.getElementById("tabRec").className  = "tab" + (t === "RECEPCIONADO"  ? " on" : "");
+    renderSolicitudes();
+  }
+
+  function cargarSolicitudes() {
+    var lugar = document.getElementById("selLugar").value;
+    if (!lugar) { document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Selecciona un lugar.</div>'; return; }
+    document.getElementById("listaSolicitudes").innerHTML = '<div class="empty"><div class="spinner"></div>Cargando solicitudes...</div>';
+    decisiones = {};
+    jsonp(SCRIPT_URL + "?accion=listarSolicitudesPorLugar&lugar=" + encodeURIComponent(lugar), function(data, err) {
+      if (!data || err || data.status !== "ok") {
+        document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Error al cargar.</div>';
+        return;
+      }
+      solicitudes = data.solicitudes || [];
+      renderSolicitudes();
+    });
+  }
+
+  function renderSolicitudes() {
+    var lugar  = document.getElementById("selLugar").value;
+    // Agrupar por idSolicitud
+    var grupos = {};
+    for (var i = 0; i < solicitudes.length; i++) {
+      var s = solicitudes[i];
+      var est = String(s.estado || "").toUpperCase();
+      if (tabActual === "PENDIENTE" && est !== "APROBADO" && est !== "PENDIENTE") continue;
+      if (tabActual === "RECEPCIONADO" && est !== "RECEPCIONADO") continue;
+      if (!grupos[s.id]) grupos[s.id] = { id: s.id, fecha: s.fecha, responsable: s.responsable, items: [] };
+      grupos[s.id].items.push(s);
+    }
+    var ids = Object.keys(grupos);
+    if (!ids.length) {
+      document.getElementById("listaSolicitudes").innerHTML = '<div class="empty">Sin solicitudes ' + (tabActual === "PENDIENTE" ? "pendientes" : "recepcionadas") + '.</div>';
+      return;
+    }
+    var html = "";
+    for (var k = 0; k < ids.length; k++) {
+      var g = grupos[ids[k]];
+      html += renderGrupo(g, lugar);
+    }
+    document.getElementById("listaSolicitudes").innerHTML = html;
+  }
+
+  function renderGrupo(g, lugar) {
+    var html = '<div class="sol-card">' +
+      '<div class="sol-head">' +
+        '<div><div class="sol-id">' + g.id + '</div>' +
+        '<div class="sol-meta">' + lugar + ' · ' + (g.fecha||'') + ' · ' + g.items.length + ' ítem' + (g.items.length > 1 ? 's' : '') + ' · ' + (g.responsable||'') + '</div></div>' +
+        '<span class="sol-badge ' + (tabActual === "PENDIENTE" ? "sb-pend" : "sb-rec") + '">' + (tabActual === "PENDIENTE" ? "PENDIENTE" : "RECEPCIONADO") + '</span>' +
+      '</div>' +
+      '<div class="items-wrap">';
+
+    for (var i = 0; i < g.items.length; i++) {
+      var it = g.items[i];
+      var key = it.id + "_" + it.fila;
+      html += '<div class="item-fila">' +
+        '<div class="item-nom">' + (it.item||'—') + '</div>' +
+        '<div class="item-sub">Cód: ' + (it.codigo||'—') + '</div>' +
+        '<div class="item-bot">' +
+          '<div class="cg"><span class="cl">Solicitado</span><span class="cn">' + (it.cantidad||'—') + '</span></div>' +
+          '<div class="cg"><span class="cl">Recibido</span><input class="ci" type="number" min="0" value="' + (it.cantidad||0) + '" id="rec-' + it.fila + '"/></div>' +
+          '<div class="cg"><span class="cl">Vencimiento</span><input class="cd" type="date" id="vrl-' + it.fila + '"/></div>' +
+          '<div class="bts">' +
+            '<button class="bap" id="ap-' + it.fila + '" onclick="togDecRL(' + it.fila + ',\'APROBADO\')">&#10003;</button>' +
+            '<button class="bre" id="re-' + it.fila + '" onclick="togDecRL(' + it.fila + ',\'RECHAZADO\')">&#10007;</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    html += '<div class="sol-foot">' +
+      '<span class="prog" id="prog-' + g.id + '">0 de ' + g.items.length + ' resueltos</span>' +
+      '<button class="btn-guardar" id="btn-' + g.id + '" onclick="guardarGrupo(\'' + g.id + '\')" disabled>Guardar</button>' +
+    '</div></div></div>';
+    return html;
+  }
+
+  function togDecRL(fila, est) {
+    var filaNum = parseInt(fila);
+    var ap = document.getElementById("ap-" + filaNum);
+    var re = document.getElementById("re-" + filaNum);
+    if (!ap || !re) return;
+    if (!decisiones[filaNum]) decisiones[filaNum] = { est: null };
+    decisiones[filaNum].est = decisiones[filaNum].est === est ? null : est;
+    ap.className = "bap" + (decisiones[filaNum].est === "APROBADO"  ? " on" : "");
+    re.className = "bre" + (decisiones[filaNum].est === "RECHAZADO" ? " on" : "");
+    // Actualizar prog y botón guardar
+    for (var gId in _grupos) { actualizarProg(gId); }
+  }
+
+  var _grupos = {};
+  // Rebuild grupos reference after render
+  var _origRender = renderSolicitudes;
+
+  function actualizarProg(gId) {
+    var progEl = document.getElementById("prog-" + gId);
+    var btnEl  = document.getElementById("btn-" + gId);
+    if (!progEl || !btnEl) return;
+    var items = getSolicitudesPorGrupo(gId);
+    var res = 0;
+    for (var i = 0; i < items.length; i++) {
+      if (decisiones[parseInt(items[i].fila)] && decisiones[parseInt(items[i].fila)].est) res++;
+    }
+    progEl.textContent = res + " de " + items.length + " resueltos";
+    btnEl.disabled = (res === 0);
+  }
+
+  function getSolicitudesPorGrupo(gId) {
+    return solicitudes.filter(function(s) { return s.id === gId; });
+  }
+
+  // Override togDecRL to update prog
+  function togDecRL(fila, est) {
+    var filaNum = parseInt(fila);
+    var ap = document.getElementById("ap-" + filaNum);
+    var re = document.getElementById("re-" + filaNum);
+    if (!ap || !re) return;
+    if (!decisiones[filaNum]) decisiones[filaNum] = { est: null };
+    decisiones[filaNum].est = decisiones[filaNum].est === est ? null : est;
+    ap.className = "bap" + (decisiones[filaNum].est === "APROBADO"  ? " on" : "");
+    re.className = "bre" + (decisiones[filaNum].est === "RECHAZADO" ? " on" : "");
+    // Find grupo for this fila
+    for (var i = 0; i < solicitudes.length; i++) {
+      if (parseInt(solicitudes[i].fila) === filaNum) {
+        actualizarProg(solicitudes[i].id);
+        break;
+      }
+    }
+  }
+
+  // Guardar grupo
+  var _gItems = []; var _gIdx = 0; var _gErr = 0;
+
+  function guardarGrupo(gId) {
+    var items = getSolicitudesPorGrupo(gId);
+    _gItems = [];
+    for (var i = 0; i < items.length; i++) {
+      var dec = decisiones[parseInt(items[i].fila)];
+      if (dec && dec.est) {
+        var recInput  = document.getElementById("rec-" + items[i].fila);
+        var vencInput = document.getElementById("vrl-" + items[i].fila);
+        _gItems.push({
+          fila:  items[i].fila,
+          id:    items[i].id,
+          lugar: document.getElementById("selLugar").value,
+          codigo: items[i].codigo,
+          item:   items[i].item,
+          est:    dec.est,
+          cant:   recInput  ? recInput.value  : items[i].cantidad,
+          venc:   vencInput ? vencInput.value : ""
+        });
+      }
+    }
+    if (!_gItems.length) { toast("Sin decisiones para guardar.", "warn"); return; }
+    document.getElementById("btn-" + gId).disabled = true;
+    document.getElementById("btn-" + gId).textContent = "Guardando…";
+    _gIdx = 0; _gErr = 0;
+    enviarItemRL();
+  }
+
+  function enviarItemRL() {
+    if (_gIdx >= _gItems.length) {
+      if (_gErr > 0) toast("Guardado con " + _gErr + " error(es).", "warn");
+      else toast("✓ Recepciones guardadas correctamente.", "ok");
+      cargarSolicitudes();
+      return;
+    }
+    var it  = _gItems[_gIdx];
+    var url = SCRIPT_URL + "?accion=recepcionarSolicitud" +
+      "&fila="         + encodeURIComponent(it.fila) +
+      "&idSolicitud="  + encodeURIComponent(it.id) +
+      "&lugar="        + encodeURIComponent(it.lugar) +
+      "&codigo="       + encodeURIComponent(it.codigo) +
+      "&descripcion="  + encodeURIComponent(it.item) +
+      "&estado="       + encodeURIComponent(it.est) +
+      "&cantRecibida=" + encodeURIComponent(it.cant) +
+      "&fechaVenc="    + encodeURIComponent(it.venc || "");
+    jsonp(url, function(data, err) {
+      if (!data || err || data.status !== "ok") _gErr++;
+      _gIdx++;
+      setTimeout(enviarItemRL, 350);
+    });
+  }
+</script>
+</body>
+</html>

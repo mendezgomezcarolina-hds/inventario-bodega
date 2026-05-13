@@ -22,7 +22,9 @@ function doGet(e) {
   if (accion === "accesos")             return responder(leerAccesos(),                            callback);
   if (accion === "lugaresConInventario") return responder(lugaresConInventario(),                  callback);
   if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
-  if (accion === "registrarEgreso")     return responder(registrarEgreso(e),                      callback);
+  if (accion === "registrarEgreso")          return responder(registrarEgreso(e),                      callback);
+  if (accion === "listarSolicitudesPorLugar") return responder(listarSolicitudesPorLugar(e),             callback);
+  if (accion === "recepcionarSolicitud")      return responder(recepcionarSolicitud(e),                  callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
   if (accion === "actualizarEstado")    return responder(actualizarEstado(e),                       callback);
@@ -533,6 +535,83 @@ function registrarEgreso(e) {
       new Date().toLocaleString("es-CL"), "EGRESO", "", "", lugar, cod, desc, qty, ""
     ]);
     return { status: "ok" };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Listar solicitudes por lugar ─────────────────────────────
+function listarSolicitudesPorLugar(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", solicitudes: [] };
+    var lugar = (e.parameter.lugar || "").trim();
+    var datos = sheet.getDataRange().getValues();
+    var inicio = String(datos[0][0]).indexOf("SOL-") === 0 ? 0 : 1;
+    var solicitudes = [];
+    for (var i = inicio; i < datos.length; i++) {
+      var f = datos[i];
+      if (!f[0] || String(f[0]).trim() === "") continue;
+      var lugarFila = String(f[1] || "").trim();
+      if (lugar && lugarFila.toUpperCase() !== lugar.toUpperCase()) continue;
+      var estado = String(f[8] || "PENDIENTE").trim().toUpperCase();
+      if (estado === "RECHAZADO") continue;
+      var fecha = f[7] instanceof Date ? f[7].toLocaleString("es-CL") : String(f[7] || "");
+      solicitudes.push({
+        fila: i + 1,
+        id:           String(f[0] || ""),
+        lugar:        lugarFila,
+        codigo:       String(f[2] || ""),
+        item:         String(f[3] || ""),
+        cantidad:     String(f[4] || ""),
+        responsable:  String(f[5] || ""),
+        idResp:       String(f[6] || ""),
+        fecha:        fecha,
+        estado:       estado
+      });
+    }
+    return { status: "ok", solicitudes: solicitudes };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Recepcionar solicitud → actualiza SOLICITUDES + escribe en MOVIMIENTOS ──
+function recepcionarSolicitud(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    if (!sheet) throw new Error("Hoja SOLICITUDES no existe.");
+    var p    = e.parameter || {};
+    var fila = parseInt(p.fila || "0");
+    var est  = (p.estado      || "").toUpperCase();
+    var cant = p.cantRecibida || "";
+    var venc = p.fechaVenc    || "";
+    if (!fila || !est) throw new Error("Faltan parámetros.");
+
+    // Actualizar estado en SOLICITUDES
+    sheet.getRange(fila, 9).setValue(est === "APROBADO" ? "RECEPCIONADO" : "RECHAZADO");
+    sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
+
+    // Si APROBADO → registrar INGRESO en MOVIMIENTOS
+    if (est === "APROBADO") {
+      var lugar = String(p.lugar       || "").trim();
+      var cod   = String(p.codigo      || "").trim();
+      var desc  = String(p.descripcion || "").trim();
+      var qty   = parseFloat(cant) || 0;
+      var nSol  = String(p.idSolicitud || "").trim();
+
+      var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+      if (movSheet.getLastRow() === 0)
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento"]);
+      movSheet.appendRow([
+        new Date().toLocaleString("es-CL"), "INGRESO",
+        nSol, "", lugar, cod, desc, qty, venc
+      ]);
+    }
+    return { status: "ok", fila: fila };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
