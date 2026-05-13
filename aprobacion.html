@@ -89,6 +89,9 @@
     .btn-ap { border-color:var(--ok-br); background:var(--ok-bg); color:var(--ok); }
     .btn-re { border-color:var(--er-br); background:var(--er-bg); color:var(--er); }
     .btn-ap.inactivo, .btn-re.inactivo { opacity:.25; }
+    .cant-apro{display:flex;flex-direction:column;gap:2px;margin-right:6px;}
+    .cant-apro label{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#0F6E56;}
+    .cant-apro input{width:62px;padding:5px 7px;border:1.5px solid #0F6E56;border-radius:6px;font-family:'DM Mono',monospace;font-size:.85rem;font-weight:600;color:#1e293b;background:#E1F5EE;outline:none;text-align:center;}
     .btn-ap.activo { background:var(--ok); color:#fff; border-color:var(--ok); }
     .btn-re.activo { background:var(--er); color:#fff; border-color:var(--er); }
     .item-estado { font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:99px; margin-top:4px; display:inline-block; }
@@ -189,6 +192,7 @@
   var todasSolicitudes = [];
   var solicitudActual  = [];
   var decisiones       = {}; // { idx: 'APROBADO' | 'RECHAZADO' | null }
+  var cantidades       = {}; // { idx: cantidad aprobada }
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
@@ -293,6 +297,7 @@
     var grupos = agrupar(todasSolicitudes);
     solicitudActual = grupos[id] || [];
     decisiones = {};
+    cantidades  = {};
     for (var i = 0; i < solicitudActual.length; i++) {
       var est = (solicitudActual[i].estado || "").toUpperCase().trim();
       decisiones[i] = (est === "APROBADO" || est === "RECHAZADO") ? est : null;
@@ -322,13 +327,19 @@
       var apCls = dec === "APROBADO"  ? "btn-ap activo" : "btn-ap" + (dec === "RECHAZADO" ? " inactivo" : "");
       var reCls = dec === "RECHAZADO" ? "btn-re activo" : "btn-re" + (dec === "APROBADO"  ? " inactivo" : "");
 
+      var cantVal  = cantidades[i] !== undefined ? cantidades[i] : (f.cantidad || "");
+      var showCant = dec === "APROBADO" ? "" : "display:none;";
       html +=
         '<div class="item-fila" id="ifila-' + i + '">' +
-          '<div>' +
+          '<div style="flex:1">' +
             '<div class="item-nom">' + (f.item || "—") + '</div>' +
-            '<div class="item-sub">Cód: ' + (f.codigo || "—") + ' · Cant: ' + (f.cantidad || "—") + '</div>' +
+            '<div class="item-sub">Cód: ' + (f.codigo || "—") + ' · Solicitado: ' + (f.cantidad || "—") + '</div>' +
           '</div>' +
-          '<div class="item-btns">' +
+          '<div class="item-btns" style="align-items:center">' +
+            '<div class="cant-apro" id="cant-wrap-' + i + '" style="' + showCant + '">' +
+              '<label>Cant. aprobada</label>' +
+              '<input type="number" min="0" id="cant-input-' + i + '" value="' + cantVal + '" onchange="cantidades[' + i + ']=this.value" />' +
+            '</div>' +
             '<button class="' + apCls + '" onclick="toggleDec(' + i + ',\'APROBADO\')" title="Aprobar">✓</button>' +
             '<button class="' + reCls + '" onclick="toggleDec(' + i + ',\'RECHAZADO\')" title="Rechazar">✕</button>' +
           '</div>' +
@@ -340,6 +351,9 @@
 
   function toggleDec(i, estado) {
     decisiones[i] = decisiones[i] === estado ? null : estado;
+    if (decisiones[i] === "APROBADO" && cantidades[i] === undefined) {
+      cantidades[i] = solicitudActual[i].cantidad || "";
+    }
     renderDetalle();
   }
 
@@ -419,12 +433,16 @@
     var f    = item.f;
     var dec  = item.dec;
 
+    var cantAprobada = (cantidades[item.i] !== undefined && cantidades[item.i] !== "")
+      ? cantidades[item.i]
+      : (f.cantidad || "");
     var url = SCRIPT_URL +
       "?accion=actualizarEstado" +
-      "&idSolicitud=" + encodeURIComponent(f.id || "") +
-      "&item="        + encodeURIComponent(f.item || "") +
-      "&lugar="       + encodeURIComponent(f.lugar || "") +
-      "&estado="      + encodeURIComponent(dec);
+      "&idSolicitud="   + encodeURIComponent(f.id || "") +
+      "&item="          + encodeURIComponent(f.item || "") +
+      "&lugar="         + encodeURIComponent(f.lugar || "") +
+      "&estado="        + encodeURIComponent(dec) +
+      "&cantAprobada="  + encodeURIComponent(cantAprobada);
 
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") _envErr++;
