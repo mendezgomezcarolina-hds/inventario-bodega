@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Stock por Lugar — Dermatología HDS</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#f0f4f8;--s:#fff;--border:#d1dce8;--text:#1e293b;--muted:#64748b;--accent:#185FA5;--ok:#16a34a;--er:#dc2626;--wa:#d97706;--radius:10px;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);min-height:100vh;padding:20px 16px 40px;}
+    .container{max-width:520px;margin:0 auto;}
+    .back{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);text-decoration:none;margin-bottom:18px;}
+    .back i{font-size:14px;}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+    .hic{width:42px;height:42px;background:#9D174D;border-radius:11px;display:grid;place-items:center;flex-shrink:0;}
+    .hic i{font-size:20px;color:#fff;}
+    .htxt h1{font-size:1rem;font-weight:600;color:var(--text);}
+    .htxt p{font-size:.72rem;color:var(--muted);margin-top:2px;}
+
+    /* Lugar selector */
+    .lugar-card{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+    .lugar-card i{font-size:16px;color:var(--muted);}
+    .lugar-card select{flex:1;font-family:'DM Sans',sans-serif;font-size:.9rem;border:none;background:transparent;color:var(--text);outline:none;}
+
+    /* Stats */
+    .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+    .stat{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center;}
+    .stat-n{font-size:1.3rem;font-weight:700;}
+    .stat-l{font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-top:2px;}
+    .st-ok .stat-n{color:var(--ok);}
+    .st-wa .stat-n{color:var(--wa);}
+    .st-er .stat-n{color:var(--er);}
+
+    /* Filtro */
+    .filtros{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;}
+    .ftag{font-size:.72rem;font-weight:500;padding:5px 12px;border-radius:99px;border:1.5px solid var(--border);background:var(--s);color:var(--muted);cursor:pointer;white-space:nowrap;}
+    .ftag.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+    /* Items */
+    .item-card{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;}
+    .item-card.warn{border-color:#fde68a;background:#fffbeb;}
+    .item-card.critical{border-color:#fecaca;background:#fff8f8;}
+    .item-nom{font-size:.85rem;font-weight:500;color:var(--text);}
+    .item-cod{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);margin-top:1px;}
+    .item-det{font-size:.68rem;color:var(--muted);margin-top:3px;}
+    .item-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;}
+    .sbadge{font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:99px;}
+    .sb-ok{background:#dcfce7;color:#15803d;}
+    .sb-wa{background:#fef3c7;color:#92400e;}
+    .sb-er{background:#fee2e2;color:#dc2626;}
+    .btn-uso{font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:600;padding:5px 12px;background:var(--er);color:#fff;border:none;border-radius:6px;cursor:pointer;}
+    .btn-uso:disabled{opacity:.4;cursor:default;}
+    .empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:.85rem;}
+    .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .formula{margin-top:10px;background:#e0eaf5;border-radius:8px;padding:10px 12px;font-size:.7rem;color:var(--accent);text-align:center;}
+
+    /* Modal */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;padding:20px;}
+    .modal-bg.show{display:flex;}
+    .modal{background:var(--s);border-radius:14px;padding:22px;width:100%;max-width:320px;}
+    .modal h3{font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:3px;}
+    .modal-nom{font-size:.82rem;color:var(--muted);margin-bottom:12px;}
+    .modal-stock{font-size:.78rem;color:var(--text);background:#f1f5f9;border-radius:6px;padding:6px 10px;margin-bottom:14px;text-align:center;}
+    .modal input{width:100%;padding:11px;border:1.5px solid var(--er);border-radius:8px;font-family:'DM Mono',monospace;font-size:1.2rem;font-weight:700;text-align:center;outline:none;margin-bottom:14px;color:var(--er);}
+    .modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .btn-cancel{padding:10px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:500;background:var(--s);color:var(--muted);cursor:pointer;}
+    .btn-confirm{padding:10px;background:var(--er);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:99px;font-size:.82rem;font-weight:500;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:200;}
+    #toast.show{opacity:1;}
+    #toast.ok{background:#15803d;}
+    #toast.warn{background:#92400e;}
+    #toast.er{background:#dc2626;}
+  </style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="back"><i class="ti ti-arrow-left"></i> Volver al portal</a>
+
+  <div class="header">
+    <div class="hic"><i class="ti ti-chart-bar"></i></div>
+    <div class="htxt">
+      <h1>Stock por Lugar</h1>
+      <p>Dermatología · Hospital del Salvador</p>
+    </div>
+  </div>
+
+  <div class="lugar-card">
+    <i class="ti ti-map-pin"></i>
+    <select id="selLugar" onchange="cargarStock()">
+      <option value="">Cargando lugares...</option>
+    </select>
+  </div>
+
+  <div class="stats">
+    <div class="stat st-ok"><div class="stat-n" id="statOk">—</div><div class="stat-l">OK</div></div>
+    <div class="stat st-wa"><div class="stat-n" id="statWa">—</div><div class="stat-l">Stock bajo</div></div>
+    <div class="stat st-er"><div class="stat-n" id="statEr">—</div><div class="stat-l">Crítico</div></div>
+  </div>
+
+  <div class="filtros">
+    <div class="ftag on" onclick="setFiltro('todos',this)">Todos</div>
+    <div class="ftag" onclick="setFiltro('ok',this)">OK</div>
+    <div class="ftag" onclick="setFiltro('warn',this)">Stock bajo</div>
+    <div class="ftag" onclick="setFiltro('critical',this)">Crítico</div>
+  </div>
+
+  <div id="listaStock"></div>
+
+  <div class="formula">Stock = Inventario inicial + Ingresos aprobados − Egresos registrados</div>
+</div>
+
+<!-- Modal egreso -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3>Registrar uso</h3>
+    <div class="modal-nom" id="modalNom"></div>
+    <div class="modal-stock" id="modalStock"></div>
+    <input type="number" id="modalCant" placeholder="0" min="1"/>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarEgreso()">Confirmar</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  var stockData  = [];
+  var filtroActual = "todos";
+  var itemSelFila  = null;
+  var itemSelCod   = "";
+  var itemSelNom   = "";
+  var itemSelStock = 0;
+  var _n = 0;
+
+  function jsonp(url, cb) {
+    var name  = "_s_" + Date.now() + "_" + (++_n);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 12000);
+    window[name] = function(d) { clearTimeout(timer); delete window[name]; cb(d, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error"); };
+    document.head.appendChild(s);
+  }
+
+  function toast(msg, tipo) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.className = "show " + (tipo||"");
+    setTimeout(function() { t.className = ""; }, 3000);
+  }
+
+  // ── Cargar lugares inventariados ──────────────────────────
+  window.onload = function() {
+    jsonp(SCRIPT_URL + "?accion=lugaresConInventario", function(data, err) {
+      var sel = document.getElementById("selLugar");
+      if (!data || err || !data.lugares || !data.lugares.length) {
+        sel.innerHTML = '<option value="">Sin lugares inventariados</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Selecciona un lugar...</option>';
+      for (var i = 0; i < data.lugares.length; i++) {
+        var o = document.createElement("option");
+        o.value = data.lugares[i];
+        o.textContent = data.lugares[i];
+        sel.appendChild(o);
+      }
+      if (data.lugares.length === 1) {
+        sel.value = data.lugares[0];
+        cargarStock();
+      }
+    });
+  };
+
+  // ── Cargar stock de un lugar ──────────────────────────────
+  function cargarStock() {
+    var lugar = document.getElementById("selLugar").value;
+    if (!lugar) { document.getElementById("listaStock").innerHTML = ""; resetStats(); return; }
+    document.getElementById("listaStock").innerHTML = '<div class="empty"><div class="spinner"></div>Calculando stock...</div>';
+    resetStats();
+    jsonp(SCRIPT_URL + "?accion=stockLugar&lugar=" + encodeURIComponent(lugar), function(data, err) {
+      if (!data || err || data.status !== "ok") {
+        document.getElementById("listaStock").innerHTML = '<div class="empty">Error al cargar stock.</div>';
+        return;
+      }
+      stockData = data.items || [];
+      renderStock();
+    });
+  }
+
+  function resetStats() {
+    document.getElementById("statOk").textContent = "—";
+    document.getElementById("statWa").textContent = "—";
+    document.getElementById("statEr").textContent = "—";
+  }
+
+  function setFiltro(f, el) {
+    filtroActual = f;
+    document.querySelectorAll(".ftag").forEach(function(t) { t.classList.remove("on"); });
+    el.classList.add("on");
+    renderStock();
+  }
+
+  function renderStock() {
+    var ok = 0, wa = 0, er = 0;
+    var filtrado = stockData.filter(function(it) {
+      var nivel = it.stock <= 0 ? "critical" : it.stock <= it.minimo ? "warn" : "ok";
+      if (nivel === "ok") ok++; else if (nivel === "warn") wa++; else er++;
+      return filtroActual === "todos" || nivel === filtroActual || (filtroActual === "warn" && nivel === "warn");
+    });
+    document.getElementById("statOk").textContent = ok;
+    document.getElementById("statWa").textContent = wa;
+    document.getElementById("statEr").textContent = er;
+
+    if (!filtrado.length) {
+      document.getElementById("listaStock").innerHTML = '<div class="empty">Sin ítems para este filtro.</div>';
+      return;
+    }
+    var html = "";
+    for (var i = 0; i < filtrado.length; i++) {
+      var it = filtrado[i];
+      var nivel = it.stock <= 0 ? "critical" : it.stock <= it.minimo ? "warn" : "ok";
+      var badgeCls = nivel === "ok" ? "sb-ok" : nivel === "warn" ? "sb-wa" : "sb-er";
+      var btnDis   = it.stock <= 0 ? ' disabled' : '';
+      html += '<div class="item-card ' + (nivel !== "ok" ? nivel : "") + '">' +
+        '<div>' +
+          '<div class="item-nom">' + it.descripcion + '</div>' +
+          '<div class="item-cod">' + it.codigo + '</div>' +
+          '<div class="item-det">Inv: ' + it.inventario + ' · +' + it.ingresos + ' · -' + it.egresos + '</div>' +
+        '</div>' +
+        '<div class="item-right">' +
+          '<span class="sbadge ' + badgeCls + '">' + it.stock + ' un.</span>' +
+          '<button class="btn-uso"' + btnDis + ' onclick="abrirModal(' + i + ')">' +
+            (it.stock <= 0 ? 'Sin stock' : 'Registrar uso') +
+          '</button>' +
+        '</div>' +
+      '</div>';
+    }
+    document.getElementById("listaStock").innerHTML = html;
+    // Store filtered reference
+    window._filtrado = filtrado;
+  }
+
+  // ── Modal egreso ──────────────────────────────────────────
+  function abrirModal(idx) {
+    var it = window._filtrado[idx];
+    itemSelCod   = it.codigo;
+    itemSelNom   = it.descripcion;
+    itemSelStock = it.stock;
+    document.getElementById("modalNom").textContent   = it.descripcion;
+    document.getElementById("modalStock").textContent = "Stock actual: " + it.stock + " unidades";
+    document.getElementById("modalCant").value = "";
+    document.getElementById("modalBg").classList.add("show");
+    setTimeout(function() { document.getElementById("modalCant").focus(); }, 200);
+  }
+
+  function cerrarModal() { document.getElementById("modalBg").classList.remove("show"); }
+
+  function confirmarEgreso() {
+    var cant = parseInt(document.getElementById("modalCant").value || "0");
+    var lugar = document.getElementById("selLugar").value;
+    if (!cant || cant < 1) { toast("Ingresa una cantidad válida.", "warn"); return; }
+    if (cant > itemSelStock) { toast("Cantidad supera el stock disponible.", "warn"); return; }
+    cerrarModal();
+    toast("Registrando egreso...", "");
+    var url = SCRIPT_URL + "?accion=registrarEgreso" +
+      "&lugar="    + encodeURIComponent(lugar) +
+      "&codigo="   + encodeURIComponent(itemSelCod) +
+      "&descripcion=" + encodeURIComponent(itemSelNom) +
+      "&cantidad=" + encodeURIComponent(cant);
+    jsonp(url, function(data, err) {
+      if (!data || err || data.status !== "ok") {
+        toast("Error al registrar. Intenta nuevamente.", "er"); return;
+      }
+      toast("✓ Egreso registrado correctamente.", "ok");
+      cargarStock();
+    });
+  }
+</script>
+</body>
+</html>

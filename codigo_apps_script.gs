@@ -20,6 +20,9 @@ function doGet(e) {
   if (accion === "itemsPorLugar")       return responder(leerItemsPorLugar(e),                      callback);
   if (accion === "colaboradores")       return responder(leerColaboradores(),                       callback);
   if (accion === "accesos")             return responder(leerAccesos(),                            callback);
+  if (accion === "lugaresConInventario") return responder(lugaresConInventario(),                  callback);
+  if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
+  if (accion === "registrarEgreso")     return responder(registrarEgreso(e),                      callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
   if (accion === "actualizarEstado")    return responder(actualizarEstado(e),                       callback);
@@ -426,6 +429,110 @@ function verificarAcceso(e) {
       }
     }
     return { status: "ok", acceso: false, mensaje: "Responsable no encontrado." };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Lugares con inventario registrado ────────────────────────
+function lugaresConInventario() {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_DATOS);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", lugares: [] };
+    var datos  = sheet.getDataRange().getValues();
+    var inicio = String(datos[0][0]).toUpperCase() === "LUGAR" ? 1 : 0;
+    var set    = {};
+    for (var i = inicio; i < datos.length; i++) {
+      var lugar = String(datos[i][0] || "").trim();
+      if (lugar) set[lugar] = true;
+    }
+    return { status: "ok", lugares: Object.keys(set) };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Stock por lugar: inventario + ingresos - egresos ─────────
+function stockLugar(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var lugar = (e.parameter.lugar || "").trim();
+    if (!lugar) return { status: "error", mensaje: "Falta lugar." };
+
+    // 1. Inventario inicial desde INVENTARIO
+    var invSheet = ss.getSheetByName(SHEET_DATOS);
+    var invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
+    var ini      = String(invDatos[0] && invDatos[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
+    var mapaInv  = {}; // codigo → {descripcion, cantidad}
+    for (var i = ini; i < invDatos.length; i++) {
+      var f = invDatos[i];
+      if (String(f[0]||"").trim() !== lugar) continue;
+      var cod  = String(f[1]||"").trim();
+      var desc = String(f[2]||"").trim();
+      var qty  = parseFloat(f[3]||0) || 0;
+      if (!cod) continue;
+      if (mapaInv[cod]) mapaInv[cod].cantidad += qty;
+      else mapaInv[cod] = { descripcion: desc, cantidad: qty, ingresos: 0, egresos: 0, minimo: 5 };
+    }
+
+    // 2. Movimientos desde MOVIMIENTOS
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (movSheet && movSheet.getLastRow() > 1) {
+      var movDatos = movSheet.getDataRange().getValues();
+      var mIni     = String(movDatos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      for (var j = mIni; j < movDatos.length; j++) {
+        var m    = movDatos[j];
+        var mLug = String(m[4]||"").trim();
+        var mTip = String(m[1]||"").trim().toUpperCase();
+        var mCod = String(m[5]||"").trim();
+        var mQty = parseFloat(m[7]||0) || 0;
+        if (mLug !== lugar || !mCod) continue;
+        if (!mapaInv[mCod]) mapaInv[mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0, minimo: 5 };
+        if (mTip === "INGRESO") mapaInv[mCod].ingresos += mQty;
+        else if (mTip === "EGRESO") mapaInv[mCod].egresos += mQty;
+      }
+    }
+
+    // 3. Calcular stock y armar respuesta
+    var items = [];
+    for (var cod in mapaInv) {
+      var it = mapaInv[cod];
+      items.push({
+        codigo:      cod,
+        descripcion: it.descripcion,
+        inventario:  it.cantidad,
+        ingresos:    it.ingresos,
+        egresos:     it.egresos,
+        stock:       it.cantidad + it.ingresos - it.egresos,
+        minimo:      it.minimo
+      });
+    }
+    items.sort(function(a,b){ return a.descripcion.localeCompare(b.descripcion); });
+    return { status: "ok", lugar: lugar, items: items };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Registrar egreso en MOVIMIENTOS ──────────────────────────
+function registrarEgreso(e) {
+  try {
+    var ss  = SpreadsheetApp.getActiveSpreadsheet();
+    var p   = e.parameter || {};
+    var lugar = String(p.lugar      || "").trim();
+    var cod   = String(p.codigo     || "").trim();
+    var desc  = String(p.descripcion|| "").trim();
+    var qty   = parseFloat(p.cantidad || 0);
+    if (!lugar || !cod || !qty) return { status: "error", mensaje: "Faltan datos." };
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento"]);
+    movSheet.appendRow([
+      new Date().toLocaleString("es-CL"), "EGRESO", "", "", lugar, cod, desc, qty, ""
+    ]);
+    return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
