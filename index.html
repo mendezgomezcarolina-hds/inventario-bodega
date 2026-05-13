@@ -74,10 +74,31 @@
     .mod-chevron { font-size: 20px; color: #cbd5e1; flex-shrink: 0; }
     .mod-row:hover .mod-chevron { color: var(--accent); }
     .footer { text-align: center; margin-top: 24px; font-size: .7rem; color: #cbd5e1; }
+    .top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:10px 14px;background:#fff;border:1px solid #d1dce8;border-radius:10px;}
+    .user-info{display:flex;align-items:center;gap:8px;}
+    .user-avatar{width:30px;height:30px;background:#185FA5;border-radius:50%;display:grid;place-items:center;flex-shrink:0;}
+    .user-avatar i{color:#fff;font-size:15px;}
+    .user-name{font-size:.82rem;font-weight:600;color:var(--text);}
+    .user-role{font-size:.66rem;color:var(--subtext);}
+    .btn-logout{display:flex;align-items:center;gap:5px;font-family:'DM Sans',sans-serif;font-size:.72rem;font-weight:500;color:#dc2626;background:#fee2e2;border:1px solid #fecaca;border-radius:7px;padding:6px 12px;cursor:pointer;}
+    .btn-logout i{font-size:14px;}
+    .btn-logout:hover{background:#fecaca;}
   </style>
 </head>
 <body>
 <div class="portal">
+  <div class="top-bar">
+    <div class="user-info">
+      <div class="user-avatar"><i class="ti ti-user"></i></div>
+      <div>
+        <div class="user-name" id="welcome">—</div>
+        <div class="user-role" id="welcomeRole">Dermatología HDS</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="cerrarSesion()">
+      <i class="ti ti-logout"></i> Cerrar sesión
+    </button>
+  </div>
   <div class="header">
     <div class="logo"><i class="ti ti-building-hospital"></i></div>
     <div class="header-text">
@@ -151,7 +172,9 @@
     // Show welcome
     var nom = sess.nombre || "";
     var el = document.getElementById("welcome");
-    if (el) el.textContent = "Bienvenida, " + nom.split(" ")[0];
+    if (el) el.textContent = nom || "—";
+    var roleEl = document.getElementById("welcomeRole");
+    if (roleEl) roleEl.textContent = (esAdmin ? "Administradora · Supervisora HDS" : "Dermatología HDS");
     // Mostrar link admin solo para Carolina Mendez
     var ADMIN_ID = "15579172-1";
     var esAdmin = (sess.id === ADMIN_ID) || (String(sess.nombre||"").toLowerCase().indexOf("carolina mendez") > -1) || (String(sess.nombre||"").toLowerCase().indexOf("carolina m") > -1);
