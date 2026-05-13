@@ -154,8 +154,9 @@
     if (el) el.textContent = "Bienvenida, " + nom.split(" ")[0];
     // Mostrar link admin solo para Carolina Mendez
     var ADMIN_ID = "15579172-1";
+    var esAdmin = (sess.id === ADMIN_ID) || (String(sess.nombre||"").toLowerCase().indexOf("carolina mendez") > -1) || (String(sess.nombre||"").toLowerCase().indexOf("carolina m") > -1);
     var linkAcc = document.getElementById("linkAcceso");
-    if (linkAcc) linkAcc.style.display = (sess.id === ADMIN_ID ? "block" : "none");
+    if (linkAcc) linkAcc.style.display = (esAdmin ? "block" : "none");
     // Apply access control: accesos[0..5] maps to modules
     var hrefs = ["recepcion_lugar.html","stock.html","inventario.html","solicitud.html","recepcion.html","aprobacion.html"];
     var acc = sess.accesos || [];
