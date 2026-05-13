@@ -92,7 +92,7 @@
       <div class="user-avatar"><i class="ti ti-user"></i></div>
       <div>
         <div class="user-name" id="welcome">—</div>
-        <div class="user-role" id="welcomeRole">Dermatología HDS</div>
+        <div class="user-role" id="welcomeRole"></div>
       </div>
     </div>
     <button class="btn-logout" onclick="cerrarSesion()">
@@ -174,7 +174,8 @@
     var el = document.getElementById("welcome");
     if (el) el.textContent = nom || "—";
     var roleEl = document.getElementById("welcomeRole");
-    if (roleEl) roleEl.textContent = (esAdmin ? "Administradora · Supervisora HDS" : "Dermatología HDS");
+    if (roleEl) roleEl.textContent = esAdmin ? "Administradora · Supervisora HDS" : "";
+    if (roleEl) roleEl.style.display = esAdmin ? "block" : "none";
     // Mostrar link admin solo para Carolina Mendez
     var ADMIN_ID = "15579172-1";
     var esAdmin = (sess.id === ADMIN_ID) || (String(sess.nombre||"").toLowerCase().indexOf("carolina mendez") > -1) || (String(sess.nombre||"").toLowerCase().indexOf("carolina m") > -1);
