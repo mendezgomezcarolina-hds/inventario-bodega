@@ -236,6 +236,20 @@ function escribirSolicitud(e) {
       "",
       ""
     ]);
+    // Enviar notificación por correo
+    try {
+      notificarSolicitud({
+        idSolicitud: p.idSolicitud || "",
+        lugar:       p.lugar       || "",
+        codigo:      p.codigo      || p.item || "",
+        descripcion: p.descripcion || p.item || "",
+        cantidad:    p.cantidad    || "",
+        responsable: p.usuario     || "Anónimo",
+        idResp:      p.usuarioId   || ""
+      });
+    } catch(mailErr) {
+      Logger.log("Error notificacion correo: " + mailErr.toString());
+    }
     return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
