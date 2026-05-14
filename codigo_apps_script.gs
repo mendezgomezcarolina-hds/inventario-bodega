@@ -23,6 +23,7 @@ function doGet(e) {
   if (accion === "lugaresConInventario") return responder(lugaresConInventario(),                  callback);
   if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
   if (accion === "registrarEgreso")          return responder(registrarEgreso(e),                      callback);
+  if (accion === "registrarCorreccion")      return responder(registrarCorreccion(e),                  callback);
   if (accion === "listarSolicitudesPorLugar") return responder(listarSolicitudesPorLugar(e),             callback);
   if (accion === "login")                     return responder(login(e),                               callback);
   if (accion === "obtenerAccesos")            return responder(obtenerAccesos(e),                      callback);
@@ -453,6 +454,32 @@ function lugaresConInventario() {
       if (lugar) set[lugar] = true;
     }
     return { status: "ok", lugares: Object.keys(set) };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Registrar corrección en MOVIMIENTOS ──────────────────────
+function registrarCorreccion(e) {
+  try {
+    var ss       = SpreadsheetApp.getActiveSpreadsheet();
+    var p        = e.parameter || {};
+    var lugar    = String(p.lugar       || "").trim();
+    var cod      = String(p.codigo      || "").trim();
+    var desc     = String(p.descripcion || "").trim();
+    var qty      = parseFloat(p.cantidad || 0);
+    var usuario  = String(p.usuario     || "").trim();
+    var usuId    = String(p.usuarioId   || "").trim();
+    var nSol     = String(p.nSol        || "").trim();
+    if (!lugar || !cod || !qty) return { status: "error", mensaje: "Faltan datos." };
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) return { status: "error", mensaje: "Sin hoja MOVIMIENTOS." };
+    movSheet.appendRow([
+      new Date().toLocaleString("es-CL"), "INGRESO", nSol, "", lugar, cod, desc, Math.abs(qty), "", usuario, usuId
+    ]);
+    // Actualizar hoja resumen
+    try { actualizarStockCuraciones(); } catch(e) { Logger.log("Stock no actualizado: " + e); }
+    return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
