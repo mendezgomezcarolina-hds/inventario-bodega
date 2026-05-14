@@ -783,3 +783,162 @@ function testMovimientos() {
     Logger.log("ERROR: " + err.toString());
   }
 }
+
+// ============================================================
+//  NOTIFICACIONES POR CORREO — Bodega Dermatología HDS
+// ============================================================
+
+function obtenerDestinatarios() {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ACCESOS");
+    if (!sheet) return ["cmendez@hsalvador.cl"];
+    var datos = sheet.getDataRange().getValues();
+    var destinos = [];
+    for (var i = 0; i < datos.length; i++) {
+      var correo = String(datos[i][9] || "").trim();
+      var activo = String(datos[i][10] || "").trim().toLowerCase();
+      if (correo && correo.indexOf("@") > -1 && activo === "si") {
+        destinos.push(correo);
+      }
+    }
+    return destinos.length > 0 ? destinos : ["cmendez@hsalvador.cl"];
+  } catch(err) {
+    return ["cmendez@hsalvador.cl"];
+  }
+}
+
+function notificarSolicitud(datos) {
+  try {
+    var destinos = obtenerDestinatarios();
+    var fecha    = new Date().toLocaleString("es-CL");
+    var asunto   = "🛒 Nueva solicitud de insumos — " + (datos.lugar || "") + " — " + fecha;
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:600px;'>" +
+      "<div style='background:#1B5FA5;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>🛒 Nueva solicitud de insumos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Dermatología · Hospital del Salvador</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;margin-bottom:14px;font-size:13px;'>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;width:140px;'>Responsable:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + (datos.responsable || "—") + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>RUT:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + (datos.idResp || "—") + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Lugar:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#185FA5;'>" + (datos.lugar || "—") + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>N° Solicitud:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + (datos.idSolicitud || "—") + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Fecha:</td>" +
+              "<td style='padding:5px 8px;color:#1e293b;'>" + fecha + "</td></tr>" +
+        "</table>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+            "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cantidad</th>" +
+          "</tr>" +
+          "<tr>" +
+            "<td style='padding:7px 10px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + (datos.codigo || "—") + "</td>" +
+            "<td style='padding:7px 10px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + (datos.descripcion || datos.item || "—") + "</td>" +
+            "<td style='padding:7px 10px;text-align:center;font-weight:700;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + (datos.cantidad || "—") + "</td>" +
+          "</tr>" +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>Esta solicitud está en estado <strong>PENDIENTE</strong> de aprobación.</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS" +
+      "</div></div>";
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+  } catch(err) {
+    Logger.log("Error notificarSolicitud: " + err.toString());
+  }
+}
+
+function agregarTriggerVencimientos() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "alertaVencimientos") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger("alertaVencimientos")
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(8)
+    .create();
+  Logger.log("✓ Trigger semanal configurado: alertaVencimientos — Lunes 8AM");
+}
+
+function alertaVencimientos() {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("INVENTARIO");
+    if (!sheet || sheet.getLastRow() <= 1) return;
+    var hoy    = new Date();
+    var en1mes = new Date(hoy); en1mes.setMonth(en1mes.getMonth() + 1);
+    var en3mes = new Date(hoy); en3mes.setMonth(en3mes.getMonth() + 3);
+    var datos  = sheet.getDataRange().getValues();
+    var alerta1 = [], alerta3 = [];
+    for (var i = 1; i < datos.length; i++) {
+      var f = datos[i];
+      var venc = f[4];
+      if (!venc || String(venc).toLowerCase() === "no aplica" || String(venc).trim() === "") continue;
+      var fechaVenc = null;
+      if (venc instanceof Date) {
+        fechaVenc = venc;
+      } else {
+        var partes = String(venc).trim().split("/");
+        if (partes.length === 3) fechaVenc = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
+      }
+      if (!fechaVenc || isNaN(fechaVenc.getTime()) || fechaVenc < hoy) continue;
+      var fila = { lugar: String(f[0]||""), cod: String(f[1]||""), desc: String(f[2]||""), cant: String(f[3]||""), venc: fechaVenc.toLocaleDateString("es-CL") };
+      if (fechaVenc <= en1mes) alerta1.push(fila);
+      else if (fechaVenc <= en3mes) alerta3.push(fila);
+    }
+    if (alerta1.length === 0 && alerta3.length === 0) { Logger.log("Sin alertas esta semana."); return; }
+    var destinos = obtenerDestinatarios();
+    var fecha    = hoy.toLocaleDateString("es-CL");
+    var asunto   = "⚠ Alerta vencimientos — Bodega Dermatología — " + fecha;
+    function filaHtml(f, color, emoji) {
+      return "<tr><td style='padding:6px 10px;border-bottom:1px solid #f0f4f8;'>" + f.lugar + "</td>" +
+        "<td style='padding:6px 10px;font-family:monospace;font-size:12px;border-bottom:1px solid #f0f4f8;'>" + f.cod + "</td>" +
+        "<td style='padding:6px 10px;border-bottom:1px solid #f0f4f8;'>" + f.desc + "</td>" +
+        "<td style='padding:6px 10px;text-align:center;border-bottom:1px solid #f0f4f8;'>" + f.cant + "</td>" +
+        "<td style='padding:6px 10px;text-align:center;font-weight:700;color:" + color + ";border-bottom:1px solid #f0f4f8;'>" + emoji + " " + f.venc + "</td></tr>";
+    }
+    var tabla = "";
+    if (alerta1.length > 0) {
+      tabla += "<tr style='background:#fee2e2;'><td colspan='5' style='padding:6px 10px;font-weight:700;color:#dc2626;'>🔴 Vencen en menos de 1 mes (" + alerta1.length + " ítems)</td></tr>";
+      for (var a = 0; a < alerta1.length; a++) tabla += filaHtml(alerta1[a], "#dc2626", "🔴");
+    }
+    if (alerta3.length > 0) {
+      tabla += "<tr style='background:#fef3c7;'><td colspan='5' style='padding:6px 10px;font-weight:700;color:#92400e;'>🟡 Vencen entre 1 y 3 meses (" + alerta3.length + " ítems)</td></tr>";
+      for (var b = 0; b < alerta3.length; b++) tabla += filaHtml(alerta3[b], "#d97706", "🟡");
+    }
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:700px;'>" +
+      "<div style='background:#92400e;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>⚠ Alerta de vencimientos próximos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Bodega Dermatología · Hospital del Salvador · " + fecha + "</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'><th style='padding:7px 10px;text-align:left;color:#185FA5;'>Lugar</th>" +
+          "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+          "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+          "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cant.</th>" +
+          "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Vencimiento</th></tr>" +
+          tabla +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>🔴 menos de 1 mes &nbsp;|&nbsp; 🟡 entre 1 y 3 meses</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS · Reporte automático semanal" +
+      "</div></div>";
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    Logger.log("✓ Alerta enviada a: " + destinos.join(", "));
+  } catch(err) {
+    Logger.log("Error alertaVencimientos: " + err.toString());
+  }
+}
