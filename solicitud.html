@@ -577,11 +577,19 @@
 
   function enviarSiguiente() {
     if (_envioIdx >= listaItems.length) {
-      // Fin
+      // Todos los ítems guardados — enviar UN solo correo resumen
+      var urlNotif = SCRIPT_URL +
+        "?accion=notificarResumenSolicitud" +
+        "&idSolicitud=" + encodeURIComponent(idSolicitud) +
+        "&lugar="       + encodeURIComponent(listaItems[0] ? listaItems[0].lugar : "") +
+        "&responsable=" + encodeURIComponent(responsableSesion) +
+        "&idResp="      + encodeURIComponent(responsableIdSesion);
+      jsonp(urlNotif, function(d, err) {
+        if (err) Logger && Logger.log && Logger.log("Notif error: " + err);
+      });
       var btn = document.getElementById("btnEnviar");
       btn.disabled = false;
       btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
-
       document.getElementById("idConfirmado").textContent = idSolicitud;
       document.getElementById("listaWrap").style.display     = "none";
       document.getElementById("inputItemWrap").style.display = "none";

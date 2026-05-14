@@ -23,7 +23,9 @@ function doGet(e) {
   if (accion === "lugaresConInventario") return responder(lugaresConInventario(),                  callback);
   if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
   if (accion === "registrarEgreso")          return responder(registrarEgreso(e),                      callback);
-  if (accion === "registrarCorreccion")      return responder(registrarCorreccion(e),                  callback);
+  if (accion === "registrarCorreccion")        return responder(registrarCorreccion(e),                callback);
+  if (accion === "notificarResumenSolicitud")  return responder(notificarResumenSolicitud(e),           callback);
+  if (accion === "notificarResumenSolicitud") return responder(notificarResumenSolicitud(e),             callback);
   if (accion === "listarSolicitudesPorLugar") return responder(listarSolicitudesPorLugar(e),             callback);
   if (accion === "login")                     return responder(login(e),                               callback);
   if (accion === "obtenerAccesos")            return responder(obtenerAccesos(e),                      callback);
@@ -236,20 +238,6 @@ function escribirSolicitud(e) {
       "",
       ""
     ]);
-    // Enviar notificación por correo
-    try {
-      notificarSolicitud({
-        idSolicitud: p.idSolicitud || "",
-        lugar:       p.lugar       || "",
-        codigo:      p.codigo      || p.item || "",
-        descripcion: p.descripcion || p.item || "",
-        cantidad:    p.cantidad    || "",
-        responsable: p.usuario     || "Anónimo",
-        idResp:      p.usuarioId   || ""
-      });
-    } catch(mailErr) {
-      Logger.log("Error notificacion correo: " + mailErr.toString());
-    }
     return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
@@ -849,6 +837,169 @@ function obtenerDestinatarios() {
     return destinos.length > 0 ? destinos : ["cmendez@hsalvador.cl"];
   } catch(err) {
     return ["cmendez@hsalvador.cl"];
+  }
+}
+
+function notificarResumenSolicitud(e) {
+  try {
+    var p          = e.parameter || {};
+    var idSolicitud = String(p.idSolicitud  || "").trim();
+    var lugar       = String(p.lugar        || "").trim();
+    var responsable = String(p.responsable  || "").trim();
+    var idResp      = String(p.idResp       || "").trim();
+    if (!idSolicitud) return { status: "error", mensaje: "Sin idSolicitud." };
+
+    // Leer todos los ítems de esta solicitud desde SOLICITUDES
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("SOLICITUDES");
+    if (!sheet) return { status: "error", mensaje: "Sin hoja SOLICITUDES." };
+    var datos = sheet.getDataRange().getValues();
+    var items = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      if (String(fila[0]||"").trim() === idSolicitud) {
+        items.push({
+          codigo:  String(fila[2]||"").trim(),
+          desc:    String(fila[3]||"").trim(),
+          cantidad: String(fila[4]||"").trim()
+        });
+      }
+    }
+    if (!items.length) return { status: "ok", mensaje: "Sin ítems para notificar." };
+
+    var destinos = obtenerDestinatarios();
+    var fecha    = new Date().toLocaleString("es-CL");
+    var asunto   = "🛒 Solicitud " + idSolicitud + " — " + lugar + " — " + fecha;
+
+    // Construir tabla HTML de ítems
+    var filasHtml = "";
+    for (var j = 0; j < items.length; j++) {
+      var bg = j % 2 === 0 ? "#ffffff" : "#f8fafc";
+      filasHtml +=
+        "<tr style='background:" + bg + "'>" +
+          "<td style='padding:7px 10px;font-family:monospace;font-size:12px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].codigo + "</td>" +
+          "<td style='padding:7px 10px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].desc + "</td>" +
+          "<td style='padding:7px 10px;text-align:center;font-weight:700;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].cantidad + "</td>" +
+        "</tr>";
+    }
+
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:600px;'>" +
+      "<div style='background:#1B5FA5;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>🛒 Nueva solicitud de insumos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Dermatología · Hospital del Salvador</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px;'>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;width:140px;'>N° Solicitud:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;font-weight:600;color:#185FA5;'>" + idSolicitud + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Responsable:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + responsable + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>RUT:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + idResp + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Lugar:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#185FA5;'>" + lugar + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Fecha:</td>" +
+              "<td style='padding:5px 8px;color:#1e293b;'>" + fecha + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Total ítems:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + items.length + "</td></tr>" +
+        "</table>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+            "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cant.</th>" +
+          "</tr>" +
+          filasHtml +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>Esta solicitud está en estado <strong>PENDIENTE</strong> de aprobación.</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS" +
+      "</div></div>";
+
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " ítems)");
+    return { status: "ok" };
+  } catch(err) {
+    Logger.log("Error notificarResumenSolicitud: " + err.toString());
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+function notificarResumenSolicitud(e) {
+  try {
+    var p           = e.parameter || {};
+    var idSolicitud = String(p.idSolicitud || "").trim();
+    var lugar       = String(p.lugar       || "").trim();
+    var responsable = String(p.responsable || "").trim();
+    var idResp      = String(p.idResp      || "").trim();
+    if (!idSolicitud) return { status: "error", mensaje: "Sin idSolicitud." };
+
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("SOLICITUDES");
+    if (!sheet) return { status: "error", mensaje: "Sin hoja SOLICITUDES." };
+    var datos = sheet.getDataRange().getValues();
+    var items = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      if (String(fila[0]||"").trim() === idSolicitud) {
+        items.push({ codigo: String(fila[2]||""), desc: String(fila[3]||""), cantidad: String(fila[4]||"") });
+      }
+    }
+    if (!items.length) return { status: "ok", mensaje: "Sin items." };
+
+    var destinos = obtenerDestinatarios();
+    var fecha    = new Date().toLocaleString("es-CL");
+    var asunto   = "🛒 Solicitud " + idSolicitud + " — " + lugar + " — " + fecha;
+    var filasHtml = "";
+    for (var j = 0; j < items.length; j++) {
+      var bg = j % 2 === 0 ? "#ffffff" : "#f8fafc";
+      filasHtml += "<tr style='background:" + bg + "'>" +
+        "<td style='padding:7px 10px;font-family:monospace;font-size:12px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].codigo + "</td>" +
+        "<td style='padding:7px 10px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].desc + "</td>" +
+        "<td style='padding:7px 10px;text-align:center;font-weight:700;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].cantidad + "</td>" +
+        "</tr>";
+    }
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:600px;'>" +
+      "<div style='background:#1B5FA5;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>🛒 Nueva solicitud de insumos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Dermatología · Hospital del Salvador</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px;'>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;width:140px;'>N° Solicitud:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;font-weight:600;color:#185FA5;'>" + idSolicitud + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Responsable:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + responsable + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>RUT:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + idResp + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Lugar:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#185FA5;'>" + lugar + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Fecha:</td>" +
+              "<td style='padding:5px 8px;color:#1e293b;'>" + fecha + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Total ítems:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + items.length + "</td></tr>" +
+        "</table>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+            "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cant.</th>" +
+          "</tr>" + filasHtml +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>Esta solicitud está en estado <strong>PENDIENTE</strong> de aprobación.</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS" +
+      "</div></div>";
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " items)");
+    return { status: "ok" };
+  } catch(err) {
+    Logger.log("Error notificarResumenSolicitud: " + err.toString());
+    return { status: "error", mensaje: err.toString() };
   }
 }
 
