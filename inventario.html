@@ -328,9 +328,9 @@
 </div>
 
 <script>
-  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec"; // URL fija
-  let listaItems = []; // [{lugar, item, cantidad}]
-  let itemsData  = []; // [{codigo, descripcion}]
+  var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec";
+  let listaItems = [];
+  let itemsData  = [];
   let listaInvAbierta  = false;
   let itemInvSelCodigo = "";
   let itemInvSelDesc   = "";
@@ -393,7 +393,6 @@
   });
 
   window.onload = () => {
-    // Leer sesión
     var sess = null;
     try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e) {}
     if (!sess) { window.location.replace("login.html"); return; }
@@ -401,27 +400,21 @@
     responsableIdSesion = sess.id     || "";
     document.getElementById("responsableBadgeTxt").textContent = responsableSesion;
     document.getElementById("responsableIdTxt").textContent    = responsableIdSesion;
-    // Mostrar lugar y cargar datos
     document.getElementById("lugarSesionWrap").style.display = "block";
     if (!SCRIPT_URL) pedirURL();
     else { cargarLugares(); cargarItems(); }
   };
 
   function pedirURL() {
-    const url = prompt(
-      "Pega la URL del Apps Script (Web App):",
-      SCRIPT_URL
-    );
+    const url = prompt("Pega la URL del Apps Script (Web App):", SCRIPT_URL);
     if (url && url.startsWith("https://")) {
       SCRIPT_URL = url.trim();
       localStorage.setItem("inv_script_url", SCRIPT_URL);
-      cargarColaboradores();
       cargarLugares();
       cargarItems();
     }
   }
 
-  // ── Carga listas desde el script ─────────────────────────────
   async function cargarLugares() {
     const sel = document.getElementById("lugar");
     try {
@@ -463,23 +456,17 @@
     document.head.appendChild(s);
   }
 
-  // ── Agregar a lista local ─────────────────────────────────────
-  let responsableSesion = "";
-  let lugarSesion = "";
-
+  let responsableSesion   = "";
   let responsableIdSesion = "";
+  let lugarSesion = "";
 
   function cambiarResponsable() {
     responsableSesion = "";
     responsableIdSesion = "";
     lugarSesion = "";
-    document.getElementById("responsableBadgeWrap").style.display  = "none";
-    document.getElementById("lugarBadgeWrap").style.display        = "none";
-    document.getElementById("inputItemWrap").style.display         = "none";
-    document.getElementById("lugarSesionWrap").style.display       = "none";
-    document.getElementById("responsableSesionWrap").style.display = "block";
-    document.getElementById("responsable").value = "";
-    document.getElementById("lugar").value = "";
+    document.getElementById("lugarBadgeWrap").style.display  = "none";
+    document.getElementById("inputItemWrap").style.display   = "none";
+    document.getElementById("lugarSesionWrap").style.display = "none";
   }
 
   function confirmarLugar() {
@@ -503,9 +490,9 @@
   }
 
   function agregarALista() {
-    const lugar      = lugarSesion;
-    const item       = document.getElementById("item").value;
-    const cantidad   = document.getElementById("cantidad").value.trim();
+    const lugar     = lugarSesion;
+    const item      = document.getElementById("item").value;
+    const cantidad  = document.getElementById("cantidad").value.trim();
     const vencimiento = document.getElementById("vencimiento").value;
 
     if (!lugar || !item || !cantidad || Number(cantidad) < 0) {
@@ -513,17 +500,14 @@
       return;
     }
 
-    // Buscar codigo y descripcion del item seleccionado
-    // Leer codigo y descripcion directamente del texto de la opcion seleccionada
-    var selEl      = document.getElementById("item");
-    var optionText = selEl.options[selEl.selectedIndex].textContent || item;
-    var partes     = optionText.split(" — ");
-    var codigoItem = partes[0].trim() || item;
-    var descItem   = partes.length > 1 ? partes.slice(1).join(" — ").trim() : item;
+    // ── FIX: usar directamente las variables del buscador ──────
+    var codigoItem = itemInvSelCodigo || item;
+    var descItem   = itemInvSelDesc   || item;
+    // ──────────────────────────────────────────────────────────
+
     listaItems.push({ lugar: lugar, item: descItem, codigo: codigoItem, cantidad: cantidad, vencimiento: vencimiento || "no aplica" });
     renderLista();
 
-    // Resetea solo cantidad, mantiene lugar e ítem para agilizar ingreso
     document.getElementById("cantidad").value = "";
     document.getElementById("vencimiento").value = "";
     document.getElementById("item").focus();
@@ -545,7 +529,9 @@
         `<span class="lugar-txt">${entry.lugar}</span>` +
         `<span class="item-txt">${entry.item}</span>` +
         `<span class="cant-txt">${entry.cantidad}</span>` +
-        (entry.vencimiento && entry.vencimiento !== "no aplica" ? `<span style="font-size:.72rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap;">${fmtFecha(entry.vencimiento)}</span>` : `<span style="font-size:.72rem;background:#f1f5f9;color:#94a3b8;border-radius:4px;padding:2px 6px;font-style:italic">Sin vencimiento</span>`) +
+        (entry.vencimiento && entry.vencimiento !== "no aplica"
+          ? `<span style="font-size:.72rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 6px;font-weight:600;white-space:nowrap;">${fmtFecha(entry.vencimiento)}</span>`
+          : `<span style="font-size:.72rem;background:#f1f5f9;color:#94a3b8;border-radius:4px;padding:2px 6px;font-style:italic">Sin vencimiento</span>`) +
         `<button class="btn-del" onclick="eliminarItem(${idx})" title="Eliminar">` +
           `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>` +
         `</button>`;
@@ -563,7 +549,6 @@
     renderLista();
   }
 
-  // ── Enviar toda la lista al sheet ─────────────────────────────
   async function enviarTodo() {
     if (listaItems.length === 0) {
       mostrarToast("Agrega al menos un ítem antes de enviar.", "warn");
@@ -571,9 +556,8 @@
     }
     if (!SCRIPT_URL) { pedirURL(); return; }
 
-
-    const btn     = document.getElementById("btnEnviar");
-    btn.disabled  = true;
+    const btn    = document.getElementById("btnEnviar");
+    btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
     let errores = 0;
@@ -604,7 +588,6 @@
     }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────
   function fmtFecha(iso) {
     if (!iso) return "";
     const [a, m, d] = iso.split("-");
@@ -627,7 +610,6 @@
     });
   }
 
-  // Enter en cantidad → agregar a lista
   document.addEventListener("keydown", e => {
     if (e.key === "Enter" && document.activeElement.id === "cantidad") agregarALista();
   });
