@@ -157,6 +157,7 @@
 
   // ── Cargar lugares inventariados ──────────────────────────
   window.onload = function() {
+    // Leer sesión
     var sess = null;
     try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e) {}
     if (!sess) { window.location.replace("login.html"); return; }
