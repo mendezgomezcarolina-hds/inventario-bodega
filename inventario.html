@@ -258,9 +258,26 @@
   <div id="inputItemWrap" style="display:none;">
     <p class="section-label">Agregar ítem</p>
     <div class="input-row">
-      <div class="field">
+      <div class="field" style="position:relative;">
         <label>Ítem</label>
-        <select id="item"><option value="" disabled selected>Cargando…</option></select>
+        <div style="display:flex;gap:7px;align-items:center;">
+          <input type="text" id="itemQ" placeholder="Escribe nombre o código…"
+            autocomplete="off" oninput="filtrarItemsInv()" onfocus="abrirListaInv()"
+            style="flex:1;font-family:'DM Sans',sans-serif;font-size:.9rem;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;"/>
+          <button type="button" onclick="toggleListaInv()"
+            style="width:42px;height:42px;background:var(--accent);border:none;border-radius:var(--radius);cursor:pointer;display:grid;place-items:center;flex-shrink:0;">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </button>
+        </div>
+        <div id="itemListaInv" style="display:none;position:absolute;left:0;right:0;z-index:100;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;"></div>
+        <div id="itemBadgeInv" style="display:none;margin-top:6px;background:#dcfce7;border:1px solid #bbf7d0;border-radius:var(--radius);padding:7px 12px;align-items:center;justify-content:space-between;">
+          <div>
+            <div id="itemBadgeNomInv" style="font-size:.85rem;font-weight:500;color:#15803d;"></div>
+            <div id="itemBadgeCodInv" style="font-family:'DM Mono',monospace;font-size:.7rem;color:#15803d;opacity:.7;margin-top:1px;"></div>
+          </div>
+          <button type="button" onclick="limpiarItemInv()" style="font-size:.75rem;background:none;border:none;cursor:pointer;color:#15803d;font-family:'DM Sans',sans-serif;">✕ cambiar</button>
+        </div>
+        <select id="item" style="display:none;"><option value="" disabled selected></option></select>
       </div>
       <div class="field">
         <label>Cantidad</label>
@@ -314,6 +331,66 @@
   var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz10wksjJGvAoSRP8ctI-j4ZKeoVnj2EzNZ-frlzw8ewqOP6JAkqWnB257TYsuZgQMQtQ/exec"; // URL fija
   let listaItems = []; // [{lugar, item, cantidad}]
   let itemsData  = []; // [{codigo, descripcion}]
+  let listaInvAbierta  = false;
+  let itemInvSelCodigo = "";
+  let itemInvSelDesc   = "";
+
+  function norm(str) {
+    return String(str||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  }
+
+  function filtrarItemsInv() {
+    var q     = norm(document.getElementById("itemQ").value).trim();
+    var lista = document.getElementById("itemListaInv");
+    lista.innerHTML = ""; lista.style.display = "block"; listaInvAbierta = true;
+    var fuente = q
+      ? itemsData.filter(function(it){ return norm(it.descripcion).indexOf(q)>-1 || norm(String(it.codigo)).indexOf(q)>-1; })
+      : itemsData;
+    if (!fuente.length) { lista.innerHTML = '<div style="padding:12px;text-align:center;font-size:.8rem;color:#94a3b8;">Sin resultados</div>'; return; }
+    for (var i=0; i<fuente.length; i++) {
+      var it  = fuente[i];
+      var div = document.createElement("div");
+      div.style.cssText = "padding:9px 12px;cursor:pointer;border-bottom:.5px solid #f0f4f8;font-size:.82rem;";
+      div.innerHTML = '<span style="font-family:monospace;font-size:.7rem;color:#64748b;margin-right:8px;">'+it.codigo+'</span>'+it.descripcion;
+      div.onmouseover = function(){ this.style.background="#f0f4f8"; };
+      div.onmouseout  = function(){ this.style.background=""; };
+      (function(item){ div.addEventListener("mousedown",function(e){e.preventDefault();seleccionarItemInv(item);}); })(it);
+      lista.appendChild(div);
+    }
+  }
+
+  function abrirListaInv() { if (!listaInvAbierta) filtrarItemsInv(); }
+  function toggleListaInv() {
+    listaInvAbierta = !listaInvAbierta;
+    document.getElementById("itemListaInv").style.display = listaInvAbierta ? "block" : "none";
+    if (listaInvAbierta) filtrarItemsInv();
+  }
+  function seleccionarItemInv(it) {
+    itemInvSelCodigo = String(it.codigo);
+    itemInvSelDesc   = it.descripcion;
+    var sel = document.getElementById("item");
+    sel.innerHTML = '<option value="'+itemInvSelCodigo+'" selected>'+itemInvSelDesc+'</option>';
+    sel.value = itemInvSelCodigo;
+    document.getElementById("itemQ").value = "";
+    document.getElementById("itemListaInv").style.display = "none";
+    listaInvAbierta = false;
+    var badge = document.getElementById("itemBadgeInv");
+    badge.style.display = "flex";
+    document.getElementById("itemBadgeNomInv").textContent = itemInvSelDesc;
+    document.getElementById("itemBadgeCodInv").textContent = itemInvSelCodigo;
+  }
+  function limpiarItemInv() {
+    itemInvSelCodigo = ""; itemInvSelDesc = "";
+    document.getElementById("itemBadgeInv").style.display = "none";
+    document.getElementById("itemQ").value = "";
+    document.getElementById("item").innerHTML = '<option value="" disabled selected></option>';
+  }
+  document.addEventListener("click", function(e){
+    if (!e.target.closest("#itemListaInv") && e.target.id !== "itemQ") {
+      var l = document.getElementById("itemListaInv");
+      if (l) { l.style.display = "none"; listaInvAbierta = false; }
+    }
+  });
 
   window.onload = () => {
     // Leer sesión

@@ -389,14 +389,18 @@
     document.getElementById("itemLista").style.display = "none";
   }
 
+  function norm(str) {
+    return String(str||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  }
+
   function filtrarItems() {
-    var q     = document.getElementById("itemQ").value.toUpperCase().trim();
+    var q     = norm(document.getElementById("itemQ").value).trim();
     var lista = document.getElementById("itemLista");
     lista.innerHTML = "";
     lista.style.display = "block";
     listaAbierta = true;
     var fuente = q
-      ? itemsData.filter(function(it){ return it.descripcion.toUpperCase().indexOf(q)>-1 || String(it.codigo).indexOf(q)>-1; })
+      ? itemsData.filter(function(it){ return norm(it.descripcion).indexOf(q)>-1 || norm(String(it.codigo)).indexOf(q)>-1; })
       : itemsData;
     if (!fuente.length) {
       lista.innerHTML = '<div class="ri-empty">Sin resultados</div>';
@@ -404,11 +408,9 @@
     }
     for (var i=0; i<fuente.length; i++) {
       var it = fuente[i];
-      var nomHtml = q ? it.descripcion.replace(new RegExp(q,"gi"),function(m){return"<mark>"+m+"</mark>";}) : it.descripcion;
-      var codHtml = q && String(it.codigo).toUpperCase().indexOf(q)>-1 ? String(it.codigo).replace(new RegExp(q,"gi"),function(m){return"<mark>"+m+"</mark>";}) : String(it.codigo);
       var div = document.createElement("div");
       div.className = "ri";
-      div.innerHTML = '<span class="ri-cod">'+codHtml+'</span><span class="ri-nom">'+nomHtml+'</span>';
+      div.innerHTML = '<span class="ri-cod">'+it.codigo+'</span><span class="ri-nom">'+it.descripcion+'</span>';
       (function(item){ div.onclick = function(){ seleccionarItem(item); }; })(it);
       lista.appendChild(div);
     }
