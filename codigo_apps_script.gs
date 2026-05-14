@@ -509,7 +509,7 @@ function stockLugar(e) {
         inventario:  it.cantidad,
         ingresos:    it.ingresos,
         egresos:     it.egresos,
-        stock:       it.cantidad + it.ingresos - it.egresos,
+        stock:       it.cantidad + it.ingresos + it.egresos,
         minimo:      it.minimo
       });
     }
@@ -525,17 +525,20 @@ function registrarEgreso(e) {
   try {
     var ss  = SpreadsheetApp.getActiveSpreadsheet();
     var p   = e.parameter || {};
-    var lugar = String(p.lugar      || "").trim();
-    var cod   = String(p.codigo     || "").trim();
-    var desc  = String(p.descripcion|| "").trim();
-    var qty   = parseFloat(p.cantidad || 0);
+    var lugar   = String(p.lugar       || "").trim();
+    var cod     = String(p.codigo      || "").trim();
+    var desc    = String(p.descripcion || "").trim();
+    var qty     = parseFloat(p.cantidad || 0);
+    var usuario = String(p.usuario     || "").trim();
+    var usuId   = String(p.usuarioId   || "").trim();
+    var nSol    = String(p.nSol        || "").trim();
     if (!lugar || !cod || !qty) return { status: "error", mensaje: "Faltan datos." };
     var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
     if (movSheet.getLastRow() === 0)
-      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento"]);
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
     movSheet.appendRow([
-      new Date().toLocaleString("es-CL"), "EGRESO", "", "", lugar, cod, desc, -Math.abs(qty), ""
+      new Date().toLocaleString("es-CL"), "EGRESO", nSol, "", lugar, cod, desc, -Math.abs(qty), "", usuario, usuId
     ]);
     return { status: "ok" };
   } catch(err) {
@@ -941,4 +944,212 @@ function alertaVencimientos() {
   } catch(err) {
     Logger.log("Error alertaVencimientos: " + err.toString());
   }
+}
+
+// ============================================================
+//  HOJAS RESUMEN DE STOCK — Bodega Dermatología HDS
+//  Pegar al FINAL del código existente en Apps Script
+//  Se llaman automáticamente al registrar movimientos
+// ============================================================
+
+// ── STOCK_CURACIONES ─────────────────────────────────────────
+// Una fila por insumo con: inv inicial + recibido − uso = stock actual
+function actualizarStockCuraciones() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var shCur   = ss.getSheetByName("CURACIONES");       // lista de ítems del lugar
+  var shInv   = ss.getSheetByName("INVENTARIO");        // captura inicial
+  var shMov   = ss.getSheetByName("MOVIMIENTOS");       // movimientos
+  var shStock = ss.getSheetByName("STOCK_CURACIONES");  // hoja resumen
+
+  if (!shCur || !shInv || !shMov || !shStock) {
+    Logger.log("actualizarStockCuraciones: falta alguna hoja requerida");
+    return;
+  }
+
+  // 1 — Leer lista de ítems desde hoja CURACIONES (A=código, B=descripción, C=crítico, D=reposición, E=máximo)
+  var itemsData = shCur.getDataRange().getValues();
+  var items = []; // [{codigo, desc, critico, reposicion, maximo}]
+  for (var i = 0; i < itemsData.length; i++) {
+    var cod  = String(itemsData[i][0] || "").trim();
+    var desc = String(itemsData[i][1] || "").trim();
+    if (!cod || !desc) continue;
+    items.push({
+      codigo:     cod,
+      desc:       desc,
+      critico:    itemsData[i][2] !== "" ? Number(itemsData[i][2]) : "",
+      reposicion: itemsData[i][3] !== "" ? Number(itemsData[i][3]) : "",
+      maximo:     itemsData[i][4] !== "" ? Number(itemsData[i][4]) : ""
+    });
+  }
+
+  // 2 — Sumar inventario inicial por código (INVENTARIO donde LUGAR=CURACIONES)
+  var invData = shInv.getDataRange().getValues();
+  var invMap  = {}; // {codigo: cantidad}
+  for (var r = 1; r < invData.length; r++) {
+    var lugar = String(invData[r][0] || "").trim().toUpperCase();
+    var cod   = String(invData[r][1] || "").trim();
+    var cant  = Number(invData[r][3]) || 0;
+    if (lugar === "CURACIONES" && cod) {
+      invMap[cod] = (invMap[cod] || 0) + cant;
+    }
+  }
+
+  // 3 — Sumar movimientos por código (MOVIMIENTOS donde LUGAR=CURACIONES)
+  var movData = shMov.getDataRange().getValues();
+  var ingMap  = {}; // {codigo: sum ingresos}
+  var egrMap  = {}; // {codigo: sum egresos (negativos)}
+  for (var m = 1; m < movData.length; m++) {
+    var tipo  = String(movData[m][1] || "").trim().toUpperCase();
+    var lugar = String(movData[m][4] || "").trim().toUpperCase();
+    var cod   = String(movData[m][5] || "").trim();
+    var cant  = Number(movData[m][7]) || 0;
+    if (lugar !== "CURACIONES" || !cod) continue;
+    if (tipo === "INGRESO") {
+      ingMap[cod] = (ingMap[cod] || 0) + cant;
+    } else if (tipo === "EGRESO") {
+      egrMap[cod] = (egrMap[cod] || 0) + cant; // ya negativos
+    }
+  }
+
+  // 4 — Construir filas para STOCK_CURACIONES
+  var ahora = new Date().toLocaleString("es-CL");
+  var encabezado = [
+    "Código", "Descripción", "Inv. Inicial", "+Recibido", "−Uso diario",
+    "Stock Actual", "Stock Crítico (7d)", "Stock Reposición (15d)",
+    "Stock Máximo (1,5m)", "Estado", "Actualizado"
+  ];
+  var filas = [encabezado];
+
+  for (var j = 0; j < items.length; j++) {
+    var it      = items[j];
+    var ini     = invMap[it.codigo]  || 0;
+    var ing     = ingMap[it.codigo]  || 0;
+    var egr     = egrMap[it.codigo]  || 0; // negativo
+    var actual  = ini + ing + egr;
+
+    var estado = "";
+    if (it.critico !== "") {
+      if (actual <= it.critico)    estado = "🔴 CRÍTICO";
+      else if (actual <= it.reposicion) estado = "🟡 REPONER";
+      else                          estado = "🟢 OK";
+    }
+
+    filas.push([
+      it.codigo, it.desc, ini, ing, egr,
+      actual, it.critico, it.reposicion, it.maximo, estado, ahora
+    ]);
+  }
+
+  // 5 — Reescribir hoja STOCK_CURACIONES
+  shStock.clearContents();
+  shStock.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
+
+  // Formato encabezado
+  shStock.getRange(1, 1, 1, filas[0].length)
+    .setBackground("#185FA5").setFontColor("#ffffff").setFontWeight("bold");
+
+  Logger.log("✓ STOCK_CURACIONES actualizado: " + (filas.length - 1) + " ítems");
+}
+
+// ── STOCK (bodega general Derma) ─────────────────────────────
+// Rastrea ingresos desde HDS y egresos despachados a cada lugar
+function actualizarStockBodega() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var shMov   = ss.getSheetByName("MOVIMIENTOS");
+  var shInsumos = ss.getSheetByName("INSUMOS");
+  var shStock = ss.getSheetByName("STOCK");
+
+  if (!shMov || !shStock) {
+    Logger.log("actualizarStockBodega: falta hoja MOVIMIENTOS o STOCK");
+    return;
+  }
+
+  // Bodegas generales del servicio
+  var BODEGAS = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+
+  // 1 — Leer descripciones desde INSUMOS (fallback)
+  var descMap = {};
+  if (shInsumos) {
+    var insData = shInsumos.getDataRange().getValues();
+    for (var i = 0; i < insData.length; i++) {
+      var c = String(insData[i][0] || "").trim();
+      var d = String(insData[i][1] || "").trim();
+      if (c && d) descMap[c] = d;
+    }
+  }
+
+  // 2 — Procesar MOVIMIENTOS de bodegas generales
+  var movData = shMov.getDataRange().getValues();
+  var codigos  = []; // orden de aparición
+  var ingHDS   = {}; // {codigo: cantidad recibida de HDS}
+  var egrLugar = {}; // {codigo: {lugar: cantidad despachada}}
+
+  for (var m = 1; m < movData.length; m++) {
+    var tipo  = String(movData[m][1] || "").trim().toUpperCase();
+    var lugar = String(movData[m][4] || "").trim().toUpperCase();
+    var cod   = String(movData[m][5] || "").trim();
+    var desc  = String(movData[m][6] || "").trim();
+    var cant  = Number(movData[m][7]) || 0;
+
+    if (!cod) continue;
+    if (desc && !descMap[cod]) descMap[cod] = desc;
+
+    var esBodega = BODEGAS.indexOf(lugar) >= 0;
+
+    if (esBodega && tipo === "INGRESO") {
+      if (codigos.indexOf(cod) < 0) codigos.push(cod);
+      ingHDS[cod] = (ingHDS[cod] || 0) + cant;
+    }
+    // EGRESO desde bodega = despacho a lugares
+    if (esBodega && tipo === "EGRESO") {
+      if (codigos.indexOf(cod) < 0) codigos.push(cod);
+      egrLugar[cod] = egrLugar[cod] || {};
+      egrLugar[cod][lugar] = (egrLugar[cod][lugar] || 0) + cant; // negativo
+    }
+  }
+
+  // 3 — Construir filas
+  var ahora = new Date().toLocaleString("es-CL");
+  var encabezado = [
+    "Código", "Descripción", "Recibido HDS", "Despachado (total)",
+    "Stock Bodega", "Última actualización"
+  ];
+  var filas = [encabezado];
+
+  for (var k = 0; k < codigos.length; k++) {
+    var cod    = codigos[k];
+    var desc   = descMap[cod] || "";
+    var recib  = ingHDS[cod] || 0;
+    var desp   = 0;
+    if (egrLugar[cod]) {
+      for (var lu in egrLugar[cod]) desp += egrLugar[cod][lu]; // ya negativo
+    }
+    var stockB = recib + desp; // desp es negativo
+
+    filas.push([cod, desc, recib, desp, stockB, ahora]);
+  }
+
+  // 4 — Reescribir hoja STOCK
+  shStock.clearContents();
+  if (filas.length > 1) {
+    shStock.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
+    shStock.getRange(1, 1, 1, filas[0].length)
+      .setBackground("#0F6E56").setFontColor("#ffffff").setFontWeight("bold");
+  } else {
+    shStock.getRange(1, 1, 1, encabezado.length).setValues([encabezado]);
+    shStock.getRange(1, 1, 1, encabezado.length)
+      .setBackground("#0F6E56").setFontColor("#ffffff").setFontWeight("bold");
+    shStock.getRange(2, 1).setValue("Sin movimientos registrados aún.");
+  }
+
+  Logger.log("✓ STOCK bodega actualizado: " + (filas.length - 1) + " ítems");
+}
+
+// ── Función combinada: actualizar ambas hojas a la vez ────────
+function actualizarTodoElStock() {
+  actualizarStockCuraciones();
+  actualizarStockBodega();
+  SpreadsheetApp.getUi().alert("✓ Hojas STOCK_CURACIONES y STOCK actualizadas correctamente.");
 }

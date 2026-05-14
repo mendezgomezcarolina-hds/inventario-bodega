@@ -136,6 +136,8 @@
   var itemSelNom   = "";
   var itemSelStock = 0;
   var _n = 0;
+  var usuarioNombre = "";
+  var usuarioId     = "";
 
   function jsonp(url, cb) {
     var name  = "_s_" + Date.now() + "_" + (++_n);
@@ -155,6 +157,12 @@
 
   // ── Cargar lugares inventariados ──────────────────────────
   window.onload = function() {
+    var sess = null;
+    try { sess = JSON.parse(localStorage.getItem("bodega_user") || "null"); } catch(e) {}
+    if (!sess) { window.location.replace("login.html"); return; }
+    usuarioNombre = sess.nombre || "";
+    usuarioId     = sess.id     || "";
+
     jsonp(SCRIPT_URL + "?accion=lugaresConInventario", function(data, err) {
       var sel = document.getElementById("selLugar");
       if (!data || err || !data.lugares || !data.lugares.length) {
@@ -266,11 +274,15 @@
     if (cant > itemSelStock) { toast("Cantidad supera el stock disponible.", "warn"); return; }
     cerrarModal();
     toast("Registrando egreso...", "");
+    var nSol = "USO-" + new Date().toISOString().replace(/[-T:.Z]/g,"").slice(0,14);
     var url = SCRIPT_URL + "?accion=registrarEgreso" +
-      "&lugar="    + encodeURIComponent(lugar) +
-      "&codigo="   + encodeURIComponent(itemSelCod) +
+      "&lugar="       + encodeURIComponent(lugar) +
+      "&codigo="      + encodeURIComponent(itemSelCod) +
       "&descripcion=" + encodeURIComponent(itemSelNom) +
-      "&cantidad=" + encodeURIComponent(cant);
+      "&cantidad="    + encodeURIComponent(cant) +
+      "&usuario="     + encodeURIComponent(usuarioNombre) +
+      "&usuarioId="   + encodeURIComponent(usuarioId) +
+      "&nSol="        + encodeURIComponent(nSol);
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") {
         toast("Error al registrar. Intenta nuevamente.", "er"); return;
