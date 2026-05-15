@@ -707,7 +707,7 @@ function leerAccesosUsuario(ss, id) {
   for (var i = 1; i < datos.length; i++) {
     if (String(datos[i][1] || "").trim() === id) {
       var acc = [];
-      for (var j = 2; j < 8; j++) acc.push(String(datos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+      for (var j = 2; j < 9; j++) acc.push(String(datos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
       return acc;
     }
   }
@@ -729,7 +729,7 @@ function obtenerAccesos(e) {
       for (var i = 1; i < accDatos.length; i++) {
         var id  = String(accDatos[i][1] || "").trim();
         var acc = [];
-        for (var j = 2; j < 8; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+        for (var j = 2; j < 9; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
         mapaAccesos[id] = acc;
       }
     }
@@ -777,10 +777,11 @@ function guardarAccesos(e) {
         mapaNom[d.id] || d.id, d.id,
         acc[0] ? "si" : "no", acc[1] ? "si" : "no",
         acc[2] ? "si" : "no", acc[3] ? "si" : "no",
-        acc[4] ? "si" : "no", acc[5] ? "si" : "no"
+        acc[4] ? "si" : "no", acc[5] ? "si" : "no",
+        acc[6] ? "si" : "no"
       ]);
     }
-    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 8).setValues(filas);
+    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 9).setValues(filas);
     return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
