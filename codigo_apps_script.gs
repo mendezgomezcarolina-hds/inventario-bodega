@@ -463,25 +463,43 @@ function lugaresConInventario() {
 
 // ── Registrar corrección en MOVIMIENTOS ──────────────────────
 function registrarCorreccion(e) {
+  // Registra un AJUSTE trimestral: diferencia entre conteo físico y stock calculado
+  // cantidad positiva = sobrante (AJUSTE+), negativa = faltante (AJUSTE-)
   try {
     var ss       = SpreadsheetApp.getActiveSpreadsheet();
     var p        = e.parameter || {};
-    var lugar    = String(p.lugar       || "").trim();
-    var cod      = String(p.codigo      || "").trim();
-    var desc     = String(p.descripcion || "").trim();
-    var qty      = parseFloat(p.cantidad || 0);
-    var usuario  = String(p.usuario     || "").trim();
-    var usuId    = String(p.usuarioId   || "").trim();
-    var nSol     = String(p.nSol        || "").trim();
-    if (!lugar || !cod || !qty) return { status: "error", mensaje: "Faltan datos." };
+    var lugar    = String(p.lugar        || "").trim();
+    var cod      = String(p.codigo       || "").trim();
+    var desc     = String(p.descripcion  || "").trim();
+    var stockReal = parseFloat(p.stockReal  || 0);   // conteo físico real
+    var stockCalc = parseFloat(p.stockCalc  || 0);   // stock calculado por sistema
+    var usuario  = String(p.usuario      || "").trim();
+    var usuId    = String(p.usuarioId    || "").trim();
+    var motivo   = String(p.motivo       || "Ajuste trimestral").trim();
+
+    if (!lugar || !cod) return { status: "error", mensaje: "Faltan datos." };
+
+    var diferencia = stockReal - stockCalc; // positivo=sobra, negativo=falta
+    if (diferencia === 0) return { status: "ok", mensaje: "Sin diferencia, no se registró ajuste." };
+
+    var tipo = diferencia > 0 ? "AJUSTE+" : "AJUSTE-";
+
     var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (!movSheet) return { status: "error", mensaje: "Sin hoja MOVIMIENTOS." };
+
     movSheet.appendRow([
-      new Date().toLocaleString("es-CL"), "INGRESO", nSol, "", lugar, cod, desc, Math.abs(qty), "", usuario, usuId
+      new Date().toLocaleString("es-CL"),
+      tipo,
+      motivo,       // campo N° Sol reutilizado para motivo del ajuste
+      "",
+      lugar, cod, desc,
+      diferencia,   // positivo o negativo según corresponda
+      "",
+      usuario, usuId
     ]);
-    // Actualizar hoja resumen
+
     try { actualizarStockCuraciones(); } catch(e) { Logger.log("Stock no actualizado: " + e); }
-    return { status: "ok" };
+    return { status: "ok", diferencia: diferencia, tipo: tipo };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
