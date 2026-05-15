@@ -1,0 +1,26 @@
+{
+  "name": "SIIDER",
+  "short_name": "SIIDER",
+  "description": "Sistema Inteligente de Insumos de Dermatología · HDS",
+  "start_url": "/inventario-bodega/index.html",
+  "display": "standalone",
+  "background_color": "#1a6fbd",
+  "theme_color": "#1a6fbd",
+  "icons": [
+    {
+      "src": "icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-180.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-180.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
