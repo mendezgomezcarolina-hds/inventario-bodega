@@ -1346,3 +1346,126 @@ function actualizarTodoElStock() {
   actualizarStockBodega();
   SpreadsheetApp.getUi().alert("✓ Hojas STOCK_CURACIONES y STOCK actualizadas correctamente.");
 }
+
+// ── Archivado anual de MOVIMIENTOS ───────────────────────────
+// Mueve los registros del año anterior a una hoja MOVIMIENTOS_YYYY
+// Mantiene el año en curso en MOVIMIENTOS para mayor agilidad
+// Se puede ejecutar manualmente desde el menú o trigger anual
+
+function archivarMovimientosAnuales() {
+  var ss   = SpreadsheetApp.getActiveSpreadsheet();
+  var ui   = SpreadsheetApp.getUi();
+
+  // Pedir año a archivar (por defecto el año anterior)
+  var anioActual  = new Date().getFullYear();
+  var anioArch    = anioActual - 1;
+
+  var resp = ui.prompt(
+    "📦 Archivar MOVIMIENTOS",
+    "¿Qué año deseas archivar?\n(Se moverán los registros de ese año a la hoja MOVIMIENTOS_" + anioArch + ")",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+
+  var inputAnio = parseInt(resp.getResponseText().trim());
+  if (!isNaN(inputAnio) && inputAnio > 2000 && inputAnio < anioActual) {
+    anioArch = inputAnio;
+  } else if (!isNaN(inputAnio)) {
+    ui.alert("⚠️ Solo puedes archivar años anteriores al año en curso (" + anioActual + ").");
+    return;
+  }
+
+  var nombreArchivo = "MOVIMIENTOS_" + anioArch;
+
+  // Verificar si ya existe la hoja de archivo
+  if (ss.getSheetByName(nombreArchivo)) {
+    var conf = ui.alert(
+      "⚠️ Ya existe la hoja " + nombreArchivo,
+      "¿Deseas reemplazarla con los datos actuales?",
+      ui.ButtonSet.YES_NO
+    );
+    if (conf !== ui.Button.YES) return;
+    ss.deleteSheet(ss.getSheetByName(nombreArchivo));
+  }
+
+  var shMov = ss.getSheetByName("MOVIMIENTOS");
+  if (!shMov) { ui.alert("No se encontró la hoja MOVIMIENTOS."); return; }
+
+  var datos = shMov.getDataRange().getValues();
+  if (datos.length <= 1) { ui.alert("No hay datos en MOVIMIENTOS para archivar."); return; }
+
+  var encabezado = datos[0];
+  var filasMover = [];
+  var filasQuedan = [encabezado];
+
+  // Columna 0 = Fecha/Hora — detectar registros del año a archivar
+  for (var i = 1; i < datos.length; i++) {
+    var fila = datos[i];
+    var celda = fila[0];
+    var anioFila = null;
+
+    if (celda instanceof Date) {
+      anioFila = celda.getFullYear();
+    } else if (typeof celda === "string" && celda.length >= 4) {
+      // Formato "DD/MM/YYYY HH:MM:SS" → extraer año
+      var partes = celda.split(/[\s\/\-]/);
+      for (var p = 0; p < partes.length; p++) {
+        var n = parseInt(partes[p]);
+        if (n > 2000 && n < 2100) { anioFila = n; break; }
+      }
+    }
+
+    if (anioFila === anioArch) {
+      filasMover.push(fila);
+    } else {
+      filasQuedan.push(fila);
+    }
+  }
+
+  if (filasMover.length === 0) {
+    ui.alert("No se encontraron registros del año " + anioArch + " en MOVIMIENTOS.");
+    return;
+  }
+
+  // Crear hoja de archivo y copiar datos
+  var shArch = ss.insertSheet(nombreArchivo);
+  var todasArch = [encabezado].concat(filasMover);
+  shArch.getRange(1, 1, todasArch.length, encabezado.length).setValues(todasArch);
+
+  // Formato encabezado en hoja de archivo
+  shArch.getRange(1, 1, 1, encabezado.length)
+    .setBackground("#0f2d52")
+    .setFontColor("#ffffff")
+    .setFontWeight("bold");
+
+  // Nota de archivo
+  shArch.getRange(todasArch.length + 2, 1)
+    .setValue("📦 Archivado el " + new Date().toLocaleDateString("es-CL") + " · SIIDER · Dermatología HDS");
+
+  // Reescribir MOVIMIENTOS solo con encabezado + año actual
+  shMov.clearContents();
+  shMov.getRange(1, 1, filasQuedan.length, encabezado.length).setValues(filasQuedan);
+  shMov.getRange(1, 1, 1, encabezado.length)
+    .setBackground("#0f2d52")
+    .setFontColor("#ffffff")
+    .setFontWeight("bold");
+
+  ui.alert(
+    "✅ Archivado exitoso",
+    filasMover.length + " registros del año " + anioArch + " movidos a la hoja \"" + nombreArchivo + "\".\n" +
+    filasQuedan.length - 1 + " registros quedan en MOVIMIENTOS (año " + anioActual + ").",
+    ui.ButtonSet.OK
+  );
+
+  Logger.log("✓ Archivado " + filasMover.length + " filas → " + nombreArchivo);
+}
+
+// ── Menú SIIDER en el sheet ───────────────────────────────────
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("⚙ SIIDER")
+    .addItem("📊 Actualizar todo el stock", "actualizarTodoElStock")
+    .addSeparator()
+    .addItem("📦 Archivar movimientos anuales", "archivarMovimientosAnuales")
+    .addToUi();
+}
