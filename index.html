@@ -201,7 +201,7 @@
     var linkAcc = document.getElementById("linkAcceso");
     if (linkAcc) linkAcc.style.display = (esAdmin ? "block" : "none");
     // Apply access control: accesos[0..5] maps to modules
-    var hrefs = ["recepcion_lugar.html","stock.html","inventario.html","solicitud.html","recepcion.html","aprobacion.html"];
+    var hrefs = ["recepcion_lugar.html","stock.html","inventario.html","solicitud.html","recepcion.html","aprobacion.html","ajuste.html"];
     var acc = sess.accesos || [];
     for (var i = 0; i < hrefs.length; i++) {
       var link = document.querySelector('a[href="' + hrefs[i] + '"]');

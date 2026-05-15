@@ -772,7 +772,7 @@ function guardarAccesos(e) {
     var filas = [];
     for (var i = 0; i < datos.length; i++) {
       var d   = datos[i];
-      var acc = d.accesos || [0,0,0,0,0,0];
+      var acc = d.accesos || [0,0,0,0,0,0,0];
       filas.push([
         mapaNom[d.id] || d.id, d.id,
         acc[0] ? "si" : "no", acc[1] ? "si" : "no",

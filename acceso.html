@@ -73,9 +73,10 @@
           <th><div class="ph-ic" style="background:#E1F5EE;color:#0F6E56;"><i class="ti ti-shopping-cart"></i></div><div class="ph-lbl">Solicitud Insumos</div></th>
           <th><div class="ph-ic" style="background:#FAEEDA;color:#854F0B;"><i class="ti ti-truck-delivery"></i></div><div class="ph-lbl">Recep. Bodega</div></th>
           <th><div class="ph-ic" style="background:#EEF2FF;color:#4338CA;"><i class="ti ti-check"></i></div><div class="ph-lbl">Aprobación Solic.</div></th>
+          <th><div class="ph-ic" style="background:#FEF3C7;color:#D97706;"><i class="ti ti-adjustments-horizontal"></i></div><div class="ph-lbl">Ajuste de Stock</div></th>
         </tr>
       </thead>
-      <tbody id="tbody"><tr><td colspan="7"><div class="spinner"></div></td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="8"><div class="spinner"></div></td></tr></tbody>
     </table>
   </div>
 </div>
@@ -111,7 +112,7 @@
   window.onload = function() {
     jsonp(SCRIPT_URL + "?accion=obtenerAccesos", function(data, err) {
       if (!data || err || data.status !== "ok") {
-        document.getElementById("tbody").innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:20px;">Error al cargar colaboradores.</td></tr>';
+        document.getElementById("tbody").innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;padding:20px;">Error al cargar colaboradores.</td></tr>';
         return;
       }
       datos = data.colaboradores || [];
@@ -127,7 +128,7 @@
       var isAdmin = d.id === ADMIN_ID;
       var tr = document.createElement("tr");
       var cells = '<td><div class="user-name">' + d.nombre + (isAdmin ? '<span class="badge-admin">admin</span>' : '') + '</div><div class="user-id">' + d.id + '</div></td>';
-      for (var j = 0; j < 6; j++) {
+      for (var j = 0; j < 7; j++) {
         var on = d.accesos[j] ? "on" : "";
         var locked = isAdmin ? "locked" : "";
         cells += '<td><div class="chk-wrap"><div class="chk ' + on + ' ' + locked + '" data-i="' + i + '" data-j="' + j + '" onclick="toggle(this,' + i + ',' + j + ')"></div></div></td>';
@@ -146,7 +147,7 @@
   function toggleAll(val) {
     for (var i = 0; i < datos.length; i++) {
       if (datos[i].id === ADMIN_ID) continue;
-      for (var j = 0; j < 6; j++) datos[i].accesos[j] = val ? 1 : 0;
+      for (var j = 0; j < 7; j++) datos[i].accesos[j] = val ? 1 : 0;
     }
     render();
   }
