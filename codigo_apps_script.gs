@@ -642,8 +642,8 @@ function recepcionarSolicitud(e) {
       if (movSheet.getLastRow() === 0)
         movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento"]);
       movSheet.appendRow([
-        new Date().toLocaleString("es-CL"), "EGRESO",
-        nSol, "", lugar, cod, desc, -Math.abs(qty), venc
+        new Date().toLocaleString("es-CL"), "INGRESO",
+        nSol, "", lugar, cod, desc, Math.abs(qty), venc
       ]);
     }
     return { status: "ok", fila: fila };

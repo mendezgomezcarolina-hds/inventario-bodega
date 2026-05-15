@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SIIDER · Manual de Usuario · Dermatología HDS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:    #0f2d52;
+  --blue:    #1a6fbd;
+  --blue-lt: #e8f2fb;
+  --teal:    #0F6E56;
+  --teal-lt: #e6f5f1;
+  --gold:    #b8860b;
+  --gold-lt: #fdf8e7;
+  --red:     #c0392b;
+  --red-lt:  #fdecea;
+  --ink:     #1e293b;
+  --muted:   #64748b;
+  --border:  #d1dce8;
+  --bg:      #f5f7fa;
+  --white:   #ffffff;
+  --radius:  10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.6;
+}
+
+/* ── COVER ── */
+.cover{
+  background:var(--navy);
+  color:#fff;
+  padding:60px 48px 52px;
+  position:relative;
+  overflow:hidden;
+}
+.cover::before{
+  content:'';
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 80% at 80% 50%, rgba(26,111,189,.35) 0%, transparent 70%);
+  pointer-events:none;
+}
+.cover-label{
+  font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);margin-bottom:12px;
+}
+.cover h1{
+  font-family:'DM Serif Display',serif;
+  font-size:3rem;line-height:1.1;font-weight:400;
+  margin-bottom:6px;
+}
+.cover h1 em{color:#6ab0f5;font-style:italic;}
+.cover-sub{font-size:1rem;color:rgba(255,255,255,.65);margin-bottom:32px;}
+.cover-meta{
+  display:flex;gap:32px;flex-wrap:wrap;
+  font-size:.8rem;color:rgba(255,255,255,.5);border-top:1px solid rgba(255,255,255,.12);
+  padding-top:20px;
+}
+.cover-meta strong{color:#fff;display:block;font-size:.85rem;}
+
+/* ── NAV INDEX ── */
+.toc{
+  background:#fff;border:1px solid var(--border);
+  max-width:860px;margin:32px auto;border-radius:16px;
+  padding:28px 32px;box-shadow:0 2px 16px rgba(0,0,0,.05);
+}
+.toc h2{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.toc-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;list-style:none;}
+.toc-list a{
+  display:flex;align-items:center;gap:8px;
+  color:var(--blue);font-size:.88rem;text-decoration:none;
+  padding:5px 8px;border-radius:6px;transition:background .12s;
+}
+.toc-list a:hover{background:var(--blue-lt);}
+.toc-list a span{
+  width:22px;height:22px;background:var(--navy);color:#fff;
+  border-radius:50%;font-size:.72rem;font-weight:700;
+  display:grid;place-items:center;flex-shrink:0;
+}
+
+/* ── LAYOUT ── */
+.wrap{max-width:860px;margin:0 auto;padding:0 20px 60px;}
+.section{
+  background:#fff;border:1px solid var(--border);
+  border-radius:16px;margin-bottom:24px;
+  overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);
+}
+.section-head{
+  padding:20px 28px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;
+}
+.section-icon{
+  width:40px;height:40px;border-radius:10px;
+  display:grid;place-items:center;flex-shrink:0;
+}
+.section-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.section-num{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.section-title{font-size:1.1rem;font-weight:700;color:var(--navy);}
+.section-body{padding:24px 28px;}
+
+/* ── STEPS ── */
+.steps{display:flex;flex-direction:column;gap:0;}
+.step{
+  display:grid;grid-template-columns:40px 1fr;gap:16px;
+  padding:16px 0;border-bottom:1px dashed var(--border);
+  position:relative;
+}
+.step:last-child{border-bottom:none;}
+.step-num{
+  width:36px;height:36px;border-radius:50%;
+  display:grid;place-items:center;font-weight:700;font-size:.88rem;
+  flex-shrink:0;margin-top:2px;
+}
+.step-content h4{font-size:.95rem;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.step-content p{font-size:.85rem;color:var(--muted);line-height:1.55;}
+.step-content .hint{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--blue-lt);color:var(--blue);
+  font-size:.75rem;font-weight:600;
+  padding:3px 10px;border-radius:99px;margin-top:6px;
+}
+.step-content .warn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--gold-lt);color:var(--gold);
+  font-size:.75rem;font-weight:600;
+  padding:3px 10px;border-radius:99px;margin-top:6px;
+}
+.step-content .ok{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--teal-lt);color:var(--teal);
+  font-size:.75rem;font-weight:600;
+  padding:3px 10px;border-radius:99px;margin-top:6px;
+}
+
+/* ── PROCESS DIAGRAM ── */
+.diagram{padding:28px;overflow-x:auto;}
+.flow{
+  display:flex;align-items:stretch;gap:0;min-width:600px;
+  position:relative;
+}
+.flow-node{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  position:relative;
+}
+.flow-node::after{
+  content:'→';
+  position:absolute;right:-14px;top:24px;
+  font-size:1.1rem;color:var(--border);font-weight:300;
+  z-index:2;
+}
+.flow-node:last-child::after{display:none;}
+.node-box{
+  width:100%;max-width:120px;
+  border-radius:12px;padding:12px 10px;text-align:center;
+  border:1.5px solid;cursor:default;
+  transition:transform .15s;
+}
+.node-box:hover{transform:translateY(-2px);}
+.node-ico{font-size:1.4rem;margin-bottom:4px;}
+.node-label{font-size:.72rem;font-weight:700;line-height:1.3;}
+.node-sub{font-size:.62rem;margin-top:3px;opacity:.75;}
+
+.n-blue{background:var(--blue-lt);border-color:var(--blue);color:var(--blue);}
+.n-teal{background:var(--teal-lt);border-color:var(--teal);color:var(--teal);}
+.n-gold{background:var(--gold-lt);border-color:var(--gold);color:var(--gold);}
+.n-navy{background:#e8ecf5;border-color:var(--navy);color:var(--navy);}
+.n-red{background:var(--red-lt);border-color:var(--red);color:var(--red);}
+
+/* ── MODULES GRID ── */
+.modules-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;
+  padding:24px 28px;
+}
+.mod-card{
+  border:1.5px solid var(--border);border-radius:12px;padding:16px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.mod-card:hover{border-color:var(--blue);box-shadow:0 2px 12px rgba(26,111,189,.1);}
+.mod-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.mod-ico{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font-size:1rem;flex-shrink:0;}
+.mod-name{font-size:.9rem;font-weight:700;color:var(--navy);}
+.mod-role{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;}
+.mod-desc{font-size:.8rem;color:var(--muted);line-height:1.45;}
+
+/* ── MARCIA BOX ── */
+.marcia-intro{
+  background:linear-gradient(135deg,var(--navy) 0%,#1a4a7a 100%);
+  border-radius:16px;padding:24px 28px;margin-bottom:24px;
+  display:flex;align-items:center;gap:20px;
+  box-shadow:0 4px 20px rgba(15,45,82,.25);
+}
+.marcia-avatar{
+  width:56px;height:56px;background:var(--blue);border-radius:50%;
+  display:grid;place-items:center;flex-shrink:0;font-size:1.6rem;
+}
+.marcia-intro h3{font-size:1rem;font-weight:700;color:#fff;margin-bottom:3px;}
+.marcia-intro p{font-size:.82rem;color:rgba(255,255,255,.65);}
+.marcia-badge{
+  margin-top:6px;display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);
+  font-size:.7rem;font-weight:600;font-family:'DM Mono',monospace;
+  padding:3px 10px;border-radius:99px;
+}
+
+/* ── ALERT BOXES ── */
+.alert{
+  border-radius:10px;padding:14px 16px;margin:16px 0;
+  font-size:.84rem;display:flex;gap:10px;align-items:flex-start;
+}
+.alert-info{background:var(--blue-lt);border:1px solid #bfdbfe;color:var(--navy);}
+.alert-ok{background:var(--teal-lt);border:1px solid #a7f3d0;color:var(--teal);}
+.alert-warn{background:var(--gold-lt);border:1px solid #fde68a;color:var(--gold);}
+.alert-icon{font-size:1rem;flex-shrink:0;margin-top:1px;}
+
+/* ── TABLA ROLES ── */
+.tabla-roles{width:100%;border-collapse:collapse;font-size:.83rem;margin:16px 0;}
+.tabla-roles th{
+  background:var(--navy);color:#fff;padding:9px 12px;text-align:left;
+  font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+}
+.tabla-roles td{padding:9px 12px;border-bottom:1px solid var(--border);}
+.tabla-roles tr:hover td{background:#f8fafc;}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700;}
+.badge-blue{background:var(--blue-lt);color:var(--blue);}
+.badge-teal{background:var(--teal-lt);color:var(--teal);}
+.badge-gold{background:var(--gold-lt);color:var(--gold);}
+
+/* ── MONO ── */
+code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding:2px 6px;border-radius:4px;}
+
+/* ── FOOTER ── */
+.footer{
+  text-align:center;padding:32px 20px;
+  font-size:.75rem;color:var(--muted);
+  border-top:1px solid var(--border);margin-top:12px;
+}
+
+@media(max-width:600px){
+  .cover{padding:40px 24px 36px;}
+  .cover h1{font-size:2rem;}
+  .toc-list{grid-template-columns:1fr;}
+  .modules-grid{grid-template-columns:1fr;}
+  .section-body,.section-head{padding:16px 20px;}
+  .marcia-intro{flex-direction:column;text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── PORTADA ── -->
+<div class="cover">
+  <div class="cover-label">Sistema Inteligente de Insumos de Dermatología · Dermatología HDS</div>
+  <h1>SIIDER<br><em>Manual de Usuario</em></h1>
+  <p class="cover-sub">Guía paso a paso para el uso del sistema de insumos del Servicio de Dermatología<br>Hospital del Salvador · Servicio de Salud Metropolitano Oriente</p>
+  <div class="cover-meta">
+    <div><strong>Versión</strong>1.0 — Mayo 2026</div>
+    <div><strong>Responsable</strong>EU Supervisora Carolina Méndez Gómez</div>
+    <div><strong>Servicio</strong>Dermatología · HDS · SSMO</div>
+    <div><strong>Acceso</strong>mendezgomezcarolina-hds.github.io/inventario-bodega</div>
+  </div>
+</div>
+
+<!-- ── ÍNDICE ── -->
+<div class="toc">
+  <h2>Contenido</h2>
+  <ul class="toc-list">
+    <li><a href="#intro"><span>1</span> ¿Qué es SIIDER?</a></li>
+    <li><a href="#roles"><span>2</span> Roles y permisos</a></li>
+    <li><a href="#proceso"><span>3</span> Diagrama del proceso</a></li>
+    <li><a href="#login"><span>4</span> Cómo ingresar al sistema</a></li>
+    <li><a href="#inventario"><span>5</span> Captura de inventario</a></li>
+    <li><a href="#solicitud"><span>6</span> Solicitud de insumos</a></li>
+    <li><a href="#aprobacion"><span>7</span> Aprobación de solicitudes</a></li>
+    <li><a href="#recepcion-lugar"><span>8</span> Recepción por lugar</a></li>
+    <li><a href="#stock"><span>9</span> Stock por lugar</a></li>
+    <li><a href="#recepcion-bodega"><span>10</span> Recepción de bodega</a></li>
+  </ul>
+</div>
+
+<div class="wrap">
+
+<!-- ── 1. QUÉ ES ── -->
+<div class="section" id="intro">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--navy)">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 1</div>
+      <div class="section-title">¿Qué es SIIDER?</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="margin-bottom:14px;font-size:.92rem;"><strong>SIIDER</strong> es el sistema digital de gestión de insumos del Servicio de Dermatología del Hospital del Salvador. Permite registrar, controlar y solicitar insumos clínicos y no clínicos de manera ordenada, trazable y en tiempo real.</p>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ️</span>
+      <span>El sistema funciona desde cualquier navegador web. No requiere instalación. Se accede desde el celular, tablet o computador con la URL del servicio.</span>
+    </div>
+
+    <div class="modules-grid">
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:var(--blue-lt)">📋</div>
+          <div class="mod-name">Captura de Inventario</div>
+        </div>
+        <div class="mod-desc">Registra el stock físico actual de cada lugar del servicio.</div>
+      </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:var(--gold-lt)">🛒</div>
+          <div class="mod-name">Solicitud de Insumos</div>
+        </div>
+        <div class="mod-desc">Genera solicitudes de reposición cuando el stock es bajo.</div>
+      </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:#fce7f3)">✅</div>
+          <div class="mod-name">Aprobación de Solicitudes</div>
+        </div>
+        <div class="mod-desc">Revisa y aprueba o rechaza las solicitudes pendientes.</div>
+      </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:var(--teal-lt)">📦</div>
+          <div class="mod-name">Recepción por Lugar</div>
+        </div>
+        <div class="mod-desc">Confirma la llegada de insumos aprobados a cada box o área.</div>
+      </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:#ede9fe">📊</div>
+          <div class="mod-name">Stock por Lugar</div>
+        </div>
+        <div class="mod-desc">Consulta el stock actual y registra el uso diario de insumos.</div>
+      </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:#f0fdf4">🏥</div>
+          <div class="mod-name">Recepción de Bodega</div>
+        </div>
+        <div class="mod-desc">Recepciona los pedidos mensuales desde bodega central HDS.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 2. ROLES ── -->
+<div class="section" id="roles">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--teal)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 2</div>
+      <div class="section-title">Roles y permisos del sistema</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <table class="tabla-roles">
+      <thead>
+        <tr>
+          <th>Rol</th>
+          <th>Quiénes</th>
+          <th>Módulos disponibles</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">Operativo</span></td>
+          <td>TENS, Profesionales, Aux. de Servicio, Administrativas</td>
+          <td>Inventario · Solicitud · Recepción por Lugar · Stock</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-teal">Supervisora</span></td>
+          <td>EU Supervisora, 1ª Subrogante y 2ª Subrogante</td>
+          <td>Todos los módulos + Aprobación + Gestión de accesos</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">Bodega</span></td>
+          <td>Encargada de Bodega (EU Supervisora/TENS en rotativa)</td>
+          <td>Recepción de Bodega · Stock</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="alert alert-warn">
+      <span class="alert-icon">⚠️</span>
+      <span>Los accesos se configuran desde el panel <strong>⚙ Gestionar accesos</strong> en el portal principal. Solo la Supervisora tiene acceso a este panel.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── 3. DIAGRAMA ── -->
+<div class="section" id="proceso">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--blue)">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 3</div>
+      <div class="section-title">Diagrama del proceso completo</div>
+    </div>
+  </div>
+
+  <!-- Flujo Principal -->
+  <div class="diagram">
+    <p style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Flujo principal · Ciclo de insumos</p>
+    <div class="flow">
+      <div class="flow-node">
+        <div class="node-box n-navy">
+          <div class="node-ico">🔐</div>
+          <div class="node-label">Login</div>
+          <div class="node-sub">Ingreso al sistema</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-blue">
+          <div class="node-ico">📋</div>
+          <div class="node-label">Captura Inventario</div>
+          <div class="node-sub">Stock inicial</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-gold">
+          <div class="node-ico">🛒</div>
+          <div class="node-label">Solicitud</div>
+          <div class="node-sub">Stock bajo</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-red">
+          <div class="node-ico">✅</div>
+          <div class="node-label">Aprobación</div>
+          <div class="node-sub">Supervisora</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-teal">
+          <div class="node-ico">📦</div>
+          <div class="node-label">Recepción</div>
+          <div class="node-sub">Confirmar llegada</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-navy">
+          <div class="node-ico">📊</div>
+          <div class="node-label">Stock diario</div>
+          <div class="node-sub">Registrar uso</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:32px;"></div>
+    <p style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;">Flujo de bodega central · Pedido mensual</p>
+    <div class="flow">
+      <div class="flow-node">
+        <div class="node-box n-gold">
+          <div class="node-ico">📝</div>
+          <div class="node-label">Bodega Central</div>
+          <div class="node-sub">Despacha pedido mensual</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-teal">
+          <div class="node-ico">🏥</div>
+          <div class="node-label">Recepción Bodega</div>
+          <div class="node-sub">Encargada confirma</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-blue">
+          <div class="node-ico">📊</div>
+          <div class="node-label">MOVIMIENTOS</div>
+          <div class="node-sub">Se registra INGRESO</div>
+        </div>
+      </div>
+      <div class="flow-node">
+        <div class="node-box n-navy">
+          <div class="node-ico">✔</div>
+          <div class="node-label">Stock actualizado</div>
+          <div class="node-sub">Visible por lugar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MARCIA HEADER ── -->
+<div class="marcia-intro">
+  <div class="marcia-avatar">👩‍⚕️</div>
+  <div>
+    <h3>Paso a paso con Marcia Vergara</h3>
+    <p>TENS · Box Curaciones · A continuación se detalla cada acción como la realizaría Marcia en su turno diario.</p>
+    <div class="marcia-badge">RUT: xxxxxxxx-x · Clave: xxxx</div>
+  </div>
+</div>
+
+<!-- ── 4. LOGIN ── -->
+<div class="section" id="login">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--navy)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 4</div>
+      <div class="section-title">Cómo ingresar al sistema</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="alert alert-info">
+      <span class="alert-icon">🌐</span>
+      <span>URL del sistema: <code>mendezgomezcarolina-hds.github.io/inventario-bodega</code> — Guárdala en favoritos del navegador.</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--navy);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Abrir el navegador y entrar a la URL</h4>
+          <p>En el celular o computador, escribe la dirección del sistema en el navegador (Chrome o Safari). Aparecerá la pantalla de inicio de sesión.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--navy);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Ingresar RUT y contraseña</h4>
+          <p>Marcia ingresa su RUT (<code>xxxxxxxx-x</code>) y su contraseña (<code>xxxx</code>). El RUT debe escribirse tal como fue registrado por la supervisora (con guión y dígito verificador).</p>
+          <span class="warn">⚠ Si olvidaste tu contraseña, comunícate con la EU Supervisora para restablecerla.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--navy);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Acceder al portal principal</h4>
+          <p>Al ingresar correctamente, aparece el <strong>Portal SIIDER</strong> con los módulos disponibles según tu rol. Marcia ve: Captura de Inventario, Solicitud de Insumos, Recepción por Lugar y Stock por Lugar.</p>
+          <span class="ok">✓ La sesión queda guardada en el dispositivo. No necesitas volver a ingresar tus datos cada vez.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 5. INVENTARIO ── -->
+<div class="section" id="inventario">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--blue)">
+      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 5</div>
+      <div class="section-title">Captura de Inventario</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Sirve para registrar el stock físico de insumos presentes en un lugar. Se realiza de forma <strong>trimestral</strong> como mínimo, o cuando la supervisora lo solicite. En lugares de mayor volumen como el Pabellón, una frecuencia mensual es recomendable pero requiere mayor coordinación del equipo.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--blue);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Ingresar al módulo</h4>
+          <p>Desde el portal, Marcia toca <strong>"Captura de Inventario"</strong>. El sistema muestra su nombre automáticamente (sesión activa).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--blue);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Seleccionar lugar de trabajo</h4>
+          <p>En el selector <strong>"Lugar"</strong>, elige el box o área que va a inventariar (ej: CURACIONES). Presiona el botón <strong>✓</strong> para confirmar.</p>
+          <span class="hint">💡 El lugar queda fijo durante toda la sesión de inventario. Si necesitas cambiar, presiona "Cambiar".</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--blue);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Buscar y agregar cada insumo</h4>
+          <p>En el campo <strong>"Ítem"</strong>, escribe el nombre o código del insumo (ej: "gasa", "aguja 21"). El buscador filtra en tiempo real. Haz clic sobre el insumo correcto para seleccionarlo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--blue);color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Ingresar cantidad y vencimiento</h4>
+          <p>Escribe la cantidad física contada en el campo <strong>"Cantidad"</strong>. Si el insumo tiene fecha de vencimiento, selecciónala. Si no, dejar en blanco.</p>
+          <span class="hint">⌨ Presiona Enter en el campo Cantidad para agregar rápidamente el ítem a la lista.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--blue);color:#fff;">5</div>
+        <div class="step-content">
+          <h4>Revisar la lista y enviar</h4>
+          <p>Todos los insumos agregados aparecen en la lista inferior. Puedes eliminar un ítem si te equivocaste. Al terminar, presiona <strong>"Enviar todo"</strong>. El sistema confirma el envío con un mensaje verde.</p>
+          <span class="ok">✓ Los datos quedan registrados automáticamente en la planilla del servicio.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 6. SOLICITUD ── -->
+<div class="section" id="solicitud">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--gold)">
+      <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 6</div>
+      <div class="section-title">Solicitud de Insumos</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Cuando el stock de un insumo está bajo o se agotó, Marcia genera una solicitud de reposición desde este módulo.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Ingresar al módulo de Solicitud</h4>
+          <p>Desde el portal, presiona <strong>"Solicitud de Insumos"</strong>. Aparece la pantalla con sesión activa de Marcia.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Seleccionar lugar</h4>
+          <p>Elige el lugar del que se realiza la solicitud y confirma con ✓.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Agregar insumos a solicitar</h4>
+          <p>Busca cada insumo que necesitas reponer, escribe la cantidad requerida y presiona <strong>+</strong>. Repite para cada insumo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Enviar la solicitud</h4>
+          <p>Cuando tengas todos los insumos en la lista, presiona <strong>"Enviar solicitud"</strong>. El sistema genera un ID de solicitud (ej: <code>SOL-260514-082711</code>).</p>
+          <span class="hint">💡 Anota o fotografía el ID de solicitud para hacer seguimiento.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">5</div>
+        <div class="step-content">
+          <h4>Esperar aprobación</h4>
+          <p>La solicitud queda en estado <strong>PENDIENTE</strong>. La supervisora recibirá una notificación y la revisará. La reposición de insumos es <strong>programada y se realiza semanalmente</strong>. Una vez aprobada, podrás recepcionar los insumos en tu lugar de trabajo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 7. APROBACIÓN ── -->
+<div class="section" id="aprobacion">
+  <div class="section-head">
+    <div class="section-icon" style="background:#e11d48">
+      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 7</div>
+      <div class="section-title">Aprobación de Solicitudes <span style="font-size:.72rem;background:#fee2e2;color:#be123c;padding:2px 8px;border-radius:99px;margin-left:8px;">Solo Supervisora</span></div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="alert alert-warn">
+      <span class="alert-icon">🔒</span>
+      <span>Este módulo es exclusivo para la EU Supervisora o quien tenga acceso de aprobación configurado en el sistema.</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:#e11d48;color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Ingresar a Aprobación de Solicitudes</h4>
+          <p>Desde el portal, la supervisora accede a <strong>"Aprobación de Solicitudes"</strong>. El sistema carga todas las solicitudes pendientes automáticamente.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#e11d48;color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Revisar cada solicitud</h4>
+          <p>Cada tarjeta muestra: lugar, responsable, insumos solicitados y cantidades. La supervisora evalúa si corresponde aprobar o rechazar.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#e11d48;color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Aprobar o rechazar</h4>
+          <p>Presiona <strong>✓ Aprobar</strong> o <strong>✕ Rechazar</strong> para cada solicitud. Al terminar, presiona <strong>"Guardar decisiones"</strong>.</p>
+          <span class="ok">✓ Al aprobar, el sistema notifica automáticamente y habilita la recepción por lugar.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 8. RECEPCIÓN POR LUGAR ── -->
+<div class="section" id="recepcion-lugar">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--teal)">
+      <svg viewBox="0 0 24 24"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 8</div>
+      <div class="section-title">Recepción por Lugar</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Cuando la bodega del servicio despacha los insumos aprobados a cada lugar, el responsable del box confirma la recepción en este módulo.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Ingresar al módulo</h4>
+          <p>Marcia toca <strong>"Recepción por Lugar"</strong> en el portal. Selecciona su lugar de trabajo (CURACIONES).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Ver las solicitudes aprobadas pendientes</h4>
+          <p>El sistema muestra la lista de insumos que están por llegar (solicitudes aprobadas, no recepcionadas aún). Pestaña <strong>"Pendientes"</strong>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Confirmar la cantidad recibida</h4>
+          <p>Para cada insumo recibido, ingresa la cantidad que efectivamente llegó (puede diferir de lo solicitado). Si el insumo tiene vencimiento, regístralo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Recepcionar</h4>
+          <p>Presiona <strong>"Recepcionar"</strong>. El sistema registra un <strong>INGRESO</strong> en el historial de movimientos y actualiza el stock del lugar automáticamente.</p>
+          <span class="ok">✓ El stock se refleja de inmediato en el módulo "Stock por Lugar".</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 9. STOCK POR LUGAR ── -->
+<div class="section" id="stock">
+  <div class="section-head">
+    <div class="section-icon" style="background:#7c3aed">
+      <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 9</div>
+      <div class="section-title">Stock por Lugar</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Módulo de uso diario. Permite consultar cuánto queda de cada insumo y registrar lo que se usó durante el turno o el día.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:#7c3aed;color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Ingresar al módulo</h4>
+          <p>Desde el portal, toca <strong>"Stock por Lugar"</strong>. El sistema carga los lugares disponibles.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#7c3aed;color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Seleccionar el lugar</h4>
+          <p>Marcia selecciona <strong>CURACIONES</strong>. El sistema despliega todos los insumos con su stock actual y semáforo de estado.</p>
+          <span class="hint">🟢 OK · 🟡 Stock bajo · 🔴 Crítico</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#7c3aed;color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Registrar uso del día</h4>
+          <p>En la columna <strong>"Usado hoy"</strong> ingresa las cantidades consumidas durante el turno. Puedes hacerlo ítem a ítem o activar el <strong>modo lote</strong> para ingresar varios a la vez.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#7c3aed;color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Guardar</h4>
+          <p>Presiona <strong>"Guardar todo"</strong>. Los egresos se registran en el historial y el stock se actualiza descontando lo consumido.</p>
+          <span class="warn">⚠ Si el stock baja al nivel crítico, genera una Solicitud de Insumos de inmediato.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 10. RECEPCIÓN BODEGA ── -->
+<div class="section" id="recepcion-bodega">
+  <div class="section-head">
+    <div class="section-icon" style="background:#0f6e56">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 10</div>
+      <div class="section-title">Recepción de Bodega <span style="font-size:.72rem;background:var(--teal-lt);color:var(--teal);padding:2px 8px;border-radius:99px;margin-left:8px;">Encargada Bodega</span></div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="alert alert-info">
+      <span class="alert-icon">🏥</span>
+      <span>Este módulo lo usa la encargada de bodega del servicio para recepcionar los pedidos mensuales desde la bodega central del Hospital del Salvador.</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:#0f6e56;color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Seleccionar el mes</h4>
+          <p>La encargada ingresa al módulo y filtra por el mes del pedido recibido.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#0f6e56;color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Revisar los pedidos pendientes</h4>
+          <p>El sistema muestra los ítems del pedido mensual que aún no han sido recepcionados.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#0f6e56;color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Confirmar cantidades recibidas y fechas de vencimiento</h4>
+          <p>Para cada ítem ingresa la cantidad que llegó físicamente y la fecha de vencimiento si corresponde.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:#0f6e56;color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Aprobar y guardar</h4>
+          <p>Presiona <strong>"Guardar"</strong>. El sistema registra el INGRESO en MOVIMIENTOS y el stock de bodega se actualiza automáticamente.</p>
+          <span class="ok">✓ Los insumos quedan disponibles para ser despachados a los distintos lugares del servicio.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TIPS FINALES ── -->
+<div class="section">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--gold)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Consejos</div>
+      <div class="section-title">Buenas prácticas de uso</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">✓</div>
+        <div class="step-content">
+          <h4>Realiza la captura de inventario cada trimestre</h4>
+          <p>La captura trimestral permite calcular el consumo real del servicio y planificar las reposiciones. En lugares de mayor volumen como Pabellón, coordina con la supervisora la frecuencia adecuada.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">✓</div>
+        <div class="step-content">
+          <h4>Registra el uso al final de tu turno</h4>
+          <p>Anotar lo consumido en el módulo Stock por Lugar cada día mantiene el inventario al día y activa alertas a tiempo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">✓</div>
+        <div class="step-content">
+          <h4>Solicita con anticipación</h4>
+          <p>No esperes al nivel crítico (🔴). Solicita cuando el stock llega al nivel de reposición (🟡) para dar tiempo a la aprobación y despacho.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">✓</div>
+        <div class="step-content">
+          <h4>Guarda el ID de tu solicitud</h4>
+          <p>El número <code>SOL-XXXXXX-XXXXXX</code> te permite hacer seguimiento del estado de tu solicitud con la supervisora.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  SIIDER · Sistema Inteligente de Insumos de Dermatología<br>
+  Desarrollado por <strong>EU Supervisora Carolina Méndez Gómez</strong> · Servicio de Salud Metropolitano Oriente · 2026<br>
+  <span style="font-family:'DM Mono',monospace;font-size:.7rem;">v1.0 — Mayo 2026</span>
+</div>
+
+</body>
+</html>
