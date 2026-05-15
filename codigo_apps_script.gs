@@ -569,6 +569,7 @@ function registrarEgreso(e) {
     movSheet.appendRow([
       new Date().toLocaleString("es-CL"), "EGRESO", nSol, "", lugar, cod, desc, -Math.abs(qty), "", usuario, usuId
     ]);
+    try { actualizarStockCuraciones(); } catch(e) { Logger.log("Stock no actualizado: " + e); }
     return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
