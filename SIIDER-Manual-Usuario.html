@@ -296,6 +296,7 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
     <li><a href="#recepcion-lugar"><span>8</span> Recepción por lugar</a></li>
     <li><a href="#stock"><span>9</span> Stock por lugar</a></li>
     <li><a href="#recepcion-bodega"><span>10</span> Recepción de bodega</a></li>
+    <li><a href="#ajuste"><span>11</span> Ajuste de Stock</a></li>
   </ul>
 </div>
 
@@ -370,6 +371,13 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
         </div>
         <div class="mod-desc">Recepciona los pedidos mensuales desde bodega central HDS.</div>
       </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:#fef3c7">🔧</div>
+          <div class="mod-name">Ajuste de Stock</div>
+        </div>
+        <div class="mod-desc">Corrección trimestral por diferencia entre conteo físico y stock calculado.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -398,7 +406,7 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
         <tr>
           <td><span class="badge badge-blue">Operativo</span></td>
           <td>TENS, Profesionales, Aux. de Servicio, Administrativas</td>
-          <td>Inventario · Solicitud · Recepción por Lugar · Stock</td>
+          <td>Inventario · Solicitud · Recepción por Lugar · Stock · Ajuste de Stock</td>
         </tr>
         <tr>
           <td><span class="badge badge-teal">Supervisora</span></td>
@@ -866,6 +874,76 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
   </div>
 </div>
 
+<!-- ── SECCIÓN 11: AJUSTE DE STOCK ── -->
+<div class="section" id="ajuste">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--gold)">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 11</div>
+      <div class="section-title">Ajuste de Stock <span style="font-size:.72rem;background:var(--gold-lt);color:var(--gold);padding:2px 8px;border-radius:99px;margin-left:8px;">Trimestral</span></div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Permite corregir diferencias entre el stock calculado por el sistema y el conteo físico real. Se realiza de forma <strong>trimestral</strong> como mínimo. Registra un <strong>AJUSTE+</strong> (sobrante) o <strong>AJUSTE−</strong> (faltante) en la hoja MOVIMIENTOS, sin tocar el inventario base.</p>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ️</span>
+      <span>Este módulo <strong>no reemplaza</strong> la captura de inventario inicial. Su función es corregir desviaciones acumuladas por pérdidas, vencimientos o errores de registro.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>Ingresar al módulo Ajuste de Stock</h4>
+          <p>Desde el portal, toca <strong>"Ajuste de Stock"</strong>. El sistema muestra la sesión activa automáticamente.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>Seleccionar el lugar a verificar</h4>
+          <p>Elige el box o área (ej: CURACIONES) y presiona <strong>"Cargar stock →"</strong>. El sistema carga todos los insumos con su stock calculado actual.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>Ingresar el conteo físico real</h4>
+          <p>Para cada insumo, escribe en la columna <strong>"Real"</strong> la cantidad que contaste físicamente. La columna <strong>"Diferencia"</strong> se calcula sola:</p>
+          <span class="ok">🟢 +4 → sobrante (AJUSTE+)</span><br style="margin:3px 0"/>
+          <span class="hint" style="background:#fee2e2;color:#dc2626;">🔴 −8 → faltante (AJUSTE−)</span><br style="margin:3px 0"/>
+          <span class="hint" style="background:#f1f5f9;color:#94a3b8;">⬜ 0 → sin diferencia, no se registra</span>
+          <p style="margin-top:6px;font-size:.82rem;color:var(--muted);">Los ítems donde no ingreses valor real son ignorados.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Seleccionar el motivo del ajuste</h4>
+          <p>Elige el motivo en el selector:</p>
+          <span class="hint">Ajuste trimestral · Ajuste mensual · Corrección por vencimiento · Corrección por pérdida · Corrección por error de registro</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">5</div>
+        <div class="step-content">
+          <h4>Registrar ajustes</h4>
+          <p>Presiona <strong>"Registrar ajustes"</strong>. El botón indica cuántos ítems tienen diferencia. Solo esos se envían al sistema.</p>
+          <span class="ok">✓ El stock queda cuadrado con la realidad. Los movimientos quedan trazados en MOVIMIENTOS con tipo AJUSTE+ o AJUSTE−.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-warn" style="margin-top:16px;">
+      <span class="alert-icon">⚠️</span>
+      <span>Si hay muchas diferencias frecuentes en el mismo insumo, puede indicar un problema de registro diario. Revisar si el equipo está usando correctamente el módulo <strong>Stock por Lugar</strong> para registrar el uso del turno.</span>
+    </div>
+  </div>
+</div>
+
 <!-- ── TIPS FINALES ── -->
 <div class="section">
   <div class="section-head">
@@ -884,6 +962,13 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
         <div class="step-content">
           <h4>Realiza la captura de inventario cada trimestre</h4>
           <p>La captura trimestral permite calcular el consumo real del servicio y planificar las reposiciones. En lugares de mayor volumen como Pabellón, coordina con la supervisora la frecuencia adecuada.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--gold);color:#fff;">✓</div>
+        <div class="step-content">
+          <h4>Usa Ajuste de Stock tras cada conteo trimestral</h4>
+          <p>Después de contar físicamente, usa el módulo Ajuste de Stock para corregir diferencias. Así el sistema refleja siempre la realidad sin alterar el inventario base.</p>
         </div>
       </div>
       <div class="step">
