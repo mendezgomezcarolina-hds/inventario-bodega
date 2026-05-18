@@ -380,6 +380,7 @@ function actualizarRecepcion(e) {
         new Date().toLocaleString("es-CL"), "INGRESO",
         nSol, mes, lugar, codigo, descr, cant, fechaVenc
       ]);
+      try { actualizarStockCuraciones(); } catch(ex) { Logger.log("Stock bodega no actualizado: " + ex); }
     }
 
     return { status: "ok", fila };
@@ -754,6 +755,7 @@ function recepcionarSolicitud(e) {
         nSol, "", lugar, cod, desc, Math.abs(qty), venc
       ]);
     }
+    try { actualizarStockCuraciones(); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
     return { status: "ok", fila: fila };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
@@ -1569,6 +1571,21 @@ function archivarMovimientosAnuales() {
 }
 
 // ── Menú SIIDER en el sheet ───────────────────────────────────
+// ── Trigger onEdit: actualiza stock automáticamente al editar MOVIMIENTOS ──
+function onEdit(e) {
+  try {
+    var sheet = e && e.range && e.range.getSheet();
+    if (!sheet) return;
+    var nombre = sheet.getName();
+    // Si se edita MOVIMIENTOS o INVENTARIO → actualizar stock
+    if (nombre === SHEET_MOVIMIENTOS || nombre === SHEET_DATOS) {
+      actualizarStockCuraciones();
+    }
+  } catch(err) {
+    Logger.log("onEdit error: " + err);
+  }
+}
+
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("⚙ SIIDER")
