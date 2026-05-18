@@ -153,26 +153,19 @@ function leerItemsPorLugar(e) {
 
     var datos = sheet.getDataRange().getValues();
     var items = [];
+    var encIni = String(datos[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
 
-    for (var j = 0; j < datos.length; j++) {
+    for (var j = encIni; j < datos.length; j++) {
       var cod  = String(datos[j][0]||"").trim();
       var desc = String(datos[j][1]||"").trim();
       var col6 = String(datos[j][5]||"").trim().toUpperCase();
-
       if (!cod) continue;
-      // Saltar encabezado: si cod no empieza con número ni SC/AP y tiene solo letras
-      if (cod.toUpperCase() === "CODIGO" || cod.toUpperCase() === "CÓDIGO" ||
-          cod.toUpperCase() === "COD") continue;
-
-      // Filtrar por bodega si se especifica
       if (bodega && col6 !== bodega) continue;
-
       items.push({ codigo: cod, descripcion: desc });
     }
 
-    return { status: "ok", items: items, fuente: sheet.getName(), total: items.length, debug_lugar: lugar, debug_bodega: bodega, debug_hoja: sheet.getName() };
+    return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };
   } catch(err) {
-    Logger.log("leerItemsPorLugar ERROR: " + err.toString());
     return { status: "error", mensaje: err.toString() };
   }
 }
