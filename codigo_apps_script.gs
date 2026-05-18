@@ -1615,6 +1615,68 @@ function clasificarInsumos() {
   );
 }
 
+// ── Escribir col F (Bodega) en hojas de cada lugar ───────────
+// Lee col F de INSUMOS y la copia en cada hoja de lugar clínico
+// Permite que el sistema sepa de qué bodega sale cada insumo
+function clasificarInsumosLugares() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+
+  // 1 — Construir mapa código → bodega desde hoja INSUMOS
+  var shIns = ss.getSheetByName("INSUMOS");
+  if (!shIns) { ui.alert("No se encontro la hoja INSUMOS."); return; }
+
+  var insData = shIns.getDataRange().getValues();
+  var mapaBodega = {}; // cod → "CLINICOS" o "NO CLINICOS"
+  var iniIns = String(insData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+  for (var i = iniIns; i < insData.length; i++) {
+    var cod  = String(insData[i][0]||"").trim();
+    var bod  = String(insData[i][5]||"").trim();
+    if (cod && bod) mapaBodega[cod] = bod;
+  }
+
+  // 2 — Hojas de lugares a procesar
+  var HOJAS_LUGARES = [
+    "CURACIONES", "PABELLON", "UNACESS", "TOMA_MUESTRAS",
+    "LASERTERAPIA", "BOX_MEDICOS", "FOTOTERAPIA",
+    "AREA_TECNICA", "OFICINA_ADMIN"
+  ];
+
+  var totalEscrito = 0, totalSinCodigo = 0;
+
+  HOJAS_LUGARES.forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh || sh.getLastRow() < 2) return;
+
+    var data = sh.getDataRange().getValues();
+    var ini  = String(data[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+
+    for (var r = ini; r < data.length; r++) {
+      var cod    = String(data[r][0]||"").trim();
+      var actual = String(data[r][5]||"").trim();
+      if (!cod) continue;
+
+      // No sobreescribir si ya tiene valor
+      if (actual === "CLINICOS" || actual === "NO CLINICOS") continue;
+
+      var bod = mapaBodega[cod];
+      if (bod) {
+        sh.getRange(r + 1, 6).setValue(bod);
+        totalEscrito++;
+      } else {
+        totalSinCodigo++;
+      }
+    }
+  });
+
+  ui.alert(
+    "Clasificacion completada",
+    totalEscrito    + " insumos clasificados en hojas de lugares. " +
+    totalSinCodigo  + " codigos sin match en INSUMOS.",
+    ui.ButtonSet.OK
+  );
+}
+
 // ── Menú SIIDER en el sheet ───────────────────────────────────
 // ── Trigger onEdit: actualiza stock automáticamente al editar MOVIMIENTOS ──
 function onEdit(e) {
@@ -1638,6 +1700,7 @@ function onOpen() {
     .addSeparator()
     .addItem("📦 Archivar movimientos anuales", "archivarMovimientosAnuales")
     .addSeparator()
-    .addItem("🏷 Clasificar insumos (col F)", "clasificarInsumos")
+    .addItem("🏷 Clasificar insumos bodega (INSUMOS)", "clasificarInsumos")
+    .addItem("🏷 Clasificar insumos lugares (hojas)", "clasificarInsumosLugares")
     .addToUi();
 }
