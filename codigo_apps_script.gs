@@ -1680,6 +1680,29 @@ function clasificarInsumosLugares() {
   );
 }
 
+// ── Diagnóstico col F en hojas de lugares ──────────────────
+function diagnosticarColF() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+  var HOJAS = ["CURACIONES","PABELLON","UNACESS","TOMA_MUESTRAS",
+               "LASERTERAPIA","BOX_MEDICOS","FOTOTERAPIA","AREA_TECNICA","OFICINA_ADMIN"];
+  var msg = "";
+  HOJAS.forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh) { msg += nombre + ": hoja no encontrada. "; return; }
+    var data = sh.getDataRange().getValues();
+    var conF = 0, sinF = 0;
+    for (var i = 1; i < data.length; i++) {
+      var cod = String(data[i][0]||"").trim();
+      var f   = String(data[i][5]||"").trim();
+      if (!cod) continue;
+      if (f) conF++; else sinF++;
+    }
+    msg += nombre + ": " + conF + " con F, " + sinF + " sin F. ";
+  });
+  ui.alert("Diagnostico col F", msg, ui.ButtonSet.OK);
+}
+
 // ── Menú SIIDER en el sheet ───────────────────────────────────
 // ── Trigger onEdit: actualiza stock automáticamente al editar MOVIMIENTOS ──
 function onEdit(e) {
@@ -1705,5 +1728,6 @@ function onOpen() {
     .addSeparator()
     .addItem("🏷 Clasificar insumos bodega (INSUMOS)", "clasificarInsumos")
     .addItem("🏷 Clasificar insumos lugares (hojas)", "clasificarInsumosLugares")
+    .addItem("🔍 Diagnosticar col F en hojas", "diagnosticarColF")
     .addToUi();
 }

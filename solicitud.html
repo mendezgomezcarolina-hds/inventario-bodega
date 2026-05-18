@@ -478,19 +478,22 @@
   function cargarItemsFiltrados(lugar, bodega) {
     var sel = document.getElementById("item");
     sel.innerHTML = '<option value="" disabled selected>Cargando...</option>';
-    // Extraer tipo de bodega: "BODEGA INSUMOS CLINICOS" → "CLINICOS"
     var tipoBodega = bodega.indexOf("NO") > -1 ? "NO CLINICOS" : "CLINICOS";
     var url = SCRIPT_URL + "?accion=itemsPorLugar" +
       "&lugar="  + encodeURIComponent(lugar) +
       "&bodega=" + encodeURIComponent(tipoBodega) +
       "&t="      + Date.now();
     jsonp(url, function(data, err) {
-      if (!data || err || data.status !== "ok" || !data.items || !data.items.length) {
-        // Fallback sin filtro
-        cargarItemsPorLugar(lugar);
+      if (err || !data || data.status !== "ok") {
+        sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
         return;
       }
       itemsData = data.items || [];
+      if (!itemsData.length) {
+        sel.innerHTML = '<option value="" disabled selected>Sin insumos clasificados para esta bodega</option>';
+        mostrarToast("Sin insumos con bodega asignada en esta hoja. Ejecuta Clasificar insumos.", "warn");
+        return;
+      }
       poblarSelectItems(sel);
     });
   }
