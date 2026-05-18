@@ -269,7 +269,7 @@
       stockData = data.items || [];
     // Mostrar leyenda solo si es bodega (semáforo por días)
     var ley = document.getElementById("leyendaDias");
-    if (ley) ley.style.display = data.esBodega ? "" : "none";
+    if (ley) ley.style.display = "";
       renderStock();
       renderLote();
     });
