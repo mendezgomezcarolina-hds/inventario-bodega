@@ -170,8 +170,7 @@ function leerItemsPorLugar(e) {
       items.push({ codigo: cod, descripcion: desc });
     }
 
-    Logger.log("leerItemsPorLugar | lugar=" + lugar + " | bodega=" + bodega + " | hoja=" + sheet.getName() + " | items=" + items.length);
-    return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };
+    return { status: "ok", items: items, fuente: sheet.getName(), total: items.length, debug_lugar: lugar, debug_bodega: bodega, debug_hoja: sheet.getName() };
   } catch(err) {
     Logger.log("leerItemsPorLugar ERROR: " + err.toString());
     return { status: "error", mensaje: err.toString() };

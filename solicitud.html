@@ -484,6 +484,7 @@
       "&bodega=" + encodeURIComponent(tipoBodega) +
       "&t="      + Date.now();
     jsonp(url, function(data, err) {
+      console.log("RESPUESTA:", JSON.stringify({fuente: data && data.fuente, total: data && data.total, debug_lugar: data && data.debug_lugar, debug_bodega: data && data.debug_bodega, debug_hoja: data && data.debug_hoja, err: err}));
       if (err || !data || data.status !== "ok") {
         sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
         return;
