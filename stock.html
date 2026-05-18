@@ -269,7 +269,14 @@
       stockData = data.items || [];
     // Mostrar leyenda solo si es bodega (semáforo por días)
     var ley = document.getElementById("leyendaDias");
-    if (ley) ley.style.display = "";
+    if (ley) {
+      ley.style.display = "";
+      // Cambiar título según tipo de semáforo
+      var tit = ley.querySelector(".ley-title");
+      if (tit) tit.textContent = data.esBodega
+        ? "Días de stock disponible"
+        : "Niveles de stock en unidades";
+    }
       renderStock();
       renderLote();
     });

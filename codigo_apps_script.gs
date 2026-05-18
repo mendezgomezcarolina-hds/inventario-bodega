@@ -517,23 +517,42 @@ function stockLugar(e) {
     var LUGARES_BODEGA = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
     var esBodega = LUGARES_BODEGA.indexOf(lugar) > -1;
 
-    // ── Leer umbrales desde hoja INSUMOS (bodegas) o hoja del lugar (otros) ──
-    // Col C=crítico (días o unidades), D=mínimo, E=máximo
+    // ── Leer umbrales ─────────────────────────────────────────
+    // BODEGAS: hoja INSUMOS col C/D/E = días (7/15/45)
+    // OTROS:   hoja del lugar col C/D/E = unidades
     var mapaUmbrales = {}; // cod → { critico, minimo, maximo }
-    var shUmbrales = esBodega
-      ? ss.getSheetByName("INSUMOS")
-      : ss.getSheetByName(lugar);
-    if (shUmbrales && shUmbrales.getLastRow() > 1) {
-      var umbData = shUmbrales.getDataRange().getValues();
-      var umbIni  = String(umbData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
-      for (var r = umbIni; r < umbData.length; r++) {
-        var ic = String(umbData[r][0]||"").trim();
-        if (!ic) continue;
-        mapaUmbrales[ic] = {
-          critico: parseFloat(umbData[r][2]||7)  || 7,
-          minimo:  parseFloat(umbData[r][3]||15) || 15,
-          maximo:  parseFloat(umbData[r][4]||45) || 45
-        };
+    if (esBodega) {
+      var shIns = ss.getSheetByName("INSUMOS");
+      if (shIns && shIns.getLastRow() > 1) {
+        var insData = shIns.getDataRange().getValues();
+        var insIni  = String(insData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+        for (var r = insIni; r < insData.length; r++) {
+          var ic = String(insData[r][0]||"").trim();
+          if (!ic) continue;
+          mapaUmbrales[ic] = {
+            critico: parseFloat(insData[r][2]||7)  || 7,
+            minimo:  parseFloat(insData[r][3]||15) || 15,
+            maximo:  parseFloat(insData[r][4]||45) || 45
+          };
+        }
+      }
+    }
+    // Lugares clínicos: leer col C/D/E en unidades desde hoja propia
+    var mapaUmbralesLugar = {}; // cod → { critico, minimo, maximo }
+    if (!esBodega) {
+      var shLugar = ss.getSheetByName(lugar);
+      if (shLugar && shLugar.getLastRow() > 1) {
+        var lugarData = shLugar.getDataRange().getValues();
+        var lugarIni  = String(lugarData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+        for (var r = lugarIni; r < lugarData.length; r++) {
+          var lc = String(lugarData[r][0]||"").trim();
+          if (!lc) continue;
+          mapaUmbralesLugar[lc] = {
+            critico: parseFloat(lugarData[r][2]||0) || 0,
+            minimo:  parseFloat(lugarData[r][3]||0) || 0,
+            maximo:  parseFloat(lugarData[r][4]||0) || 0
+          };
+        }
       }
     }
 
@@ -575,7 +594,7 @@ function stockLugar(e) {
         else if (mTip === "EGRESO")   mapaInv[mCod].egresos  += mQty;
 
         // Acumular egresos últimos 90 días para consumo promedio (solo bodegas)
-        if ((mTip === "EGRESO") && mQty < 0) {
+        if (esBodega && (mTip === "EGRESO") && mQty < 0) {
           var fMov = m[0] instanceof Date ? m[0] : new Date(m[0]);
           if (!isNaN(fMov) && fMov >= fechaCorte) {
             mapaEgreso90[mCod] = (mapaEgreso90[mCod] || 0) + Math.abs(mQty);
@@ -591,21 +610,32 @@ function stockLugar(e) {
       var stock = it.cantidad + it.ingresos + it.egresos;
       var estado, dias = null;
 
-      // Semáforo por días para todos los lugares
-      // Usa col C/D/E de INSUMOS (bodegas) o hoja del lugar (otros)
-      var egr90   = mapaEgreso90[cod] || 0;
-      var consDia = egr90 > 0 ? egr90 / 90 : 0;
-      var u = mapaUmbrales[cod] || { critico:7, minimo:15, maximo:45 };
-
-      if (consDia > 0) {
-        dias   = stock / consDia;
-        estado = dias <= u.critico ? "CRITICO"
-               : dias <= u.minimo  ? "BAJO"
-               : dias <= u.maximo  ? "OK"
-               : "SOBRESTOCK";
+      if (esBodega) {
+        // Semáforo por días — bodegas
+        var egr90   = mapaEgreso90[cod] || 0;
+        var consDia = egr90 > 0 ? egr90 / 90 : 0;
+        var u = mapaUmbrales[cod] || { critico:7, minimo:15, maximo:45 };
+        if (consDia > 0) {
+          dias   = stock / consDia;
+          estado = dias <= u.critico ? "CRITICO"
+                 : dias <= u.minimo  ? "BAJO"
+                 : dias <= u.maximo  ? "OK"
+                 : "SOBRESTOCK";
+        } else {
+          estado = "SD";
+          dias   = null;
+        }
       } else {
-        estado = "SD"; // sin historial de consumo aún
-        dias   = null;
+        // Semáforo por unidades — lugares clínicos (CURACIONES, etc.)
+        var u2 = mapaUmbralesLugar[cod] || { critico:0, minimo:0, maximo:0 };
+        if (u2.critico > 0 || u2.minimo > 0) {
+          estado = stock <= u2.critico ? "CRITICO"
+                 : stock <= u2.minimo  ? "BAJO"
+                 : u2.maximo > 0 && stock > u2.maximo ? "SOBRESTOCK"
+                 : "OK";
+        } else {
+          estado = stock <= 0 ? "CRITICO" : "OK";
+        }
       }
 
       items.push({
