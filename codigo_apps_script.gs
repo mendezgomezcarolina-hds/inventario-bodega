@@ -1599,12 +1599,10 @@ function clasificarInsumos() {
   }
 
   ui.alert(
-    "✅ Clasificación completada",
-    clinicos    + " insumos marcados como CLINICOS
-" +
-    noClinicos  + " insumos marcados como NO CLINICOS
-" +
-    yaTenia     + " insumos ya tenían valor (no modificados)",
+    "Clasificacion completada",
+    clinicos   + " insumos marcados CLINICOS. " +
+    noClinicos + " marcados NO CLINICOS. " +
+    yaTenia    + " ya tenian valor (no modificados).",
     ui.ButtonSet.OK
   );
 }
