@@ -149,11 +149,11 @@
   <!-- Modo individual -->
   <!-- Leyenda semáforo por días (solo bodegas) -->
   <div id="leyendaDias" style="display:none;background:#fff;border:1px solid #d1dce8;border-radius:10px;padding:11px 14px;margin-bottom:10px;">
-    <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:7px;">Días de stock disponible</div>
+    <div class="ley-title" style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:7px;">Niveles de stock en unidades</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
-      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#fee2e2;color:#b91c1c;"><div style="font-size:1rem;margin-bottom:2px;">🔴</div><div style="font-size:.68rem;font-weight:700;">Crítico</div><div style="font-size:.62rem;">≤ 7 días</div></div>
-      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#fef3c7;color:#92400e;"><div style="font-size:1rem;margin-bottom:2px;">🟡</div><div style="font-size:.68rem;font-weight:700;">Bajo</div><div style="font-size:.62rem;">8–15 días</div></div>
-      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#dcfce7;color:#15803d;"><div style="font-size:1rem;margin-bottom:2px;">🟢</div><div style="font-size:.68rem;font-weight:700;">OK</div><div style="font-size:.62rem;">16–45 días</div></div>
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#fee2e2;color:#b91c1c;"><div style="font-size:1rem;margin-bottom:2px;">🔴</div><div style="font-size:.68rem;font-weight:700;">Crítico</div><div style="font-size:.62rem;">Stock 7 días</div></div>
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#fef3c7;color:#92400e;"><div style="font-size:1rem;margin-bottom:2px;">🟡</div><div style="font-size:.68rem;font-weight:700;">Mínimo</div><div style="font-size:.62rem;">Stock 15 días</div></div>
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#dcfce7;color:#15803d;"><div style="font-size:1rem;margin-bottom:2px;">🟢</div><div style="font-size:.68rem;font-weight:700;">OK</div><div style="font-size:.62rem;">Stock 45 días</div></div>
       <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#ede9fe;color:#6d28d9;"><div style="font-size:1rem;margin-bottom:2px;">🔵</div><div style="font-size:.68rem;font-weight:700;">Sobrestock</div><div style="font-size:.62rem;">> 45 días</div></div>
     </div>
   </div>
@@ -269,14 +269,7 @@
       stockData = data.items || [];
     // Mostrar leyenda solo si es bodega (semáforo por días)
     var ley = document.getElementById("leyendaDias");
-    if (ley) {
-      ley.style.display = "";
-      // Cambiar título según tipo de semáforo
-      var tit = ley.querySelector(".ley-title");
-      if (tit) tit.textContent = data.esBodega
-        ? "Días de stock disponible"
-        : "Niveles de stock en unidades";
-    }
+    if (ley) ley.style.display = "";
       renderStock();
       renderLote();
     });
