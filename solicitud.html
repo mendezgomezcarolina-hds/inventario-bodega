@@ -123,6 +123,11 @@
     .btn-submit svg { width:16px; height:16px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
     .spinner { width:16px; height:16px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
     @keyframes spin { to{transform:rotate(360deg)} }
+    .btn-bodega{flex:1;padding:11px 8px;border:1.5px solid var(--border);border-radius:var(--radius);
+      background:var(--bg);font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;
+      color:var(--muted);cursor:pointer;transition:all .14s;text-align:center;}
+    .btn-bodega.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .btn-bodega:hover:not(.on){border-color:var(--accent);color:var(--accent);}
     #itemLista .ri { padding:9px 12px; font-size:.82rem; cursor:pointer; border-bottom:0.5px solid var(--border); }
     #itemLista .ri:last-child { border-bottom:none; }
     #itemLista .ri:hover { background:#EBF3FC; }
@@ -203,7 +208,24 @@
     </div>
   </div>
 
-  <!-- PASO 3: Items -->
+  <!-- PASO 2b: Bodega origen -->
+  <div id="bodegaWrap" style="display:none">
+    <p class="section-label">Paso 3 — ¿Desde qué bodega se pide?</p>
+    <div style="display:flex;gap:8px;">
+      <button id="btnClinicos" class="btn-bodega" onclick="selBodega('BODEGA INSUMOS CLINICOS',this)">
+        🏥 Bodega Insumos Clínicos
+      </button>
+      <button id="btnNoClinicos" class="btn-bodega" onclick="selBodega('BODEGA INSUMOS NO CLINICOS',this)">
+        📦 Bodega Insumos No Clínicos
+      </button>
+    </div>
+    <div id="bodegaBadge" style="display:none;margin-top:8px;" class="badge-session badge-blue">
+      <span id="bodegaBadgeTxt"></span>
+      <button onclick="cambiarBodega()">Cambiar</button>
+    </div>
+  </div>
+
+  <!-- PASO 4: Items -->
   <div id="inputItemWrap" style="display:none">
     <p class="section-label">Paso 3 — Agregar insumo</p>
     <div class="input-row">
@@ -295,7 +317,8 @@
   var listaAbierta = false;
   var itemSelCodigo = "";
   var itemSelDesc   = "";
-  var idSolicitud = "";
+  var idSolicitud   = "";
+  var bodegaOrigen  = "";
   var _cbCount = 0;
 
   window.onload = function() {
@@ -499,14 +522,29 @@
     if (!sel) { mostrarToast("Selecciona un lugar.", "warn"); return; }
     lugarSesion = sel;
     idSolicitud = generarId();
-    document.getElementById("lugarBadgeTxt").textContent   = sel;
-    document.getElementById("idSolicitudTxt").textContent  = idSolicitud;
+    document.getElementById("lugarBadgeTxt").textContent      = sel;
+    document.getElementById("idSolicitudTxt").textContent     = idSolicitud;
     document.getElementById("lugarSesionWrap").style.display  = "none";
     document.getElementById("lugarBadgeWrap").style.display   = "block";
-    document.getElementById("inputItemWrap").style.display    = "block";
+    document.getElementById("bodegaWrap").style.display       = "block";
     document.getElementById("divider").style.display          = "block";
     cargarItemsPorLugar(lugarSesion);
-    document.getElementById("item").focus();
+  }
+
+  function selBodega(bodega, btn) {
+    bodegaOrigen = bodega;
+    document.querySelectorAll(".btn-bodega").forEach(function(b){ b.classList.remove("on"); });
+    btn.classList.add("on");
+    document.getElementById("bodegaBadge").style.display   = "flex";
+    document.getElementById("bodegaBadgeTxt").textContent  = bodega;
+    document.getElementById("inputItemWrap").style.display = "block";
+  }
+
+  function cambiarBodega() {
+    bodegaOrigen = "";
+    document.querySelectorAll(".btn-bodega").forEach(function(b){ b.classList.remove("on"); });
+    document.getElementById("bodegaBadge").style.display   = "none";
+    document.getElementById("inputItemWrap").style.display = "none";
   }
 
   function cambiarLugar() {
@@ -564,6 +602,7 @@
 
   function enviarTodo() {
     if (!listaItems.length) { mostrarToast("Agrega al menos un insumo.", "warn"); return; }
+    if (!bodegaOrigen) { mostrarToast("Selecciona la bodega de origen.", "warn"); return; }
     if (!SCRIPT_URL) { pedirURL(); return; }
 
     var btn = document.getElementById("btnEnviar");
@@ -608,7 +647,8 @@
       "&cantidad="    + encodeURIComponent(entry.cantidad) +
       "&usuario="     + encodeURIComponent(responsableSesion) +
       "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
-      "&idSolicitud=" + encodeURIComponent(idSolicitud);
+      "&idSolicitud=" + encodeURIComponent(idSolicitud) +
+      "&bodegaOrigen=" + encodeURIComponent(bodegaOrigen);
 
     enviarImagen(url);
     _envioIdx++;

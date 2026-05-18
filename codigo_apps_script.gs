@@ -692,22 +692,51 @@ function recepcionarSolicitud(e) {
     sheet.getRange(fila, 9).setValue(est === "APROBADO" ? "RECEPCIONADO" : "RECHAZADO");
     sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
 
-    // Si APROBADO → registrar INGRESO en MOVIMIENTOS
+    // Si APROBADO → registrar INGRESO en lugar + EGRESO en bodega origen
     if (est === "APROBADO") {
       var lugar = String(p.lugar       || "").trim();
       var cod   = String(p.codigo      || "").trim();
       var desc  = String(p.descripcion || "").trim();
       var qty   = parseFloat(cant) || 0;
       var nSol  = String(p.idSolicitud || "").trim();
+      var bodegaOrigen = String(p.bodegaOrigen || "").trim();
 
       var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
       if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
       if (movSheet.getLastRow() === 0)
-        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento"]);
-      movSheet.appendRow([
-        new Date().toLocaleString("es-CL"), "INGRESO",
-        nSol, "", lugar, cod, desc, Math.abs(qty), venc
-      ]);
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+
+      var ahora = new Date().toLocaleString("es-CL");
+
+      // INGRESO en el lugar que recibe
+      movSheet.appendRow([ahora, "INGRESO", nSol, "", lugar, cod, desc, Math.abs(qty), venc, "", ""]);
+
+      // EGRESO en la bodega que despacha
+      // Si no viene bodegaOrigen desde la app, leer desde SOLICITUDES col 11 o buscar en INSUMOS col F
+      if (!bodegaOrigen) {
+        var solData = sheet.getDataRange().getValues();
+        if (fila > 0 && fila < solData.length + 1) {
+          var solRow = solData[fila - 1];
+          if (solRow[10]) bodegaOrigen = String(solRow[10]||"").trim();
+        }
+      }
+      // Como fallback final, buscar en INSUMOS col F
+      if (!bodegaOrigen) {
+        var shIns = ss.getSheetByName("INSUMOS");
+        if (shIns) {
+          var insData = shIns.getDataRange().getValues();
+          for (var bi = 1; bi < insData.length; bi++) {
+            if (String(insData[bi][0]||"").trim() === cod) {
+              var tipoBodega = String(insData[bi][5]||"").trim().toUpperCase();
+              bodegaOrigen = tipoBodega === "CLINICOS" ? "BODEGA INSUMOS CLINICOS" : "BODEGA INSUMOS NO CLINICOS";
+              break;
+            }
+          }
+        }
+      }
+      if (bodegaOrigen) {
+        movSheet.appendRow([ahora, "EGRESO", nSol, "", bodegaOrigen, cod, desc, -Math.abs(qty), venc, "", ""]);
+      }
     }
     try { actualizarStockCuraciones(); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
     return { status: "ok", fila: fila };
