@@ -147,6 +147,16 @@
   </div>
 
   <!-- Modo individual -->
+  <!-- Leyenda semáforo por días (solo bodegas) -->
+  <div id="leyendaDias" style="display:none;background:#fff;border:1px solid #d1dce8;border-radius:10px;padding:11px 14px;margin-bottom:10px;">
+    <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:7px;">Días de stock disponible</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#fee2e2;color:#b91c1c;"><div style="font-size:1rem;margin-bottom:2px;">🔴</div><div style="font-size:.68rem;font-weight:700;">Crítico</div><div style="font-size:.62rem;">≤ 7 días</div></div>
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#fef3c7;color:#92400e;"><div style="font-size:1rem;margin-bottom:2px;">🟡</div><div style="font-size:.68rem;font-weight:700;">Bajo</div><div style="font-size:.62rem;">8–15 días</div></div>
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#dcfce7;color:#15803d;"><div style="font-size:1rem;margin-bottom:2px;">🟢</div><div style="font-size:.68rem;font-weight:700;">OK</div><div style="font-size:.62rem;">16–45 días</div></div>
+      <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#ede9fe;color:#6d28d9;"><div style="font-size:1rem;margin-bottom:2px;">🔵</div><div style="font-size:.68rem;font-weight:700;">Sobrestock</div><div style="font-size:.62rem;">> 45 días</div></div>
+    </div>
+  </div>
   <div id="listaStock"></div>
 
   <!-- Modo lote -->
@@ -257,6 +267,9 @@
         return;
       }
       stockData = data.items || [];
+    // Mostrar leyenda solo si es bodega (semáforo por días)
+    var ley = document.getElementById("leyendaDias");
+    if (ley) ley.style.display = data.esBodega ? "" : "none";
       renderStock();
       renderLote();
     });
@@ -275,11 +288,25 @@
     renderStock();
   }
 
+  function getNivel(it) {
+    // Usar estado del script si viene (bodegas) o calcular por unidades (otros)
+    if (it.estado) {
+      if (it.estado === "CRITICO")    return "critical";
+      if (it.estado === "BAJO")       return "warn";
+      if (it.estado === "SOBRESTOCK") return "sobre";
+      if (it.estado === "SD")         return "sd";
+      return "ok";
+    }
+    return it.stock <= 0 ? "critical" : it.stock <= (it.minimo || 5) ? "warn" : "ok";
+  }
+
   function renderStock() {
     var ok = 0, wa = 0, er = 0;
     var filtrado = stockData.filter(function(it) {
-      var nivel = it.stock <= 0 ? "critical" : it.stock <= it.minimo ? "warn" : "ok";
-      if (nivel === "ok") ok++; else if (nivel === "warn") wa++; else er++;
+      var nivel = getNivel(it);
+      if (nivel === "ok" || nivel === "sobre") ok++;
+      else if (nivel === "warn") wa++;
+      else if (nivel === "critical") er++;
       return filtroActual === "todos" || nivel === filtroActual || (filtroActual === "warn" && nivel === "warn");
     });
     document.getElementById("statOk").textContent = ok;
@@ -293,14 +320,23 @@
     var html = "";
     for (var i = 0; i < filtrado.length; i++) {
       var it = filtrado[i];
-      var nivel = it.stock <= 0 ? "critical" : it.stock <= it.minimo ? "warn" : "ok";
-      var badgeCls = nivel === "ok" ? "sb-ok" : nivel === "warn" ? "sb-wa" : "sb-er";
+      var nivel = getNivel(it);
+      // Punto de color semáforo
+      var dotColor = nivel === "ok"       ? "#16a34a"
+                   : nivel === "warn"     ? "#d97706"
+                   : nivel === "critical" ? "#dc2626"
+                   : nivel === "sobre"    ? "#7c3aed"
+                   : "#e2e8f0"; // SD
+      var semDot = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-top:3px;"></span>';
+      var badgeCls = nivel === "ok" || nivel === "sobre" ? "sb-ok" : nivel === "warn" ? "sb-wa" : nivel === "critical" ? "sb-er" : "sb-sd";
       var btnDis   = it.stock <= 0 ? ' disabled' : '';
-      html += '<div class="item-card ' + (nivel !== "ok" ? nivel : "") + '">' +
-        '<div>' +
-          '<div class="item-nom">' + it.descripcion + '</div>' +
-          '<div class="item-cod">' + it.codigo + '</div>' +
-          '<div class="item-det">Inv: ' + it.inventario + ' · +' + it.ingresos + ' · -' + it.egresos + '</div>' +
+      html += '<div class="item-card ' + (nivel !== "ok" && nivel !== "sobre" ? nivel : "") + '">' +
+        '<div style="display:flex;gap:8px;align-items:flex-start;">' +
+          semDot +
+          '<div>' +
+            '<div class="item-nom">' + it.descripcion + '</div>' +
+            '<div class="item-cod">' + it.codigo + '</div>' +
+          '</div>' +
         '</div>' +
         '<div class="item-right">' +
           '<span class="sbadge ' + badgeCls + '">' + it.stock + ' un.</span>' +

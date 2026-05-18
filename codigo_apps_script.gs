@@ -512,11 +512,34 @@ function stockLugar(e) {
     var lugar = (e.parameter.lugar || "").trim();
     if (!lugar) return { status: "error", mensaje: "Falta lugar." };
 
-    // 1. Inventario inicial desde INVENTARIO
+    // Bodegas con semáforo por DÍAS (leen hoja INSUMOS col C=crítico, D=mínimo, E=máximo)
+    var LUGARES_BODEGA = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+    var esBodega = LUGARES_BODEGA.indexOf(lugar) > -1;
+
+    // ── Leer umbrales desde hoja INSUMOS (solo bodegas) ──────
+    var mapaUmbrales = {}; // cod → { critico, minimo, maximo }
+    if (esBodega) {
+      var shIns = ss.getSheetByName("INSUMOS");
+      if (shIns && shIns.getLastRow() > 1) {
+        var insData = shIns.getDataRange().getValues();
+        var insIni  = String(insData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+        for (var r = insIni; r < insData.length; r++) {
+          var ic = String(insData[r][0]||"").trim();
+          if (!ic) continue;
+          mapaUmbrales[ic] = {
+            critico: parseFloat(insData[r][2]||7)  || 7,
+            minimo:  parseFloat(insData[r][3]||15) || 15,
+            maximo:  parseFloat(insData[r][4]||45) || 45
+          };
+        }
+      }
+    }
+
+    // ── Inventario inicial ────────────────────────────────────
     var invSheet = ss.getSheetByName(SHEET_DATOS);
     var invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
     var ini      = String(invDatos[0] && invDatos[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
-    var mapaInv  = {}; // codigo → {descripcion, cantidad}
+    var mapaInv  = {}; // cod → { descripcion, cantidad, ingresos, egresos, minimo }
     for (var i = ini; i < invDatos.length; i++) {
       var f = invDatos[i];
       if (String(f[0]||"").trim() !== lugar) continue;
@@ -528,7 +551,12 @@ function stockLugar(e) {
       else mapaInv[cod] = { descripcion: desc, cantidad: qty, ingresos: 0, egresos: 0, minimo: 5 };
     }
 
-    // 2. Movimientos desde MOVIMIENTOS
+    // ── Movimientos ───────────────────────────────────────────
+    // Para bodegas también acumulamos egresos de los últimos 90 días para consumo promedio
+    var fechaCorte = new Date();
+    fechaCorte.setDate(fechaCorte.getDate() - 90);
+    var mapaEgreso90 = {}; // cod → total egresos últimos 90 días
+
     var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (movSheet && movSheet.getLastRow() > 1) {
       var movDatos = movSheet.getDataRange().getValues();
@@ -541,27 +569,62 @@ function stockLugar(e) {
         var mQty = parseFloat(m[7]||0) || 0;
         if (mLug !== lugar || !mCod) continue;
         if (!mapaInv[mCod]) mapaInv[mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0, minimo: 5 };
-        if (mTip === "INGRESO") mapaInv[mCod].ingresos += mQty;
-        else if (mTip === "EGRESO") mapaInv[mCod].egresos += mQty;
+        if (mTip === "INGRESO")       mapaInv[mCod].ingresos += mQty;
+        else if (mTip === "EGRESO")   mapaInv[mCod].egresos  += mQty;
+
+        // Acumular egresos últimos 90 días para consumo promedio (solo bodegas)
+        if (esBodega && (mTip === "EGRESO") && mQty < 0) {
+          var fMov = m[0] instanceof Date ? m[0] : new Date(m[0]);
+          if (!isNaN(fMov) && fMov >= fechaCorte) {
+            mapaEgreso90[mCod] = (mapaEgreso90[mCod] || 0) + Math.abs(mQty);
+          }
+        }
       }
     }
 
-    // 3. Calcular stock y armar respuesta
+    // ── Calcular stock, estado y días ─────────────────────────
     var items = [];
     for (var cod in mapaInv) {
-      var it = mapaInv[cod];
+      var it    = mapaInv[cod];
+      var stock = it.cantidad + it.ingresos + it.egresos;
+      var estado, dias = null;
+
+      if (esBodega) {
+        // Consumo promedio diario (últimos 90 días)
+        var egr90  = mapaEgreso90[cod] || 0;
+        var consDia = egr90 > 0 ? egr90 / 90 : 0;
+        var u = mapaUmbrales[cod] || { critico:7, minimo:15, maximo:45 };
+
+        if (consDia > 0) {
+          dias   = stock / consDia;
+          estado = dias <= u.critico ? "CRITICO"
+                 : dias <= u.minimo  ? "BAJO"
+                 : dias <= u.maximo  ? "OK"
+                 : "SOBRESTOCK";
+        } else {
+          estado = "SD"; // sin historial de consumo
+          dias   = null;
+        }
+      } else {
+        // Semáforo por unidades — comportamiento original
+        var min = it.minimo || 5;
+        estado  = stock <= 0 ? "CRITICO"
+                : stock <= min ? "BAJO"
+                : "OK";
+      }
+
       items.push({
         codigo:      cod,
         descripcion: it.descripcion,
-        inventario:  it.cantidad,
-        ingresos:    it.ingresos,
-        egresos:     it.egresos,
-        stock:       it.cantidad + it.ingresos + it.egresos,
-        minimo:      it.minimo
+        stock:       stock,
+        estado:      estado,
+        dias:        dias !== null ? Math.round(dias) : null,
+        esBodega:    esBodega
       });
     }
+
     items.sort(function(a,b){ return a.descripcion.localeCompare(b.descripcion); });
-    return { status: "ok", lugar: lugar, items: items };
+    return { status: "ok", lugar: lugar, items: items, esBodega: esBodega };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
