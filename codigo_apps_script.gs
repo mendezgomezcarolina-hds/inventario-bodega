@@ -1553,6 +1553,62 @@ function archivarMovimientosAnuales() {
   Logger.log("✓ Archivado " + filasMover.length + " filas → " + nombreArchivo);
 }
 
+// ── Clasificar insumos: escribe CLINICOS/NO CLINICOS en col F ──
+// Busca cada código de INSUMOS en las hojas de lugares clínicos
+// Si aparece en alguna → CLINICOS, si no → NO CLINICOS
+function clasificarInsumos() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+
+  var shIns = ss.getSheetByName("INSUMOS");
+  if (!shIns) { ui.alert("No se encontró la hoja INSUMOS."); return; }
+
+  // Hojas de lugares clínicos donde buscar
+  var LUGARES_CLINICOS = ["CURACIONES", "PABELLON", "UNACESS", "TOMA DE MUESTRAS",
+                          "LASERTERAPIA", "BOX MEDICOS", "SALA DE ESPERA"];
+
+  // Construir mapa de códigos clínicos desde todas las hojas de lugares
+  var codigosClinicos = {};
+  LUGARES_CLINICOS.forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh || sh.getLastRow() < 2) return;
+    var data = sh.getDataRange().getValues();
+    var ini  = String(data[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+    for (var i = ini; i < data.length; i++) {
+      var cod = String(data[i][0]||"").trim();
+      if (cod) codigosClinicos[cod] = true;
+    }
+  });
+
+  // Leer INSUMOS y escribir col F
+  var insData = shIns.getDataRange().getValues();
+  var ini     = String(insData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+  var clinicos = 0, noClinicos = 0, yaTenia = 0;
+
+  for (var r = ini; r < insData.length; r++) {
+    var cod    = String(insData[r][0]||"").trim();
+    var actual = String(insData[r][5]||"").trim();
+    if (!cod) continue;
+
+    // Si ya tiene valor en col F, no sobreescribir
+    if (actual === "CLINICOS" || actual === "NO CLINICOS") { yaTenia++; continue; }
+
+    var valor = codigosClinicos[cod] ? "CLINICOS" : "NO CLINICOS";
+    shIns.getRange(r + 1, 6).setValue(valor);
+    if (valor === "CLINICOS") clinicos++; else noClinicos++;
+  }
+
+  ui.alert(
+    "✅ Clasificación completada",
+    clinicos    + " insumos marcados como CLINICOS
+" +
+    noClinicos  + " insumos marcados como NO CLINICOS
+" +
+    yaTenia     + " insumos ya tenían valor (no modificados)",
+    ui.ButtonSet.OK
+  );
+}
+
 // ── Menú SIIDER en el sheet ───────────────────────────────────
 // ── Trigger onEdit: actualiza stock automáticamente al editar MOVIMIENTOS ──
 function onEdit(e) {
@@ -1575,5 +1631,7 @@ function onOpen() {
     .addItem("📊 Actualizar todo el stock", "actualizarTodoElStock")
     .addSeparator()
     .addItem("📦 Archivar movimientos anuales", "archivarMovimientosAnuales")
+    .addSeparator()
+    .addItem("🏷 Clasificar insumos (col F)", "clasificarInsumos")
     .addToUi();
 }
