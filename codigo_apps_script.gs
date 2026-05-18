@@ -133,7 +133,7 @@ function leerItemsPorLugar(e) {
   try {
     var ss     = SpreadsheetApp.getActiveSpreadsheet();
     var lugar  = (e.parameter.lugar  || "").trim();
-    var bodega = (e.parameter.bodega || "").trim().toUpperCase(); // "CLINICOS" o "NO CLINICOS"
+    var bodega = (e.parameter.bodega || "").trim().toUpperCase();
     var sheet  = null;
 
     if (lugar) {
@@ -149,29 +149,27 @@ function leerItemsPorLugar(e) {
       }
     }
 
-    // Fallback INSUMOS si no se encuentra hoja del lugar
     if (!sheet) sheet = ss.getSheetByName(SHEET_ITEMS) || ss.getSheets()[2];
 
     var datos = sheet.getDataRange().getValues();
     var items = [];
-    // Detectar fila de encabezado: si col A no es numérico o contiene letras de título
-    var primeraCel = String(datos[0][0]||"").trim();
-    var esEncabezado = isNaN(primeraCel) && primeraCel.length > 0 && !/^\d/.test(primeraCel);
-    var encIni = esEncabezado ? 1 : 0;
 
-    for (var j = encIni; j < datos.length; j++) {
+    for (var j = 0; j < datos.length; j++) {
       var cod  = String(datos[j][0]||"").trim();
       var desc = String(datos[j][1]||"").trim();
-      var col6 = String(datos[j][5]||"").trim().toUpperCase(); // col F = bodega
-      if (!cod) continue;
-      // Saltar filas que parezcan encabezado aunque estén más abajo
-      if (isNaN(cod) && /^[a-zA-ZÁÉÍÓÚáéíóúñÑ]/.test(cod) && cod.length > 6) continue;
+      var col6 = String(datos[j][5]||"").trim().toUpperCase();
 
-      // Si se pasa filtro de bodega, solo incluir los que coincidan (excluye vacíos)
+      if (!cod) continue;
+      // Saltar encabezado: si cod no empieza con número ni SC/AP y tiene solo letras
+      if (cod.toUpperCase() === "CODIGO" || cod.toUpperCase() === "CÓDIGO" ||
+          cod.toUpperCase() === "COD") continue;
+
+      // Filtrar por bodega si se especifica
       if (bodega && col6 !== bodega) continue;
 
       items.push({ codigo: cod, descripcion: desc });
     }
+
     return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
