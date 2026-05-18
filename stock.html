@@ -383,16 +383,34 @@
     var filtrado = stockData;
     if (!filtrado.length) { lista.innerHTML = "<div style='padding:20px;text-align:center;color:var(--muted);font-size:.85rem;'>Sin datos</div>"; return; }
     loteDatos = filtrado;
+
+    // Actualizar contadores usando getNivel (misma lógica que renderStock)
+    var ok = 0, wa = 0, er = 0;
+    for (var k = 0; k < filtrado.length; k++) {
+      var nk = getNivel(filtrado[k]);
+      if (nk === "ok" || nk === "sobre" || nk === "sd") ok++;
+      else if (nk === "warn") wa++;
+      else if (nk === "critical") er++;
+    }
+    document.getElementById("statOk").textContent = ok;
+    document.getElementById("statWa").textContent = wa;
+    document.getElementById("statEr").textContent = er;
+
     var html = "";
     for (var i = 0; i < filtrado.length; i++) {
       var it = filtrado[i];
-      var cls = it.stock <= 0 ? "critical" : (it.minimo && it.stock <= it.minimo ? "warn" : "");
-      var stCls = it.stock <= 0 ? "ls-er" : (it.minimo && it.stock <= it.minimo ? "ls-wa" : "ls-ok");
+      var nivel = getNivel(it);
+      var cls   = nivel === "critical" ? "critical" : nivel === "warn" ? "warn" : "";
+      var dotColor = nivel === "ok" || nivel === "sd" || nivel === "sobre" ? "#16a34a" : nivel === "warn" ? "#d97706" : "#dc2626";
+      var stCls = nivel === "critical" ? "ls-er" : nivel === "warn" ? "ls-wa" : "ls-ok";
       html +=
         '<div class="lote-row ' + cls + '" id="lrow-' + i + '">' +
           '<div>' +
+            '<div style="display:flex;align-items:flex-start;gap:7px;">' +
+            '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-top:4px;"></span>' +
             '<div class="lote-nom">' + it.descripcion + '</div>' +
-            '<div class="lote-info"><span class="lote-stock ' + stCls + '">' + it.stock + ' un.</span></div>' +
+          '</div>' +
+          '<div class="lote-info" style="padding-left:17px;"><span class="lote-stock ' + stCls + '">' + it.stock + ' un.</span></div>' +
           '</div>' +
           '<div class="lote-input-wrap">' +
             '<label>Cantidad</label>' +
