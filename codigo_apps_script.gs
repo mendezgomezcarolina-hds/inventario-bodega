@@ -111,23 +111,22 @@ function leerItems() {
 // ── Leer items por lugar (hoja con nombre del lugar) ────────
 // Mapa explícito para nombres que difieren del nombre de hoja
 var MAPA_LUGAR_SHEET = {
-  // Bodegas → usan hoja INSUMOS (catálogo completo)
-  "BODEGA INSUMOS CLINICOS":     "INSUMOS",
-  "BODEGA INSUMOS NO CLINICOS":  "INSUMOS",
-  // Lugares clínicos → cada uno usa su propia hoja
-  "CURACIONES":                  "CURACIONES",
-  "UNACESS":                     "UNACESS",
-  "TOMA DE MUESTRAS":            "TOMA DE MUESTRAS",
-  "LASERTERAPIA":                "LASERTERAPIA",
-  "BOX MEDICOS":                 "BOX MEDICOS",
-  "FOTOTERAPIA":                 "FOTOTERAPIA",
-  "PABELLÓN":                    "PABELLON",
-  "PABELLON":                    "PABELLON",
-  // Lugares no clínicos → usan hoja INSUMOS NO CLINICOS
-  "ÁREA TÉCNICA DERMA":          "AREA TECNICA DERMA",
-  "AREA TECNICA DERMA":          "AREA TECNICA DERMA",
-  "OFICINA SECRETARIA":          "OFICINA SECRETARIA",
-  "OFICINA ADMINISTRATIVA":      "OFICINA ADMINISTRATIVA"
+  // Bodegas → usan hoja INSUMOS
+  "BODEGA INSUMOS CLINICOS":    "INSUMOS",
+  "BODEGA INSUMOS NO CLINICOS": "INSUMOS",
+  // Lugares clínicos → hoja propia (nombres exactos del sheet)
+  "CURACIONES":                 "CURACIONES",
+  "UNACESS":                    "UNACESS",
+  "TOMA DE MUESTRAS":           "TOMA_MUESTRAS",
+  "LASERTERAPIA":               "LASERTERAPIA",
+  "BOX MEDICOS":                "BOX_MEDICOS",
+  "FOTOTERAPIA":                "FOTOTERAPIA",
+  "PABELLÓN":                   "PABELLON",
+  "PABELLON":                   "PABELLON",
+  "ÁREA TÉCNICA DERMA":         "AREA_TECNICA",
+  "AREA TECNICA DERMA":         "AREA_TECNICA",
+  "OFICINA SECRETARIA":         "OFICINA_ADMIN",
+  "OFICINA ADMINISTRATIVA":     "OFICINA_ADMIN"
 };
 
 function leerItemsPorLugar(e) {
@@ -1573,8 +1572,8 @@ function clasificarInsumos() {
   if (!shIns) { ui.alert("No se encontró la hoja INSUMOS."); return; }
 
   // Hojas de lugares clínicos donde buscar
-  var LUGARES_CLINICOS = ["CURACIONES", "PABELLON", "UNACESS", "TOMA DE MUESTRAS",
-                          "LASERTERAPIA", "BOX MEDICOS", "FOTOTERAPIA"];
+  var LUGARES_CLINICOS = ["CURACIONES", "PABELLON", "UNACESS", "TOMA_MUESTRAS",
+                          "LASERTERAPIA", "BOX_MEDICOS", "FOTOTERAPIA", "AREA_TECNICA"];
 
   // Construir mapa de códigos clínicos desde todas las hojas de lugares
   var codigosClinicos = {};
