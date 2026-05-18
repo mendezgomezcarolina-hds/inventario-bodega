@@ -535,11 +535,30 @@ function stockLugar(e) {
       }
     }
 
+    // ── Leer umbrales por unidades desde hoja propia del lugar (no bodegas) ──
+    var mapaUmbralesLugar = {}; // cod → { critico, minimo, maximo }
+    if (!esBodega) {
+      var shLugar = ss.getSheetByName(lugar);
+      if (shLugar && shLugar.getLastRow() > 1) {
+        var lugarData = shLugar.getDataRange().getValues();
+        var lugarIni  = String(lugarData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+        for (var r = lugarIni; r < lugarData.length; r++) {
+          var lc = String(lugarData[r][0]||"").trim();
+          if (!lc) continue;
+          mapaUmbralesLugar[lc] = {
+            critico: parseFloat(lugarData[r][2]||0) || 0,
+            minimo:  parseFloat(lugarData[r][3]||0) || 0,
+            maximo:  parseFloat(lugarData[r][4]||0) || 0
+          };
+        }
+      }
+    }
+
     // ── Inventario inicial ────────────────────────────────────
     var invSheet = ss.getSheetByName(SHEET_DATOS);
     var invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
     var ini      = String(invDatos[0] && invDatos[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
-    var mapaInv  = {}; // cod → { descripcion, cantidad, ingresos, egresos, minimo }
+    var mapaInv  = {}; // cod → { descripcion, cantidad, ingresos, egresos }
     for (var i = ini; i < invDatos.length; i++) {
       var f = invDatos[i];
       if (String(f[0]||"").trim() !== lugar) continue;
@@ -548,7 +567,7 @@ function stockLugar(e) {
       var qty  = parseFloat(f[3]||0) || 0;
       if (!cod) continue;
       if (mapaInv[cod]) mapaInv[cod].cantidad += qty;
-      else mapaInv[cod] = { descripcion: desc, cantidad: qty, ingresos: 0, egresos: 0, minimo: 5 };
+      else mapaInv[cod] = { descripcion: desc, cantidad: qty, ingresos: 0, egresos: 0 };
     }
 
     // ── Movimientos ───────────────────────────────────────────
@@ -568,7 +587,7 @@ function stockLugar(e) {
         var mCod = String(m[5]||"").trim();
         var mQty = parseFloat(m[7]||0) || 0;
         if (mLug !== lugar || !mCod) continue;
-        if (!mapaInv[mCod]) mapaInv[mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0, minimo: 5 };
+        if (!mapaInv[mCod]) mapaInv[mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0 };
         if (mTip === "INGRESO")       mapaInv[mCod].ingresos += mQty;
         else if (mTip === "EGRESO")   mapaInv[mCod].egresos  += mQty;
 
@@ -606,11 +625,18 @@ function stockLugar(e) {
           dias   = null;
         }
       } else {
-        // Semáforo por unidades — comportamiento original
-        var min = it.minimo || 5;
-        estado  = stock <= 0 ? "CRITICO"
-                : stock <= min ? "BAJO"
-                : "OK";
+        // Semáforo por unidades — lee col C/D/E de hoja propia del lugar
+        var u2 = mapaUmbralesLugar[cod] || { critico:0, minimo:0, maximo:0 };
+        if (u2.critico > 0 || u2.minimo > 0) {
+          // Tiene umbrales definidos en su hoja
+          estado = stock <= u2.critico ? "CRITICO"
+                 : stock <= u2.minimo  ? "BAJO"
+                 : u2.maximo > 0 && stock > u2.maximo ? "SOBRESTOCK"
+                 : "OK";
+        } else {
+          // Sin umbrales definidos — semáforo simple
+          estado = stock <= 0 ? "CRITICO" : "OK";
+        }
       }
 
       items.push({
