@@ -483,15 +483,12 @@
       "&lugar="  + encodeURIComponent(lugar) +
       "&bodega=" + encodeURIComponent(tipoBodega) +
       "&t="      + Date.now();
-    console.log("URL filtrada:", url);
     jsonp(url, function(data, err) {
-      console.log("Respuesta filtrada:", JSON.stringify(data).substring(0, 300));
       if (err || !data || data.status !== "ok") {
         sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
         return;
       }
       itemsData = data.items || [];
-      console.log("Items filtrados:", itemsData.length, "tipoBodega:", tipoBodega);
       if (!itemsData.length) {
         sel.innerHTML = '<option value="" disabled selected>Sin insumos clasificados para esta bodega</option>';
         mostrarToast("Sin insumos con bodega asignada en esta hoja. Ejecuta Clasificar insumos.", "warn");
