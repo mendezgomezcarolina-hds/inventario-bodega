@@ -304,7 +304,7 @@
     var ok = 0, wa = 0, er = 0;
     var filtrado = stockData.filter(function(it) {
       var nivel = getNivel(it);
-      if (nivel === "ok" || nivel === "sobre") ok++;
+      if (nivel === "ok" || nivel === "sobre" || nivel === "sd") ok++;
       else if (nivel === "warn") wa++;
       else if (nivel === "critical") er++;
       return filtroActual === "todos" || nivel === filtroActual || (filtroActual === "warn" && nivel === "warn");
