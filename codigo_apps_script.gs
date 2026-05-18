@@ -132,41 +132,39 @@ var MAPA_LUGAR_SHEET = {
 function leerItemsPorLugar(e) {
   try {
     var ss     = SpreadsheetApp.getActiveSpreadsheet();
-    var lugar  = (e.parameter.lugar || "").trim();
+    var lugar  = (e.parameter.lugar  || "").trim();
+    var bodega = (e.parameter.bodega || "").trim().toUpperCase(); // "CLINICOS" o "NO CLINICOS"
     var sheet  = null;
 
     if (lugar) {
-      // 1. Buscar en mapa explícito
-      var lugarUp   = lugar.toUpperCase();
+      var lugarUp    = lugar.toUpperCase();
       var nombreHoja = MAPA_LUGAR_SHEET[lugarUp] || MAPA_LUGAR_SHEET[lugar] || null;
-
-      if (nombreHoja) {
-        sheet = ss.getSheetByName(nombreHoja);
-      }
-
-      // 2. Exacto
+      if (nombreHoja) sheet = ss.getSheetByName(nombreHoja);
       if (!sheet) sheet = ss.getSheetByName(lugar);
-
-      // 3. Insensible a mayúsculas/acentos
       if (!sheet) {
         var hojas = ss.getSheets();
         for (var i = 0; i < hojas.length; i++) {
-          if (hojas[i].getName().toUpperCase() === lugarUp) {
-            sheet = hojas[i]; break;
-          }
+          if (hojas[i].getName().toUpperCase() === lugarUp) { sheet = hojas[i]; break; }
         }
       }
     }
 
-    // 4. Fallback INSUMOS
+    // Fallback INSUMOS si no se encuentra hoja del lugar
     if (!sheet) sheet = ss.getSheetByName(SHEET_ITEMS) || ss.getSheets()[2];
 
     var datos = sheet.getDataRange().getValues();
     var items = [];
-    for (var j = 0; j < datos.length; j++) {
-      var cod  = String(datos[j][0]).trim();
-      var desc = String(datos[j][1] || "").trim();
-      if (!cod || cod.toUpperCase() === "CODIGO" || cod.toUpperCase() === "CÓDIGO") continue;
+    var encIni = String(datos[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+
+    for (var j = encIni; j < datos.length; j++) {
+      var cod  = String(datos[j][0]||"").trim();
+      var desc = String(datos[j][1]||"").trim();
+      var col6 = String(datos[j][5]||"").trim().toUpperCase(); // col F = bodega
+      if (!cod) continue;
+
+      // Si se pasa filtro de bodega, solo incluir los que coincidan
+      if (bodega && col6 && col6 !== bodega) continue;
+
       items.push({ codigo: cod, descripcion: desc });
     }
     return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };

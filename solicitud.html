@@ -475,6 +475,25 @@
     }
   }
 
+  function cargarItemsFiltrados(lugar, bodega) {
+    var sel = document.getElementById("item");
+    sel.innerHTML = '<option value="" disabled selected>Cargando...</option>';
+    // Extraer tipo de bodega: "BODEGA INSUMOS CLINICOS" → "CLINICOS"
+    var tipoBodega = bodega.indexOf("NO") > -1 ? "NO CLINICOS" : "CLINICOS";
+    var url = SCRIPT_URL + "?accion=itemsPorLugar" +
+      "&lugar="  + encodeURIComponent(lugar) +
+      "&bodega=" + encodeURIComponent(tipoBodega);
+    jsonp(url, function(data, err) {
+      if (!data || err || data.status !== "ok" || !data.items || !data.items.length) {
+        // Fallback sin filtro
+        cargarItemsPorLugar(lugar);
+        return;
+      }
+      itemsData = data.items || [];
+      poblarSelectItems(sel);
+    });
+  }
+
   function cargarItemsPorLugar(lugar) {
     var sel = document.getElementById("item");
     sel.innerHTML = '<option value="" disabled selected>Cargando…</option>';
@@ -528,7 +547,7 @@
     document.getElementById("lugarBadgeWrap").style.display   = "block";
     document.getElementById("bodegaWrap").style.display       = "block";
     document.getElementById("divider").style.display          = "block";
-    cargarItemsPorLugar(lugarSesion);
+    // ítems se cargan al elegir bodega
   }
 
   function selBodega(bodega, btn) {
@@ -538,13 +557,17 @@
     document.getElementById("bodegaBadge").style.display   = "flex";
     document.getElementById("bodegaBadgeTxt").textContent  = bodega;
     document.getElementById("inputItemWrap").style.display = "block";
+    // Cargar ítems filtrados por bodega elegida
+    cargarItemsFiltrados(lugarSesion, bodega);
   }
 
   function cambiarBodega() {
     bodegaOrigen = "";
+    itemsData = [];
     document.querySelectorAll(".btn-bodega").forEach(function(b){ b.classList.remove("on"); });
     document.getElementById("bodegaBadge").style.display   = "none";
     document.getElementById("inputItemWrap").style.display = "none";
+    limpiarItem();
   }
 
   function cambiarLugar() {
