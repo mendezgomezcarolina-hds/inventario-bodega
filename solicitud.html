@@ -482,7 +482,8 @@
     var tipoBodega = bodega.indexOf("NO") > -1 ? "NO CLINICOS" : "CLINICOS";
     var url = SCRIPT_URL + "?accion=itemsPorLugar" +
       "&lugar="  + encodeURIComponent(lugar) +
-      "&bodega=" + encodeURIComponent(tipoBodega);
+      "&bodega=" + encodeURIComponent(tipoBodega) +
+      "&t="      + Date.now();
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok" || !data.items || !data.items.length) {
         // Fallback sin filtro

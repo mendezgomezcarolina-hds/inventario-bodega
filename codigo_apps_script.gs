@@ -154,13 +154,18 @@ function leerItemsPorLugar(e) {
 
     var datos = sheet.getDataRange().getValues();
     var items = [];
-    var encIni = String(datos[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+    // Detectar fila de encabezado: si col A no es numérico o contiene letras de título
+    var primeraCel = String(datos[0][0]||"").trim();
+    var esEncabezado = isNaN(primeraCel) && primeraCel.length > 0 && !/^\d/.test(primeraCel);
+    var encIni = esEncabezado ? 1 : 0;
 
     for (var j = encIni; j < datos.length; j++) {
       var cod  = String(datos[j][0]||"").trim();
       var desc = String(datos[j][1]||"").trim();
       var col6 = String(datos[j][5]||"").trim().toUpperCase(); // col F = bodega
       if (!cod) continue;
+      // Saltar filas que parezcan encabezado aunque estén más abajo
+      if (isNaN(cod) && /^[a-zA-ZÁÉÍÓÚáéíóúñÑ]/.test(cod) && cod.length > 6) continue;
 
       // Si se pasa filtro de bodega, solo incluir los que coincidan (excluye vacíos)
       if (bodega && col6 !== bodega) continue;
