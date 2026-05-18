@@ -162,8 +162,8 @@ function leerItemsPorLugar(e) {
       var col6 = String(datos[j][5]||"").trim().toUpperCase(); // col F = bodega
       if (!cod) continue;
 
-      // Si se pasa filtro de bodega, solo incluir los que coincidan
-      if (bodega && col6 && col6 !== bodega) continue;
+      // Si se pasa filtro de bodega, solo incluir los que coincidan (excluye vacíos)
+      if (bodega && col6 !== bodega) continue;
 
       items.push({ codigo: cod, descripcion: desc });
     }
