@@ -1701,6 +1701,25 @@ function diagnosticarColF() {
   ui.alert("Diagnostico col F", msg, ui.ButtonSet.OK);
 }
 
+// ── Corrección manual SOL-260519-094240 ──────────────────────
+function corregirSOL260519094240() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+  var mov = ss.getSheetByName("MOVIMIENTOS");
+  if (!mov) { ui.alert("No se encontro hoja MOVIMIENTOS."); return; }
+
+  var ahora = "19-05-2026, 10:15:12 p. m.";
+  var sol   = "SOL-260519-094240";
+  var cod   = "2002416175";
+  var desc  = "TORULA C/VASTAGO DE MADERA ESTERIL";
+  var qty   = 20;
+
+  mov.appendRow([ahora, "INGRESO", sol, "", "LASERTERAPIA", cod, desc, qty, "", "", ""]);
+  mov.appendRow([ahora, "EGRESO",  sol, "", "BODEGA INSUMOS CLINICOS", cod, desc, -qty, "", "", ""]);
+
+  ui.alert("Listo. Se agregaron 2 registros en MOVIMIENTOS para " + sol);
+}
+
 // ── Menú SIIDER en el sheet ───────────────────────────────────
 // ── Trigger onEdit: actualiza stock automáticamente al editar MOVIMIENTOS ──
 function onEdit(e) {
@@ -1727,5 +1746,6 @@ function onOpen() {
     .addItem("🏷 Clasificar insumos bodega (INSUMOS)", "clasificarInsumos")
     .addItem("🏷 Clasificar insumos lugares (hojas)", "clasificarInsumosLugares")
     .addItem("🔍 Diagnosticar col F en hojas", "diagnosticarColF")
+    .addItem("🛠 Corregir SOL-260519-094240", "corregirSOL260519094240")
     .addToUi();
 }
