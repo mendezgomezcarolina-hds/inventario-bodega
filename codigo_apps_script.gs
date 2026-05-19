@@ -1242,217 +1242,153 @@ function alertaVencimientos() {
 }
 
 // ============================================================
+// ============================================================
 //  HOJAS RESUMEN DE STOCK — Bodega Dermatología HDS
-//  Pegar al FINAL del código existente en Apps Script
-//  Se llaman automáticamente al registrar movimientos
+//  Función genérica actualizarStockLugar(nombre)
+//  Crea/actualiza STOCK_<LUGAR> para cualquier lugar clínico
 // ============================================================
 
-// ── STOCK_CURACIONES ─────────────────────────────────────────
-// Una fila por insumo con: inv inicial + recibido − uso = stock actual
-function actualizarStockCuraciones() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+// Colores de encabezado por lugar
+var COLOR_LUGAR = {
+  "CURACIONES":    "#185FA5",
+  "PABELLON":      "#7c3aed",
+  "UNACESS":       "#0F6E56",
+  "LASERTERAPIA":  "#b45309",
+  "TOMA_MUESTRAS": "#0369a1",
+  "BOX_MEDICOS":   "#be185d",
+  "FOTOTERAPIA":   "#065f46",
+  "AREA_TECNICA":  "#1e3a5f",
+  "OFICINA_ADMIN": "#374151"
+};
 
-  var shCur   = ss.getSheetByName("CURACIONES");       // lista de ítems del lugar
-  var shInv   = ss.getSheetByName("INVENTARIO");        // captura inicial
-  var shMov   = ss.getSheetByName("MOVIMIENTOS");       // movimientos
-  var shStock = ss.getSheetByName("STOCK_CURACIONES");  // hoja resumen
+// Lista de todos los lugares clínicos con hoja catálogo propia
+var LUGARES_STOCK = [
+  "CURACIONES", "PABELLON", "UNACESS", "LASERTERAPIA",
+  "TOMA_MUESTRAS", "BOX_MEDICOS", "FOTOTERAPIA", "AREA_TECNICA", "OFICINA_ADMIN"
+];
 
-  if (!shCur || !shInv || !shMov || !shStock) {
-    Logger.log("actualizarStockCuraciones: falta alguna hoja requerida");
-    return;
+// ── Función genérica ─────────────────────────────────────────
+function actualizarStockLugar(nombreLugar) {
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var lugarUP  = nombreLugar.toUpperCase();
+  var shLugar  = ss.getSheetByName(nombreLugar);
+  var shInv    = ss.getSheetByName("INVENTARIO");
+  var shMov    = ss.getSheetByName("MOVIMIENTOS");
+  var stockNom = "STOCK_" + lugarUP;
+  var shStock  = ss.getSheetByName(stockNom);
+
+  // Crear hoja STOCK si no existe
+  if (!shStock) {
+    shStock = ss.insertSheet(stockNom);
+    Logger.log("✓ Hoja creada: " + stockNom);
   }
 
-  // 1 — Leer lista de ítems desde hoja CURACIONES (A=código, B=descripción, C=crítico, D=reposición, E=máximo)
-  var itemsData = shCur.getDataRange().getValues();
-  var items = []; // [{codigo, desc, critico, reposicion, maximo}]
-  for (var i = 0; i < itemsData.length; i++) {
-    var cod  = String(itemsData[i][0] || "").trim();
-    var desc = String(itemsData[i][1] || "").trim();
-    if (!cod || !desc) continue;
-    items.push({
-      codigo:     cod,
-      desc:       desc,
-      critico:    itemsData[i][2] !== "" ? Number(itemsData[i][2]) : "",
-      reposicion: itemsData[i][3] !== "" ? Number(itemsData[i][3]) : "",
-      maximo:     itemsData[i][4] !== "" ? Number(itemsData[i][4]) : ""
-    });
-  }
-
-  // 2 — Sumar inventario inicial por código (INVENTARIO donde LUGAR=CURACIONES)
-  var invData = shInv.getDataRange().getValues();
-  var invMap  = {}; // {codigo: cantidad}
-  for (var r = 1; r < invData.length; r++) {
-    var lugar = String(invData[r][0] || "").trim().toUpperCase();
-    var cod   = String(invData[r][1] || "").trim();
-    var cant  = Number(invData[r][3]) || 0;
-    if (lugar === "CURACIONES" && cod) {
-      invMap[cod] = (invMap[cod] || 0) + cant;
+  // 1 — Catálogo del lugar (A=código, B=desc, C=crítico, D=reposición, E=máximo)
+  var items = [];
+  if (shLugar && shLugar.getLastRow() > 0) {
+    var itemsData = shLugar.getDataRange().getValues();
+    var iniLug = String(itemsData[0][0] || "").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+    for (var i = iniLug; i < itemsData.length; i++) {
+      var cod  = String(itemsData[i][0] || "").trim();
+      var desc = String(itemsData[i][1] || "").trim();
+      if (!cod) continue;
+      items.push({
+        codigo:     cod,
+        desc:       desc || cod,
+        critico:    itemsData[i][2] !== "" ? Number(itemsData[i][2]) : "",
+        reposicion: itemsData[i][3] !== "" ? Number(itemsData[i][3]) : "",
+        maximo:     itemsData[i][4] !== "" ? Number(itemsData[i][4]) : ""
+      });
     }
   }
 
-  // 3 — Sumar movimientos por código (MOVIMIENTOS donde LUGAR=CURACIONES)
-  var movData = shMov.getDataRange().getValues();
-  var ingMap  = {}; // {codigo: sum ingresos}
-  var egrMap  = {}; // {codigo: sum egresos (negativos)}
-  for (var m = 1; m < movData.length; m++) {
-    var tipo  = String(movData[m][1] || "").trim().toUpperCase();
-    var lugar = String(movData[m][4] || "").trim().toUpperCase();
-    var cod   = String(movData[m][5] || "").trim();
-    var cant  = Number(movData[m][7]) || 0;
-    if (lugar !== "CURACIONES" || !cod) continue;
-    if (tipo === "INGRESO") {
-      ingMap[cod] = (ingMap[cod] || 0) + cant;
-    } else if (tipo === "EGRESO") {
-      egrMap[cod] = (egrMap[cod] || 0) + cant; // ya negativos
+  // 2 — Inventario inicial filtrado por lugar
+  var invMap = {};
+  if (shInv && shInv.getLastRow() > 1) {
+    var invData = shInv.getDataRange().getValues();
+    for (var r = 1; r < invData.length; r++) {
+      var lug  = String(invData[r][0] || "").trim().toUpperCase();
+      var cod  = String(invData[r][1] || "").trim();
+      var desc = String(invData[r][2] || "").trim();
+      var cant = Number(invData[r][3]) || 0;
+      if (lug === lugarUP && cod) {
+        if (!invMap[cod]) invMap[cod] = { desc: desc, cantidad: 0 };
+        invMap[cod].cantidad += cant;
+      }
     }
   }
 
-  // 4 — Construir filas para STOCK_CURACIONES
+  // 3 — Movimientos filtrados por lugar
+  var ingMap = {}, egrMap = {}, descMov = {};
+  if (shMov && shMov.getLastRow() > 1) {
+    var movData = shMov.getDataRange().getValues();
+    var mIni = String(movData[0][0] || "").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    for (var m = mIni; m < movData.length; m++) {
+      var tipo = String(movData[m][1] || "").trim().toUpperCase();
+      var lug  = String(movData[m][4] || "").trim().toUpperCase();
+      var cod  = String(movData[m][5] || "").trim();
+      var desc = String(movData[m][6] || "").trim();
+      var cant = Number(movData[m][7]) || 0;
+      if (lug !== lugarUP || !cod) continue;
+      if (desc) descMov[cod] = desc;
+      if (tipo === "INGRESO")     ingMap[cod] = (ingMap[cod] || 0) + cant;
+      else if (tipo === "EGRESO") egrMap[cod] = (egrMap[cod] || 0) + cant;
+    }
+  }
+
+  // 4 — Añadir códigos con movimiento que no estén en catálogo
+  var codsVistos = {};
+  items.forEach(function(it) { codsVistos[it.codigo] = true; });
+  Object.keys(ingMap).concat(Object.keys(egrMap)).forEach(function(cod) {
+    if (!codsVistos[cod]) {
+      codsVistos[cod] = true;
+      var d = descMov[cod] || (invMap[cod] ? invMap[cod].desc : cod);
+      items.push({ codigo: cod, desc: d, critico: "", reposicion: "", maximo: "" });
+    }
+  });
+
+  // 5 — Construir filas
   var ahora = new Date().toLocaleString("es-CL");
   var encabezado = [
-    "Código", "Descripción", "Inv. Inicial", "+Recibido", "−Uso diario",
-    "Stock Actual", "Stock Crítico (7d)", "Stock Reposición (15d)",
-    "Stock Máximo (1,5m)", "Estado", "Actualizado"
+    "Código", "Descripción", "Inv. Inicial", "+Recibido", "−Egreso",
+    "Stock Actual", "Stock Crítico", "Stock Reposición", "Stock Máximo", "Estado", "Actualizado"
   ];
   var filas = [encabezado];
 
-  for (var j = 0; j < items.length; j++) {
-    var it      = items[j];
-    var ini     = invMap[it.codigo]  || 0;
-    var ing     = ingMap[it.codigo]  || 0;
-    var egr     = egrMap[it.codigo]  || 0; // negativo
-    var actual  = ini + ing + egr;
-
+  items.forEach(function(it) {
+    var ini    = invMap[it.codigo] ? invMap[it.codigo].cantidad : 0;
+    var ing    = ingMap[it.codigo] || 0;
+    var egr    = egrMap[it.codigo] || 0;
+    var actual = ini + ing + egr;
     var estado = "";
     if (it.critico !== "") {
-      if (actual <= it.critico)    estado = "🔴 CRÍTICO";
-      else if (actual <= it.reposicion) estado = "🟡 REPONER";
-      else                          estado = "🟢 OK";
+      if (actual <= it.critico)              estado = "🔴 CRÍTICO";
+      else if (actual <= it.reposicion)      estado = "🟡 REPONER";
+      else if (it.maximo && actual > it.maximo) estado = "🔵 SOBRE";
+      else                                   estado = "🟢 OK";
+    } else {
+      estado = actual <= 0 ? "🔴 CRÍTICO" : "🟢 OK";
     }
+    filas.push([it.codigo, it.desc, ini, ing, egr, actual,
+                it.critico, it.reposicion, it.maximo, estado, ahora]);
+  });
 
-    filas.push([
-      it.codigo, it.desc, ini, ing, egr,
-      actual, it.critico, it.reposicion, it.maximo, estado, ahora
-    ]);
-  }
-
-  // 5 — Reescribir hoja STOCK_CURACIONES
+  // 6 — Escribir y formatear
   shStock.clearContents();
   shStock.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
-
-  // Formato encabezado
-  shStock.getRange(1, 1, 1, filas[0].length)
-    .setBackground("#185FA5").setFontColor("#ffffff").setFontWeight("bold");
-
-  Logger.log("✓ STOCK_CURACIONES actualizado: " + (filas.length - 1) + " ítems");
-}
-
-// ── STOCK (bodega general Derma) ─────────────────────────────
-// Rastrea ingresos desde HDS y egresos despachados a cada lugar
-function actualizarStockBodega() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  var shMov   = ss.getSheetByName("MOVIMIENTOS");
-  var shInsumos = ss.getSheetByName("INSUMOS");
-  var shStock = ss.getSheetByName("STOCK");
-
-  if (!shMov || !shStock) {
-    Logger.log("actualizarStockBodega: falta hoja MOVIMIENTOS o STOCK");
-    return;
-  }
-
-  // Bodegas generales del servicio
-  var BODEGAS = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
-
-  // 1 — Leer descripciones desde INSUMOS (fallback)
-  var descMap = {};
-  if (shInsumos) {
-    var insData = shInsumos.getDataRange().getValues();
-    for (var i = 0; i < insData.length; i++) {
-      var c = String(insData[i][0] || "").trim();
-      var d = String(insData[i][1] || "").trim();
-      if (c && d) descMap[c] = d;
-    }
-  }
-
-  // 2 — Procesar MOVIMIENTOS de bodegas generales
-  var movData = shMov.getDataRange().getValues();
-  var codigos  = []; // orden de aparición
-  var ingHDS   = {}; // {codigo: cantidad recibida de HDS}
-  var egrLugar = {}; // {codigo: {lugar: cantidad despachada}}
-
-  for (var m = 1; m < movData.length; m++) {
-    var tipo  = String(movData[m][1] || "").trim().toUpperCase();
-    var lugar = String(movData[m][4] || "").trim().toUpperCase();
-    var cod   = String(movData[m][5] || "").trim();
-    var desc  = String(movData[m][6] || "").trim();
-    var cant  = Number(movData[m][7]) || 0;
-
-    if (!cod) continue;
-    if (desc && !descMap[cod]) descMap[cod] = desc;
-
-    var esBodega = BODEGAS.indexOf(lugar) >= 0;
-
-    if (esBodega && tipo === "INGRESO") {
-      if (codigos.indexOf(cod) < 0) codigos.push(cod);
-      ingHDS[cod] = (ingHDS[cod] || 0) + cant;
-    }
-    // EGRESO desde bodega = despacho a lugares
-    if (esBodega && tipo === "EGRESO") {
-      if (codigos.indexOf(cod) < 0) codigos.push(cod);
-      egrLugar[cod] = egrLugar[cod] || {};
-      egrLugar[cod][lugar] = (egrLugar[cod][lugar] || 0) + cant; // negativo
-    }
-  }
-
-  // 3 — Construir filas
-  var ahora = new Date().toLocaleString("es-CL");
-  var encabezado = [
-    "Código", "Descripción", "Recibido HDS", "Despachado (total)",
-    "Stock Bodega", "Última actualización"
-  ];
-  var filas = [encabezado];
-
-  for (var k = 0; k < codigos.length; k++) {
-    var cod    = codigos[k];
-    var desc   = descMap[cod] || "";
-    var recib  = ingHDS[cod] || 0;
-    var desp   = 0;
-    if (egrLugar[cod]) {
-      for (var lu in egrLugar[cod]) desp += egrLugar[cod][lu]; // ya negativo
-    }
-    var stockB = recib + desp; // desp es negativo
-
-    filas.push([cod, desc, recib, desp, stockB, ahora]);
-  }
-
-  // 4 — Reescribir hoja STOCK
-  shStock.clearContents();
+  var color = COLOR_LUGAR[lugarUP] || "#185FA5";
+  shStock.getRange(1, 1, 1, encabezado.length)
+    .setBackground(color).setFontColor("#ffffff").setFontWeight("bold");
   if (filas.length > 1) {
-    shStock.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
-    shStock.getRange(1, 1, 1, filas[0].length)
-      .setBackground("#0F6E56").setFontColor("#ffffff").setFontWeight("bold");
-  } else {
-    shStock.getRange(1, 1, 1, encabezado.length).setValues([encabezado]);
-    shStock.getRange(1, 1, 1, encabezado.length)
-      .setBackground("#0F6E56").setFontColor("#ffffff").setFontWeight("bold");
-    shStock.getRange(2, 1).setValue("Sin movimientos registrados aún.");
+    shStock.getRange(2, 3, filas.length - 1, 4).setNumberFormat("0");
+    shStock.autoResizeColumns(1, encabezado.length);
   }
-
-  Logger.log("✓ STOCK bodega actualizado: " + (filas.length - 1) + " ítems");
+  Logger.log("✓ " + stockNom + " actualizado: " + (filas.length - 1) + " ítems");
+  return filas.length - 1;
 }
 
-// ── Función combinada: actualizar ambas hojas a la vez ────────
-function actualizarTodoElStock() {
-  actualizarStockCuraciones();
-  actualizarStockBodega();
-  SpreadsheetApp.getUi().alert("✓ Hojas STOCK_CURACIONES y STOCK actualizadas correctamente.");
-}
-
-// ── Archivado anual de MOVIMIENTOS ───────────────────────────
-// Mueve los registros del año anterior a una hoja MOVIMIENTOS_YYYY
-// Mantiene el año en curso en MOVIMIENTOS para mayor agilidad
-// Se puede ejecutar manualmente desde el menú o trigger anual
+// ── Alias retrocompatible ────────────────────────────────────
+function actualizarStockCuraciones() { actualizarStockLugar("CURACIONES"); }
 
 function archivarMovimientosAnuales() {
   var ss   = SpreadsheetApp.getActiveSpreadsheet();
@@ -1736,16 +1672,56 @@ function onEdit(e) {
   }
 }
 
+// ── Actualizar stock de TODOS los lugares + bodegas ──────────
+function actualizarTodoElStock() {
+  var ui = SpreadsheetApp.getUi();
+  var resumen = [];
+  LUGARES_STOCK.forEach(function(lu) {
+    try {
+      var n = actualizarStockLugar(lu);
+      resumen.push("✓ " + lu + ": " + n + " ítems");
+    } catch(e) {
+      resumen.push("✗ " + lu + ": " + e.message);
+    }
+  });
+  try { actualizarStockBodega(); resumen.push("✓ BODEGA (general)"); } catch(e) {}
+  ui.alert("✅ Stock actualizado", resumen.join("\n"), ui.ButtonSet.OK);
+}
+
+// ── Funciones individuales por lugar (para el menú) ──────────
+function stockCuraciones()   { actualizarStockLugar("CURACIONES");   SpreadsheetApp.getUi().alert("✓ STOCK_CURACIONES actualizado."); }
+function stockPabellon()     { actualizarStockLugar("PABELLON");     SpreadsheetApp.getUi().alert("✓ STOCK_PABELLON actualizado."); }
+function stockUnacess()      { actualizarStockLugar("UNACESS");      SpreadsheetApp.getUi().alert("✓ STOCK_UNACESS actualizado."); }
+function stockLaserterapia() { actualizarStockLugar("LASERTERAPIA"); SpreadsheetApp.getUi().alert("✓ STOCK_LASERTERAPIA actualizado."); }
+function stockTomaMuestras() { actualizarStockLugar("TOMA_MUESTRAS");SpreadsheetApp.getUi().alert("✓ STOCK_TOMA_MUESTRAS actualizado."); }
+function stockBoxMedicos()   { actualizarStockLugar("BOX_MEDICOS");  SpreadsheetApp.getUi().alert("✓ STOCK_BOX_MEDICOS actualizado."); }
+function stockFototerapia()  { actualizarStockLugar("FOTOTERAPIA");  SpreadsheetApp.getUi().alert("✓ STOCK_FOTOTERAPIA actualizado."); }
+function stockAreaTecnica()  { actualizarStockLugar("AREA_TECNICA"); SpreadsheetApp.getUi().alert("✓ STOCK_AREA_TECNICA actualizado."); }
+function stockOficinaAdmin() { actualizarStockLugar("OFICINA_ADMIN");SpreadsheetApp.getUi().alert("✓ STOCK_OFICINA_ADMIN actualizado."); }
+
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu("⚙ SIIDER")
-    .addItem("📊 Actualizar todo el stock", "actualizarTodoElStock")
-    .addSeparator()
-    .addItem("📦 Archivar movimientos anuales", "archivarMovimientosAnuales")
-    .addSeparator()
-    .addItem("🏷 Clasificar insumos bodega (INSUMOS)", "clasificarInsumos")
-    .addItem("🏷 Clasificar insumos lugares (hojas)", "clasificarInsumosLugares")
-    .addItem("🔍 Diagnosticar col F en hojas", "diagnosticarColF")
-    .addItem("🛠 Corregir SOL-260519-094240", "corregirSOL260519094240")
-    .addToUi();
+  var ui   = SpreadsheetApp.getUi();
+  var menu = ui.createMenu("⚙ SIIDER");
+
+  menu.addItem("📊 Actualizar TODO el stock (todos los lugares)", "actualizarTodoElStock")
+      .addSeparator()
+      .addSubMenu(ui.createMenu("📍 Actualizar lugar individual")
+        .addItem("Curaciones",      "stockCuraciones")
+        .addItem("Pabellón",        "stockPabellon")
+        .addItem("UNACESS",         "stockUnacess")
+        .addItem("Laserterapia",    "stockLaserterapia")
+        .addItem("Toma de muestras","stockTomaMuestras")
+        .addItem("Box médicos",     "stockBoxMedicos")
+        .addItem("Fototerapia",     "stockFototerapia")
+        .addItem("Área técnica",    "stockAreaTecnica")
+        .addItem("Oficina admin",   "stockOficinaAdmin")
+      )
+      .addSeparator()
+      .addItem("📦 Archivar movimientos anuales", "archivarMovimientosAnuales")
+      .addSeparator()
+      .addItem("🏷 Clasificar insumos bodega (INSUMOS)", "clasificarInsumos")
+      .addItem("🏷 Clasificar insumos lugares (hojas)",  "clasificarInsumosLugares")
+      .addItem("🔍 Diagnosticar col F en hojas",         "diagnosticarColF")
+      .addItem("🛠 Corregir SOL-260519-094240",          "corregirSOL260519094240")
+      .addToUi();
 }
