@@ -38,6 +38,7 @@ function doGet(e) {
   if (accion === "actualizarRecepcion") return responder(actualizarRecepcion(e),                    callback);
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
+  if (accion === "enviarReporte")      return responder(enviarReporte(e),                          callback);
 
   return responder(escribir(e), callback);
 }
@@ -783,18 +784,18 @@ function login(e) {
 // ── Leer accesos de un usuario desde hoja ACCESOS ────────────
 function leerAccesosUsuario(ss, id) {
   var ADMIN_ID = "15579172-1";
-  if (id === ADMIN_ID) return [1,1,1,1,1,1]; // Admin siempre con acceso total
+  if (id === ADMIN_ID) return [1,1,1,1,1,1,1,1]; // Admin siempre con acceso total
   var sheet = ss.getSheetByName("ACCESOS");
-  if (!sheet || sheet.getLastRow() <= 1) return [1,1,1,1,1,1];
+  if (!sheet || sheet.getLastRow() <= 1) return [1,1,1,1,1,1,1,1];
   var datos = sheet.getDataRange().getValues();
   for (var i = 1; i < datos.length; i++) {
     if (String(datos[i][1] || "").trim() === id) {
       var acc = [];
-      for (var j = 2; j < 9; j++) acc.push(String(datos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+      for (var j = 2; j < 10; j++) acc.push(String(datos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
       return acc;
     }
   }
-  return [1,1,1,1,1,1];
+  return [1,1,1,1,1,1,1,1];
 }
 
 // ── Obtener todos los accesos para panel admin ────────────────
@@ -812,7 +813,7 @@ function obtenerAccesos(e) {
       for (var i = 1; i < accDatos.length; i++) {
         var id  = String(accDatos[i][1] || "").trim();
         var acc = [];
-        for (var j = 2; j < 9; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+        for (var j = 2; j < 10; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
         mapaAccesos[id] = acc;
       }
     }
@@ -823,7 +824,7 @@ function obtenerAccesos(e) {
       colaboradores.push({
         nombre:  String(colDatos[i][0]).trim(),
         id:      id,
-        accesos: mapaAccesos[id] || [1,1,1,1,1,1]
+        accesos: mapaAccesos[id] || [1,1,1,1,1,1,1,1]
       });
     }
     return { status: "ok", colaboradores: colaboradores };
@@ -842,9 +843,9 @@ function guardarAccesos(e) {
     var datos = JSON.parse(decodeURIComponent(p.datos || "[]"));
     // Limpiar y reescribir desde fila 2
     var lastRow = sheet.getLastRow();
-    if (lastRow >= 2) sheet.getRange(2, 1, lastRow - 1, 8).clearContent();
+    if (lastRow >= 2) sheet.getRange(2, 1, lastRow - 1, 9).clearContent();
     // Encabezados si faltan
-    if (lastRow < 1) sheet.getRange(1,1,1,8).setValues([["Responsable","ID","Recep. por Lugar","Stock por Lugar","Captura Inventario","Solicitud Insumos","Recep. Bodega","Aprobación Solic."]]);
+    if (lastRow < 1) sheet.getRange(1,1,1,8).setValues([["Responsable","ID","Recep. por Lugar","Stock por Lugar","Captura Inventario","Solicitud Insumos","Recep. Bodega","Aprobación Solic.","Ajuste Stock","Reportes Gestión"]]);
     // También cargar nombres desde COLABORADORES para la columna A
     var colabs  = ss.getSheetByName("COLABORADORES");
     var mapaNom = {};
@@ -855,16 +856,16 @@ function guardarAccesos(e) {
     var filas = [];
     for (var i = 0; i < datos.length; i++) {
       var d   = datos[i];
-      var acc = d.accesos || [0,0,0,0,0,0,0];
+      var acc = d.accesos || [0,0,0,0,0,0,0,0];
       filas.push([
         mapaNom[d.id] || d.id, d.id,
         acc[0] ? "si" : "no", acc[1] ? "si" : "no",
         acc[2] ? "si" : "no", acc[3] ? "si" : "no",
         acc[4] ? "si" : "no", acc[5] ? "si" : "no",
-        acc[6] ? "si" : "no"
+        acc[6] ? "si" : "no", acc[7] ? "si" : "no"
       ]);
     }
-    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 9).setValues(filas);
+    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 10).setValues(filas);
     return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
@@ -1284,52 +1285,70 @@ function actualizarStockLugar(nombreLugar) {
   }
 
   // 1 — Catálogo del lugar (A=código, B=desc, C=crítico, D=reposición, E=máximo)
+  // Los códigos SAP son numéricos; cualquier fila cuya col A no empiece por dígito
+  // es encabezado o fila vacía → se ignora automáticamente sin depender de iniLug.
   var items = [];
   if (shLugar && shLugar.getLastRow() > 0) {
     var itemsData = shLugar.getDataRange().getValues();
-    var iniLug = String(itemsData[0][0] || "").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
-    for (var i = iniLug; i < itemsData.length; i++) {
+    for (var i = 0; i < itemsData.length; i++) {
       var cod  = String(itemsData[i][0] || "").trim();
       var desc = String(itemsData[i][1] || "").trim();
-      if (!cod) continue;
-      items.push({
-        codigo:     cod,
-        desc:       desc || cod,
-        critico:    itemsData[i][2] !== "" ? Number(itemsData[i][2]) : "",
-        reposicion: itemsData[i][3] !== "" ? Number(itemsData[i][3]) : "",
-        maximo:     itemsData[i][4] !== "" ? Number(itemsData[i][4]) : ""
-      });
+      if (!cod || !/^\d/.test(cod)) continue; // omite encabezados y filas vacías
+      var critico    = (itemsData[i][2] !== "" && !isNaN(itemsData[i][2])) ? Number(itemsData[i][2]) : "";
+      var reposicion = (itemsData[i][3] !== "" && !isNaN(itemsData[i][3])) ? Number(itemsData[i][3]) : "";
+      var maximo     = (itemsData[i][4] !== "" && !isNaN(itemsData[i][4])) ? Number(itemsData[i][4]) : "";
+      items.push({ codigo: cod, desc: desc || cod, critico: critico, reposicion: reposicion, maximo: maximo });
     }
   }
 
-  // 2 — Inventario inicial filtrado por lugar
+  // Normaliza texto: quita tildes, reemplaza espacios por _, mayúsculas
+  // Permite comparar "PABELLÓN" con "PABELLON" y "ÁREA TÉCNICA DERMA" con "AREA_TECNICA"
+  function normalizarLugar(s) {
+    return s.toUpperCase()
+      .replace(/[ÁÀÂÄ]/g,"A").replace(/[ÉÈÊË]/g,"E")
+      .replace(/[ÍÌÎÏ]/g,"I").replace(/[ÓÒÔÖ]/g,"O")
+      .replace(/[ÚÙÛÜ]/g,"U").replace(/Ñ/g,"N")
+      .replace(/\s+/g,"_");
+  }
+  var lugarNorm = normalizarLugar(lugarUP);
+
+  // 2 — Inventario inicial filtrado por lugar (comparación normalizada)
   var invMap = {};
   if (shInv && shInv.getLastRow() > 1) {
     var invData = shInv.getDataRange().getValues();
     for (var r = 1; r < invData.length; r++) {
-      var lug  = String(invData[r][0] || "").trim().toUpperCase();
-      var cod  = String(invData[r][1] || "").trim();
-      var desc = String(invData[r][2] || "").trim();
-      var cant = Number(invData[r][3]) || 0;
-      if (lug === lugarUP && cod) {
+      var lugRaw = String(invData[r][0] || "").trim();
+      var lug    = normalizarLugar(lugRaw);
+      var cod    = String(invData[r][1] || "").trim();
+      var desc   = String(invData[r][2] || "").trim();
+      var cant   = Number(invData[r][3]) || 0;
+      // Coincidencia exacta normalizada O si el nombre del lugar contiene lugarNorm
+      var coincide = lug === lugarNorm ||
+                     lug.indexOf(lugarNorm) === 0 ||
+                     lugarNorm.indexOf(lug) === 0;
+      if (coincide && cod) {
         if (!invMap[cod]) invMap[cod] = { desc: desc, cantidad: 0 };
         invMap[cod].cantidad += cant;
       }
     }
   }
 
-  // 3 — Movimientos filtrados por lugar
+  // 3 — Movimientos filtrados por lugar (comparación normalizada)
   var ingMap = {}, egrMap = {}, descMov = {};
   if (shMov && shMov.getLastRow() > 1) {
     var movData = shMov.getDataRange().getValues();
     var mIni = String(movData[0][0] || "").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
     for (var m = mIni; m < movData.length; m++) {
-      var tipo = String(movData[m][1] || "").trim().toUpperCase();
-      var lug  = String(movData[m][4] || "").trim().toUpperCase();
-      var cod  = String(movData[m][5] || "").trim();
-      var desc = String(movData[m][6] || "").trim();
-      var cant = Number(movData[m][7]) || 0;
-      if (lug !== lugarUP || !cod) continue;
+      var tipo   = String(movData[m][1] || "").trim().toUpperCase();
+      var lugRaw = String(movData[m][4] || "").trim();
+      var lug    = normalizarLugar(lugRaw);
+      var cod    = String(movData[m][5] || "").trim();
+      var desc   = String(movData[m][6] || "").trim();
+      var cant   = Number(movData[m][7]) || 0;
+      var coincide = lug === lugarNorm ||
+                     lug.indexOf(lugarNorm) === 0 ||
+                     lugarNorm.indexOf(lug) === 0;
+      if (!coincide || !cod) continue;
       if (desc) descMov[cod] = desc;
       if (tipo === "INGRESO")     ingMap[cod] = (ingMap[cod] || 0) + cant;
       else if (tipo === "EGRESO") egrMap[cod] = (egrMap[cod] || 0) + cant;
@@ -1724,4 +1743,60 @@ function onOpen() {
       .addItem("🔍 Diagnosticar col F en hojas",         "diagnosticarColF")
       .addItem("🛠 Corregir SOL-260519-094240",          "corregirSOL260519094240")
       .addToUi();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ENVIAR REPORTE POR CORREO — Panel Reportes de Gestión
+//  Parámetros GET:
+//    accion=enviarReporte
+//    destinatario = email destino
+//    asunto       = asunto del correo
+//    tipo         = consumo | semaforo | solicitudes | ranking
+//    htmlTabla    = contenido HTML de la tabla (URL-encoded)
+//    periodo      = texto descriptivo del período (ej: "Mayo 2026")
+// ══════════════════════════════════════════════════════════════
+function enviarReporte(e) {
+  try {
+    var p            = e.parameter || {};
+    var destinatario = p.destinatario || "";
+    var asunto       = p.asunto      || "Reporte SIIDER — Dermatología HDS";
+    var htmlTabla    = p.htmlTabla   || "";
+    var periodo      = p.periodo     || "";
+    var tipo         = p.tipo        || "reporte";
+
+    if (!destinatario) return { status: "error", mensaje: "Falta destinatario." };
+
+    var ahora   = new Date().toLocaleString("es-CL");
+    var titulos = {
+      consumo:      "📊 Consumo Mensual por Lugar",
+      semaforo:     "🚦 Semáforo Consolidado de Stock",
+      solicitudes:  "📋 Estado de Solicitudes",
+      ranking:      "🏆 Ranking de Insumos más Consumidos"
+    };
+    var titulo = titulos[tipo] || "Reporte de Gestión";
+
+    var htmlCuerpo = [
+      '<html><body style="font-family:Arial,sans-serif;color:#1e293b;max-width:700px;margin:0 auto;">',
+      '<div style="background:#185FA5;padding:16px 20px;border-radius:8px 8px 0 0;">',
+      '<h2 style="color:#fff;margin:0;font-size:16px;">SIIDER · Dermatología · Hospital del Salvador</h2>',
+      '<p style="color:#bfdbfe;margin:4px 0 0;font-size:13px;">' + titulo + '</p>',
+      '</div>',
+      '<div style="border:1px solid #d1dce8;border-top:none;border-radius:0 0 8px 8px;padding:16px;">',
+      periodo ? '<p style="font-size:13px;color:#64748b;margin-bottom:12px;">📅 Período: <strong>' + periodo + '</strong></p>' : '',
+      htmlTabla,
+      '<hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">',
+      '<p style="font-size:11px;color:#94a3b8;">Generado el ' + ahora + ' desde SIIDER.<br>',
+      'Este es un correo automático — no responder a esta dirección.</p>',
+      '</div></body></html>'
+    ].join("");
+
+    GmailApp.sendEmail(destinatario, asunto, "Reporte adjunto (ver versión HTML).", {
+      htmlBody: htmlCuerpo,
+      name: "SIIDER — Dermatología HDS"
+    });
+
+    return { status: "ok", mensaje: "Correo enviado a " + destinatario };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
 }

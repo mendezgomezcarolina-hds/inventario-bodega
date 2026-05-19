@@ -74,6 +74,7 @@
           <th><div class="ph-ic" style="background:#FAEEDA;color:#854F0B;"><i class="ti ti-truck-delivery"></i></div><div class="ph-lbl">Recep. Bodega</div></th>
           <th><div class="ph-ic" style="background:#EEF2FF;color:#4338CA;"><i class="ti ti-check"></i></div><div class="ph-lbl">Aprobación Solic.</div></th>
           <th><div class="ph-ic" style="background:#FEF3C7;color:#D97706;"><i class="ti ti-adjustments-horizontal"></i></div><div class="ph-lbl">Ajuste de Stock</div></th>
+          <th><div class="ph-ic" style="background:#E0F2FE;color:#0369a1;"><i class="ti ti-chart-dots-3"></i></div><div class="ph-lbl">Reportes Gestión</div></th>
         </tr>
       </thead>
       <tbody id="tbody"><tr><td colspan="8"><div class="spinner"></div></td></tr></tbody>
@@ -128,7 +129,7 @@
       var isAdmin = d.id === ADMIN_ID;
       var tr = document.createElement("tr");
       var cells = '<td><div class="user-name">' + d.nombre + (isAdmin ? '<span class="badge-admin">admin</span>' : '') + '</div><div class="user-id">' + d.id + '</div></td>';
-      for (var j = 0; j < 7; j++) {
+      for (var j = 0; j < 8; j++) {
         var on = d.accesos[j] ? "on" : "";
         var locked = isAdmin ? "locked" : "";
         cells += '<td><div class="chk-wrap"><div class="chk ' + on + ' ' + locked + '" data-i="' + i + '" data-j="' + j + '" onclick="toggle(this,' + i + ',' + j + ')"></div></div></td>';
@@ -147,7 +148,7 @@
   function toggleAll(val) {
     for (var i = 0; i < datos.length; i++) {
       if (datos[i].id === ADMIN_ID) continue;
-      for (var j = 0; j < 7; j++) datos[i].accesos[j] = val ? 1 : 0;
+      for (var j = 0; j < 8; j++) datos[i].accesos[j] = val ? 1 : 0;
     }
     render();
   }
