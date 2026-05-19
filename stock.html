@@ -309,7 +309,9 @@
       if (nivel === "ok" || nivel === "sobre" || nivel === "sd") ok++;
       else if (nivel === "warn") wa++;
       else if (nivel === "critical") er++;
-      return filtroActual === "todos" || nivel === filtroActual || (filtroActual === "warn" && nivel === "warn");
+      return filtroActual === "todos"
+        || nivel === filtroActual
+        || (filtroActual === "ok" && (nivel === "ok" || nivel === "sobre" || nivel === "sd"));
     });
     document.getElementById("statOk").textContent = ok;
     document.getElementById("statWa").textContent = wa;
