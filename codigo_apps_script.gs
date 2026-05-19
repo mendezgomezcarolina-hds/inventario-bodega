@@ -691,11 +691,14 @@ function recepcionarSolicitud(e) {
     var venc = p.fechaVenc    || "";
     if (!fila || !est) throw new Error("Faltan parámetros.");
 
-    // Actualizar estado en SOLICITUDES
-    sheet.getRange(fila, 9).setValue(est === "APROBADO" ? "RECEPCIONADO" : "RECHAZADO");
-    sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
-
-    // Si APROBADO → registrar INGRESO en lugar + EGRESO en bodega origen
+    if (est !== "APROBADO") {
+      // Solo actualizar estado (RECHAZADO no genera movimientos)
+      sheet.getRange(fila, 9).setValue("RECHAZADO");
+      sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
+      return { status: "ok", fila: fila };
+    }
+    // APROBADO → registrar INGRESO en lugar + EGRESO en bodega origen
+    // (estado se actualiza DESPUÉS para no marcar como recepcionado si falla)
     if (est === "APROBADO") {
       var lugar = String(p.lugar       || "").trim();
       var cod   = String(p.codigo      || "").trim();
@@ -741,6 +744,9 @@ function recepcionarSolicitud(e) {
         movSheet.appendRow([ahora, "EGRESO", nSol, "", bodegaOrigen, cod, desc, -Math.abs(qty), venc, "", ""]);
       }
     }
+    // Actualizar estado en SOLICITUDES (aquí, después de escribir movimientos)
+    sheet.getRange(fila, 9).setValue(est === "APROBADO" ? "RECEPCIONADO" : "RECHAZADO");
+    sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
     try { actualizarStockCuraciones(); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
     return { status: "ok", fila: fila };
   } catch(err) {
