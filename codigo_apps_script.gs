@@ -2445,9 +2445,6 @@ function actualizarStockLugar(nombreLugar) {
   return filas.length - 1;
 }
 
-// ── Alias retrocompatible ────────────────────────────────────
-function actualizarStockCuraciones() { actualizarStockLugar("CURACIONES"); }
-
 function archivarMovimientosAnuales() {
   var ss   = SpreadsheetApp.getActiveSpreadsheet();
   var ui   = SpreadsheetApp.getUi();
