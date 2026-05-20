@@ -1022,7 +1022,7 @@ function notificarResumenSolicitud(e) {
         "Sistema de Gestión de Insumos · Dermatología HDS" +
       "</div></div>";
 
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
     Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " ítems)");
     return { status: "ok" };
   } catch(err) {
@@ -1098,7 +1098,7 @@ function notificarResumenSolicitud(e) {
       "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
         "Sistema de Gestión de Insumos · Dermatología HDS" +
       "</div></div>";
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
     Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " items)");
     return { status: "ok" };
   } catch(err) {
@@ -1148,7 +1148,7 @@ function notificarSolicitud(datos) {
       "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
         "Sistema de Gestión de Insumos · Dermatología HDS" +
       "</div></div>";
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
   } catch(err) {
     Logger.log("Error notificarSolicitud: " + err.toString());
   }
@@ -1235,7 +1235,7 @@ function alertaVencimientos() {
       "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
         "Sistema de Gestión de Insumos · Dermatología HDS · Reporte automático semanal" +
       "</div></div>";
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
     Logger.log("✓ Alerta enviada a: " + destinos.join(", "));
   } catch(err) {
     Logger.log("Error alertaVencimientos: " + err.toString());
@@ -1896,9 +1896,12 @@ function enviarReporte(e) {
       '<p style="font-size:11px;color:#94a3b8;">Generado el ' + ahora + ' desde SIIDER.</p>' +
       '</div></body></html>';
 
-    GmailApp.sendEmail(destinatario, asunto, "Ver version HTML.", {
+    MailApp.sendEmail({
+      to: destinatario,
+      subject: asunto,
       htmlBody: htmlCuerpo,
-      name: "SIIDER — Dermatología HDS"
+      body: "Ver version HTML.",
+      name: "SIIDER · Dermatología HDS"
     });
 
     return { status: "ok", mensaje: "Correo enviado a " + destinatario };
@@ -2058,7 +2061,7 @@ function notificarResumenSolicitud(e) {
         "Sistema de Gestión de Insumos · Dermatología HDS" +
       "</div></div>";
 
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
     Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " ítems)");
     return { status: "ok" };
   } catch(err) {
@@ -2134,7 +2137,7 @@ function notificarResumenSolicitud(e) {
       "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
         "Sistema de Gestión de Insumos · Dermatología HDS" +
       "</div></div>";
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
     Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " items)");
     return { status: "ok" };
   } catch(err) {
@@ -2184,7 +2187,7 @@ function notificarSolicitud(datos) {
       "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
         "Sistema de Gestión de Insumos · Dermatología HDS" +
       "</div></div>";
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
   } catch(err) {
     Logger.log("Error notificarSolicitud: " + err.toString());
   }
@@ -2271,7 +2274,7 @@ function alertaVencimientos() {
       "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
         "Sistema de Gestión de Insumos · Dermatología HDS · Reporte automático semanal" +
       "</div></div>";
-    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo, name: "SIIDER · Dermatología HDS" });
     Logger.log("✓ Alerta enviada a: " + destinos.join(", "));
   } catch(err) {
     Logger.log("Error alertaVencimientos: " + err.toString());
@@ -2930,9 +2933,12 @@ function enviarReporte(e) {
       '</div></body></html>'
     ].join("");
 
-    GmailApp.sendEmail(destinatario, asunto, "Reporte adjunto (ver versión HTML).", {
+    MailApp.sendEmail({
+      to: destinatario,
+      subject: asunto,
       htmlBody: htmlCuerpo,
-      name: "SIIDER — Dermatología HDS"
+      body: "Ver version HTML.",
+      name: "SIIDER · Dermatología HDS"
     });
 
     return { status: "ok", mensaje: "Correo enviado a " + destinatario };
@@ -2943,10 +2949,11 @@ function enviarReporte(e) {
 
 // ── Autorización GmailApp (ejecutar una vez desde el editor) ──
 function testGmail() {
-  GmailApp.sendEmail(
-    Session.getActiveUser().getEmail(),
-    "Test SIIDER - Autorizacion Gmail",
-    "Si recibes este correo, GmailApp esta autorizado correctamente."
-  );
+  MailApp.sendEmail({
+    to: Session.getActiveUser().getEmail(),
+    subject: "Test SIIDER - Autorizacion",
+    body: "Si recibes este correo, MailApp esta autorizado correctamente.",
+    name: "SIIDER · Dermatología HDS"
+  });
   Logger.log("Correo enviado OK a: " + Session.getActiveUser().getEmail());
 }
