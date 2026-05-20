@@ -414,46 +414,67 @@ function cargarConsumo(){
     });
     if(!fil.length){empty("r-consumo","Sin egresos para el período seleccionado.");return;}
 
+    // Agrupar por lugar → código → acumular cantidad y contar movimientos
     var porLugar={},totalU=0,setItems={};
     fil.forEach(function(m){
       var lu=m.lugar||"Sin lugar";
-      var me=m.mes?m.mes.toUpperCase():normMes(m.fecha)||"(sin mes)";
-      var q=Math.abs(parseFloat(m.cantidad)||0);
+      var cod=m.codigo||"—";
+      var desc=m.descripcion||cod;
+      var qty=Math.abs(parseFloat(m.cantidad)||0);
       if(!porLugar[lu])porLugar[lu]={};
-      if(!porLugar[lu][me])porLugar[lu][me]=0;
-      porLugar[lu][me]+=q; totalU+=q; setItems[m.codigo]=1;
+      if(!porLugar[lu][cod])porLugar[lu][cod]={desc:desc,total:0,movs:0};
+      porLugar[lu][cod].total+=qty;
+      porLugar[lu][cod].movs++;
+      totalU+=qty; setItems[cod]=1;
     });
+
     document.getElementById("c-s1").textContent=fmt(totalU);
     document.getElementById("c-s2").textContent=Object.keys(porLugar).length;
     document.getElementById("c-s3").textContent=Object.keys(setItems).length;
     document.getElementById("c-stats").style.display="grid";
 
-    // Armar filas para Excel
-    var filas=[["Lugar","Mes","Unidades Egresadas"]];
+    var filas=[["Lugar","Código","Descripción","Unidades Egresadas","N° Movimientos"]];
     var colors=["#185FA5","#0F6E56","#7c3aed","#d97706","#be185d","#0369a1","#065f46"];
     var ci=0; var html="";
+
     Object.keys(porLugar).sort().forEach(function(lu){
-      var mmap=porLugar[lu];
-      var tot=Object.values(mmap).reduce(function(a,b){return a+b;},0);
-      var maxV=Math.max.apply(null,Object.values(mmap));
+      var items=porLugar[lu];
+      var totLugar=Object.values(items).reduce(function(a,b){return a+b.total;},0);
       var col=colors[ci%colors.length]; ci++;
+
       html+='<div class="lugar-hdr" style="background:'+col+'11;border-color:'+col+'44;">';
       html+='<span class="lugar-nom" style="color:'+col+'">📍 '+lu+'</span>';
-      html+='<span class="lugar-tot" style="color:'+col+'">'+fmt(tot)+' uds.</span></div>';
-      html+='<div class="lugar-body">';
-      Object.keys(mmap).sort(cmpMes).forEach(function(me){
-        var v=mmap[me]; var pct=maxV>0?(v/maxV*100):0;
-        filas.push([lu,cap(me),v]);
-        html+='<div class="bar-row"><span class="bar-lbl">'+cap(me)+'</span>';
-        html+='<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+col+';"></div></div>';
-        html+='<span class="bar-val">'+fmt(v)+'</span></div>';
-      });
-      html+='</div>';
-    });
-    document.getElementById("r-consumo").innerHTML=html;
+      html+='<span class="lugar-tot" style="color:'+col+'">'+fmt(totLugar)+' uds.</span></div>';
 
+      var sorted=Object.keys(items).map(function(k){
+        return{cod:k,desc:items[k].desc,total:items[k].total,movs:items[k].movs};
+      }).sort(function(a,b){return b.total-a.total;});
+
+      html+='<div class="lugar-body" style="overflow-x:auto;">';
+      html+='<table style="width:100%;border-collapse:collapse;font-size:.72rem;">';
+      html+='<thead><tr style="background:#f8fafc;">';
+      html+='<th style="padding:5px 10px;text-align:left;font-size:.61rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Código</th>';
+      html+='<th style="padding:5px 10px;text-align:left;font-size:.61rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Descripción</th>';
+      html+='<th style="padding:5px 10px;text-align:right;font-size:.61rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Unidades</th>';
+      html+='<th style="padding:5px 10px;text-align:center;font-size:.61rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Mov.</th>';
+      html+='</tr></thead><tbody>';
+
+      sorted.forEach(function(it,idx){
+        var bg=idx%2===0?"#fff":"#f8fafc";
+        filas.push([lu,it.cod,it.desc,it.total,it.movs]);
+        html+='<tr style="background:'+bg+';">';
+        html+='<td style="padding:5px 10px;font-family:\'DM Mono\',monospace;font-size:.65rem;color:var(--muted);border-bottom:1px solid #f0f4f8;">'+it.cod+'</td>';
+        html+='<td style="padding:5px 10px;border-bottom:1px solid #f0f4f8;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+it.desc+'</td>';
+        html+='<td style="padding:5px 10px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;color:'+col+';border-bottom:1px solid #f0f4f8;">'+fmt(it.total)+'</td>';
+        html+='<td style="padding:5px 10px;text-align:center;color:var(--muted);border-bottom:1px solid #f0f4f8;">'+it.movs+'</td>';
+        html+='</tr>';
+      });
+      html+='</tbody></table></div>';
+    });
+
+    document.getElementById("r-consumo").innerHTML=html;
     var periodo=(mes?cap(mes)+" ":"")+(anio)+(lugar?" · "+lugar:"");
-    _reporteActual={tipo:"consumo",titulo:"Consumo Mensual por Lugar",periodo:periodo,filas:filas,params:{lugar:lugar,anio:anio,mes:mes}};
+    _reporteActual={tipo:"consumo",titulo:"Consumo por Insumo",periodo:periodo,filas:filas,params:{lugar:lugar,anio:anio,mes:mes}};
     mostrarAcciones("📊 Consumo "+periodo);
   });
 }
