@@ -11,6 +11,30 @@ const SHEET_SOLICITUDES   = "SOLICITUDES";
 const SHEET_RECEPCION     = "RECEPCION_BODEGA";
 const SHEET_MOVIMIENTOS   = "MOVIMIENTOS";
 
+
+// ── Diagnóstico estados SOLICITUDES ─────────────────────────
+function diagnosticoEstados(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    if (!sheet) return { status: "error", mensaje: "Sin hoja SOLICITUDES" };
+    var datos = sheet.getDataRange().getValues();
+    var estados = {}, ids = {};
+    for (var i = 1; i < datos.length; i++) {
+      var f   = datos[i];
+      var id  = String(f[0]||"").trim();
+      var est = String(f[8]||"").trim();
+      if (!id) continue;
+      estados[est] = (estados[est]||0) + 1;
+      if (!ids[id]) ids[id] = [];
+      ids[id].push(est);
+    }
+    return { status: "ok", conteoEstados: estados, totalIds: Object.keys(ids).length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
   const callback = e.parameter.callback || "";
@@ -37,6 +61,7 @@ function doGet(e) {
   if (accion === "listarRecepcion")     return responder(listarRecepcion(e),                        callback);
   if (accion === "actualizarRecepcion") return responder(actualizarRecepcion(e),                    callback);
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
+  if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
   if (accion === "enviarReporte")      return responder(enviarReporte(e),                          callback);
 
