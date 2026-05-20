@@ -2940,3 +2940,13 @@ function enviarReporte(e) {
     return { status: "error", mensaje: err.toString() };
   }
 }
+
+// ── Autorización GmailApp (ejecutar una vez desde el editor) ──
+function testGmail() {
+  GmailApp.sendEmail(
+    Session.getActiveUser().getEmail(),
+    "Test SIIDER - Autorizacion Gmail",
+    "Si recibes este correo, GmailApp esta autorizado correctamente."
+  );
+  Logger.log("Correo enviado OK a: " + Session.getActiveUser().getEmail());
+}
