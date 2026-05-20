@@ -1760,21 +1760,125 @@ function enviarReporte(e) {
     var p            = e.parameter || {};
     var destinatario = p.destinatario || "";
     var asunto       = p.asunto      || "Reporte SIIDER — Dermatología HDS";
-    var htmlTabla    = p.htmlTabla   || "";
+    var tipo         = p.tipo        || "";
     var periodo      = p.periodo     || "";
-    var tipo         = p.tipo        || "reporte";
+    // Parámetros de filtro para generar la tabla en el GS
+    var lugar        = p.lugar       || "";
+    var anio         = p.anio        || "";
+    var mes          = p.mes         || "";
+    var estado       = p.estado      || "";
+    var top          = parseInt(p.top || "20") || 20;
 
     if (!destinatario) return { status: "error", mensaje: "Falta destinatario." };
 
-    var ahora   = new Date().toLocaleString("es-CL");
+    var ss   = SpreadsheetApp.getActiveSpreadsheet();
+    var ahora = new Date().toLocaleString("es-CL");
     var titulos = {
-      consumo:      "📊 Consumo Mensual por Lugar",
-      semaforo:     "🚦 Semáforo Consolidado de Stock",
-      solicitudes:  "📋 Estado de Solicitudes",
-      ranking:      "🏆 Ranking de Insumos más Consumidos"
+      consumo:     "📊 Consumo Mensual por Lugar",
+      semaforo:    "🚦 Semáforo Consolidado de Stock",
+      solicitudes: "📋 Estado de Solicitudes",
+      ranking:     "🏆 Ranking de Insumos más Consumidos"
     };
     var titulo = titulos[tipo] || "Reporte de Gestión";
 
+    // ── Generar tabla HTML según tipo ──────────────────────────────
+    var htmlTabla = "";
+    var TH = 'style="background:#185FA5;color:#fff;padding:6px 10px;font-size:12px;text-align:left;"';
+    var TD = 'style="padding:6px 10px;font-size:12px;border-bottom:1px solid #e2e8f0;"';
+    var TDR = 'style="padding:6px 10px;font-size:12px;border-bottom:1px solid #e2e8f0;text-align:right;"';
+
+    if (tipo === "consumo") {
+      var shMov = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      var movs  = shMov && shMov.getLastRow() > 1 ? shMov.getDataRange().getValues() : [];
+      var mIni  = movs.length && String(movs[0][0]).toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      var meses = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+      var acum  = {};
+      for (var i = mIni; i < movs.length; i++) {
+        var r = movs[i];
+        if (String(r[1]||"").toUpperCase() !== "EGRESO") continue;
+        if (lugar && r[4] !== lugar) continue;
+        if (anio  && String(r[0]||"").indexOf(anio) === -1) continue;
+        var mVal = r[3] ? String(r[3]).toUpperCase() : "";
+        if (!mVal) { var d=String(r[0]||"").split(/[\/\-\,\s]/); if(d.length>=2){var mi=parseInt(d[1]);if(!isNaN(mi)&&mi>=1&&mi<=12)mVal=meses[mi-1];} }
+        if (mes && mVal !== mes) continue;
+        var lu = String(r[4]||"Sin lugar");
+        var qty = Math.abs(parseFloat(r[7])||0);
+        if (!acum[lu]) acum[lu] = {};
+        if (!acum[lu][mVal]) acum[lu][mVal] = 0;
+        acum[lu][mVal] += qty;
+      }
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;">';
+      htmlTabla += '<tr><th '+TH+'>Lugar</th><th '+TH+'>Mes</th><th '+TH+' style="text-align:right;">Unidades</th></tr>';
+      var bg = true;
+      Object.keys(acum).sort().forEach(function(lu){
+        Object.keys(acum[lu]).forEach(function(me){
+          var rowBg = bg ? "#f8fafc" : "#fff"; bg = !bg;
+          htmlTabla += '<tr style="background:'+rowBg+'"><td '+TD+'>'+lu+'</td><td '+TD+'>'+me+'</td><td '+TDR+'>'+acum[lu][me]+'</td></tr>';
+        });
+      });
+      htmlTabla += '</table>';
+
+    } else if (tipo === "semaforo") {
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;">';
+      htmlTabla += '<tr><th '+TH+'>Lugar</th><th '+TH+'>Código</th><th '+TH+'>Descripción</th><th '+TH+' style="text-align:right;">Stock</th><th '+TH+'>Estado</th></tr>';
+      var LUGARES_SEM = ["CURACIONES","PABELLON","UNACESS","LASERTERAPIA","TOMA_MUESTRAS","BOX_MEDICOS","FOTOTERAPIA","AREA_TECNICA","OFICINA_ADMIN"];
+      var bg = true;
+      LUGARES_SEM.forEach(function(lu){
+        var stockData = stockLugar({ parameter: { lugar: lu } });
+        if (!stockData || !stockData.items) return;
+        stockData.items.forEach(function(it){
+          var est = String(it.estado||"").toUpperCase();
+          var rowBg = bg ? "#f8fafc" : "#fff"; bg = !bg;
+          htmlTabla += '<tr style="background:'+rowBg+'"><td '+TD+'>'+lu+'</td><td '+TD+'>'+it.codigo+'</td><td '+TD+'>'+(it.descripcion||it.codigo)+'</td><td '+TDR+'>'+it.stock+'</td><td '+TD+'>'+est+'</td></tr>';
+        });
+      });
+      htmlTabla += '</table>';
+
+    } else if (tipo === "solicitudes") {
+      var shSol = ss.getSheetByName("SOLICITUDES") || ss.getSheetByName(SHEET_SOLICITUDES);
+      var solData = shSol && shSol.getLastRow() > 1 ? shSol.getDataRange().getValues() : [];
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;">';
+      htmlTabla += '<tr><th '+TH+'>N° Solicitud</th><th '+TH+'>Lugar</th><th '+TH+'>Responsable</th><th '+TH+'>Fecha</th><th '+TH+'>Estado</th></tr>';
+      var vistos = {}, bg = true;
+      var sIni = solData.length && String(solData[0][0]).toUpperCase().indexOf("SOL") === -1 ? 0 : 1;
+      for (var i = sIni; i < solData.length; i++) {
+        var f = solData[i];
+        var id  = String(f[0]||"");
+        var est = String(f[6]||"PENDIENTE").toUpperCase();
+        if (!id || vistos[id]) continue;
+        if (estado && est !== estado) continue;
+        vistos[id] = true;
+        var rowBg = bg ? "#f8fafc" : "#fff"; bg = !bg;
+        htmlTabla += '<tr style="background:'+rowBg+'"><td '+TD+'>'+id+'</td><td '+TD+'>'+String(f[3]||"")+'</td><td '+TD+'>'+String(f[2]||"")+'</td><td '+TD+'>'+String(f[1]||"")+'</td><td '+TD+'>'+est+'</td></tr>';
+      }
+      htmlTabla += '</table>';
+
+    } else if (tipo === "ranking") {
+      var shMov2 = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      var movs2  = shMov2 && shMov2.getLastRow() > 1 ? shMov2.getDataRange().getValues() : [];
+      var mIni2  = movs2.length && String(movs2[0][0]).toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      var acum2  = {};
+      for (var i = mIni2; i < movs2.length; i++) {
+        var r = movs2[i];
+        if (String(r[1]||"").toUpperCase() !== "EGRESO") continue;
+        if (lugar && r[4] !== lugar) continue;
+        var k = String(r[5]||r[6]||"");
+        if (!acum2[k]) acum2[k] = { desc: String(r[6]||r[5]||""), total: 0 };
+        acum2[k].total += Math.abs(parseFloat(r[7])||0);
+      }
+      var sorted = Object.values(acum2).sort(function(a,b){return b.total-a.total;}).slice(0, top);
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;font-family:Arial,sans-serif;">';
+      htmlTabla += '<tr><th '+TH+'>#</th><th '+TH+'>Descripción</th><th '+TH+' style="text-align:right;">Unidades Egresadas</th></tr>';
+      sorted.forEach(function(it, idx){
+        var rowBg = idx % 2 === 0 ? "#f8fafc" : "#fff";
+        htmlTabla += '<tr style="background:'+rowBg+'"><td '+TD+'>'+(idx+1)+'</td><td '+TD+'>'+it.desc+'</td><td '+TDR+'>'+it.total+'</td></tr>';
+      });
+      htmlTabla += '</table>';
+    }
+
+    if (!htmlTabla) htmlTabla = '<p style="font-size:13px;color:#94a3b8;">Sin datos para el período seleccionado.</p>';
+
+    // ── Armar cuerpo del correo ────────────────────────────────────
     var htmlCuerpo = [
       '<html><body style="font-family:Arial,sans-serif;color:#1e293b;max-width:700px;margin:0 auto;">',
       '<div style="background:#185FA5;padding:16px 20px;border-radius:8px 8px 0 0;">',
