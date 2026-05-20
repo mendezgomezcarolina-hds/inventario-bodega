@@ -593,7 +593,7 @@ function stockLugar(e) {
         estado = stock <= u.critico ? "CRITICO"
                : stock <= u.minimo  ? "BAJO"
                : u.maximo > 0 && stock > u.maximo ? "SOBRESTOCK"
-               : "MAXIMO";
+               : "OK";
       } else {
         estado = stock <= 0 ? "CRITICO" : "OK";
       }
