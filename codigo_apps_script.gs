@@ -1759,6 +1759,1042 @@ function enviarReporte(e) {
   try {
     var p            = e.parameter || {};
     var destinatario = p.destinatario || "";
+    var asunto       = p.asunto      || "Reporte SIIDER";
+    var tipo         = p.tipo        || "";
+    var periodo      = p.periodo     || "";
+    var lugar        = p.lugar       || "";
+    var anio         = p.anio        || "";
+    var mes          = p.mes         || "";
+    var estado       = (p.estado     || "").toUpperCase();
+    var top          = parseInt(p.top || "20") || 20;
+
+    if (!destinatario) return { status: "error", mensaje: "Falta destinatario." };
+    if (!tipo)         return { status: "error", mensaje: "Falta tipo de reporte." };
+
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var ahora = new Date().toLocaleString("es-CL");
+    var titulos = {
+      consumo:     "Consumo Mensual por Lugar",
+      semaforo:    "Semaforo Consolidado de Stock",
+      solicitudes: "Estado de Solicitudes",
+      ranking:     "Ranking de Insumos mas Consumidos"
+    };
+    var titulo = titulos[tipo] || "Reporte de Gestion";
+    var MESES  = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+
+    var TH  = 'style="background:#185FA5;color:#fff;padding:7px 10px;font-size:12px;text-align:left;"';
+    var TD  = 'style="padding:6px 10px;font-size:12px;border-bottom:1px solid #e2e8f0;"';
+    var TDR = 'style="padding:6px 10px;font-size:12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;"';
+    var htmlTabla = "";
+
+    // ── CONSUMO ────────────────────────────────────────────────
+    if (tipo === "consumo") {
+      var shM = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      var rows = shM && shM.getLastRow() > 1 ? shM.getDataRange().getValues() : [];
+      var ini  = rows.length && String(rows[0][0]).toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      var acum = {};
+      for (var i = ini; i < rows.length; i++) {
+        var r = rows[i];
+        if (String(r[1]||"").toUpperCase() !== "EGRESO") continue;
+        if (lugar && r[4] !== lugar) continue;
+        if (anio  && String(r[0]||"").indexOf(anio) === -1) continue;
+        var mV = r[3] ? String(r[3]).toUpperCase() : "";
+        if (!mV) {
+          var d = String(r[0]||"").split(/[\/\-\,\s]/);
+          if (d.length >= 2) { var mi = parseInt(d[1]); if (!isNaN(mi) && mi >= 1 && mi <= 12) mV = MESES[mi-1]; }
+        }
+        if (mes && mV !== mes) continue;
+        var lu = String(r[4]||"Sin lugar");
+        var qty = Math.abs(parseFloat(r[7])||0);
+        if (!acum[lu]) acum[lu] = {};
+        if (!acum[lu][mV]) acum[lu][mV] = 0;
+        acum[lu][mV] += qty;
+      }
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;">';
+      htmlTabla += '<tr><th '+TH+'>Lugar</th><th '+TH+'>Mes</th><th '+TH+' style="text-align:right;">Unidades</th></tr>';
+      var bg = true;
+      Object.keys(acum).sort().forEach(function(lu) {
+        Object.keys(acum[lu]).forEach(function(me) {
+          var c = bg ? "#f8fafc" : "#fff"; bg = !bg;
+          htmlTabla += '<tr style="background:'+c+'"><td '+TD+'>'+lu+'</td><td '+TD+'>'+me+'</td><td '+TDR+'>'+acum[lu][me]+'</td></tr>';
+        });
+      });
+      htmlTabla += '</table>';
+
+    // ── SOLICITUDES ────────────────────────────────────────────
+    } else if (tipo === "solicitudes") {
+      var shS  = ss.getSheetByName(SHEET_SOLICITUDES);
+      var rows = shS && shS.getLastRow() > 1 ? shS.getDataRange().getValues() : [];
+      var ini  = rows.length && String(rows[0][0]).indexOf("SOL-") === 0 ? 0 : 1;
+      var vistos = {};
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;">';
+      htmlTabla += '<tr><th '+TH+'>N° Solicitud</th><th '+TH+'>Lugar</th><th '+TH+'>Responsable</th><th '+TH+'>Fecha</th><th '+TH+'>Estado</th></tr>';
+      var bg = true;
+      for (var i = ini; i < rows.length; i++) {
+        var f   = rows[i];
+        var id  = String(f[0]||"").trim();
+        var est = String(f[8]||"PENDIENTE").trim().toUpperCase();
+        if (!id || vistos[id]) continue;
+        if (estado && est !== estado) continue;
+        vistos[id] = true;
+        var fecha = f[7] instanceof Date ? f[7].toLocaleString("es-CL") : String(f[7]||"");
+        var c = bg ? "#f8fafc" : "#fff"; bg = !bg;
+        htmlTabla += '<tr style="background:'+c+'"><td '+TD+'>'+id+'</td><td '+TD+'>'+String(f[1]||"")+'</td><td '+TD+'>'+String(f[5]||"")+'</td><td '+TD+'>'+fecha+'</td><td '+TD+'>'+est+'</td></tr>';
+      }
+      htmlTabla += '</table>';
+
+    // ── RANKING ────────────────────────────────────────────────
+    } else if (tipo === "ranking") {
+      var shM  = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      var rows = shM && shM.getLastRow() > 1 ? shM.getDataRange().getValues() : [];
+      var ini  = rows.length && String(rows[0][0]).toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      var acum = {};
+      for (var i = ini; i < rows.length; i++) {
+        var r = rows[i];
+        if (String(r[1]||"").toUpperCase() !== "EGRESO") continue;
+        if (lugar && r[4] !== lugar) continue;
+        var k = String(r[5]||r[6]||"");
+        if (!acum[k]) acum[k] = { desc: String(r[6]||r[5]||""), total: 0 };
+        acum[k].total += Math.abs(parseFloat(r[7])||0);
+      }
+      var sorted = Object.values(acum).sort(function(a,b){ return b.total - a.total; }).slice(0, top);
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;">';
+      htmlTabla += '<tr><th '+TH+'>#</th><th '+TH+'>Descripción</th><th '+TH+' style="text-align:right;">Unidades</th></tr>';
+      sorted.forEach(function(it, idx) {
+        var c = idx % 2 === 0 ? "#f8fafc" : "#fff";
+        htmlTabla += '<tr style="background:'+c+'"><td '+TD+'>'+(idx+1)+'</td><td '+TD+'>'+it.desc+'</td><td '+TDR+'>'+it.total+'</td></tr>';
+      });
+      htmlTabla += '</table>';
+
+    // ── SEMÁFORO (texto simple, no llama stockLugar) ───────────
+    } else if (tipo === "semaforo") {
+      var shI  = ss.getSheetByName("INVENTARIO");
+      var rows = shI && shI.getLastRow() > 1 ? shI.getDataRange().getValues() : [];
+      htmlTabla = '<table style="border-collapse:collapse;width:100%;">';
+      htmlTabla += '<tr><th '+TH+'>Lugar</th><th '+TH+'>Código</th><th '+TH+'>Descripción</th><th '+TH+' style="text-align:right;">Cantidad</th></tr>';
+      var bg = true;
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i]; if (!r[1]) continue;
+        var c = bg ? "#f8fafc" : "#fff"; bg = !bg;
+        htmlTabla += '<tr style="background:'+c+'"><td '+TD+'>'+String(r[0]||"")+'</td><td '+TD+'>'+String(r[1]||"")+'</td><td '+TD+'>'+String(r[2]||"")+'</td><td '+TDR+'>'+String(r[3]||"")+'</td></tr>';
+      }
+      htmlTabla += '</table>';
+    }
+
+    if (!htmlTabla) htmlTabla = '<p style="font-size:13px;color:#94a3b8;">Sin datos para el período seleccionado.</p>';
+
+    var htmlCuerpo =
+      '<html><body style="font-family:Arial,sans-serif;color:#1e293b;max-width:700px;margin:0 auto;">' +
+      '<div style="background:#185FA5;padding:16px 20px;border-radius:8px 8px 0 0;">' +
+      '<h2 style="color:#fff;margin:0;font-size:16px;">SIIDER · Dermatología · Hospital del Salvador</h2>' +
+      '<p style="color:#bfdbfe;margin:4px 0 0;font-size:13px;">' + titulo + '</p>' +
+      '</div>' +
+      '<div style="border:1px solid #d1dce8;border-top:none;border-radius:0 0 8px 8px;padding:16px;">' +
+      (periodo ? '<p style="font-size:13px;color:#64748b;margin-bottom:12px;">Periodo: <strong>' + periodo + '</strong></p>' : '') +
+      htmlTabla +
+      '<hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">' +
+      '<p style="font-size:11px;color:#94a3b8;">Generado el ' + ahora + ' desde SIIDER.</p>' +
+      '</div></body></html>';
+
+    GmailApp.sendEmail(destinatario, asunto, "Ver version HTML.", {
+      htmlBody: htmlCuerpo,
+      name: "SIIDER — Dermatología HDS"
+    });
+
+    return { status: "ok", mensaje: "Correo enviado a " + destinatario };
+
+  } catch(err) {
+    return { status: "error", mensaje: "enviarReporte: " + err.toString() };
+  }
+}
+
+// ── Test manual ───────────────────────────────────────────────
+function testWrite() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_DATOS)
+    || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
+  sheet.appendRow(["TEST","TEST","1","","", new Date().toLocaleString("es-CL"),"Test",""]);
+  Logger.log("OK → " + sheet.getName());
+}
+
+// ── Test MOVIMIENTOS (ejecutar directo desde el editor) ───────
+function testMovimientos() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    Logger.log("1. Spreadsheet: " + ss.getName());
+    
+    // Intentar obtener o crear hoja MOVIMIENTOS
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    Logger.log("2. Hoja MOVIMIENTOS existe: " + (movSheet !== null));
+    
+    if (!movSheet) {
+      movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+      Logger.log("3. Hoja creada OK");
+    }
+    
+    // Intentar escribir una fila de prueba
+    if (movSheet.getLastRow() === 0) {
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad"]);
+      Logger.log("4. Encabezados escritos");
+    }
+    
+    movSheet.appendRow([
+      new Date().toLocaleString("es-CL"),
+      "TEST-INGRESO",
+      "S_TEST",
+      "JUNIO",
+      "BODEGA TEST",
+      "9999999",
+      "ITEM DE PRUEBA",
+      "99"
+    ]);
+    
+    Logger.log("5. Fila de prueba escrita OK. Total filas: " + movSheet.getLastRow());
+    
+  } catch(err) {
+    Logger.log("ERROR: " + err.toString());
+  }
+}
+
+// ============================================================
+//  NOTIFICACIONES POR CORREO — Bodega Dermatología HDS
+// ============================================================
+
+function obtenerDestinatarios() {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("ACCESOS");
+    if (!sheet) return ["cmendez@hsalvador.cl"];
+    var datos = sheet.getDataRange().getValues();
+    var destinos = [];
+    for (var i = 0; i < datos.length; i++) {
+      var correo = String(datos[i][9] || "").trim();
+      var activo = String(datos[i][10] || "").trim().toLowerCase();
+      if (correo && correo.indexOf("@") > -1 && activo === "si") {
+        destinos.push(correo);
+      }
+    }
+    return destinos.length > 0 ? destinos : ["cmendez@hsalvador.cl"];
+  } catch(err) {
+    return ["cmendez@hsalvador.cl"];
+  }
+}
+
+function notificarResumenSolicitud(e) {
+  try {
+    var p          = e.parameter || {};
+    var idSolicitud = String(p.idSolicitud  || "").trim();
+    var lugar       = String(p.lugar        || "").trim();
+    var responsable = String(p.responsable  || "").trim();
+    var idResp      = String(p.idResp       || "").trim();
+    if (!idSolicitud) return { status: "error", mensaje: "Sin idSolicitud." };
+
+    // Leer todos los ítems de esta solicitud desde SOLICITUDES
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("SOLICITUDES");
+    if (!sheet) return { status: "error", mensaje: "Sin hoja SOLICITUDES." };
+    var datos = sheet.getDataRange().getValues();
+    var items = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      if (String(fila[0]||"").trim() === idSolicitud) {
+        items.push({
+          codigo:  String(fila[2]||"").trim(),
+          desc:    String(fila[3]||"").trim(),
+          cantidad: String(fila[4]||"").trim()
+        });
+      }
+    }
+    if (!items.length) return { status: "ok", mensaje: "Sin ítems para notificar." };
+
+    var destinos = obtenerDestinatarios();
+    var fecha    = new Date().toLocaleString("es-CL");
+    var asunto   = "🛒 Solicitud " + idSolicitud + " — " + lugar + " — " + fecha;
+
+    // Construir tabla HTML de ítems
+    var filasHtml = "";
+    for (var j = 0; j < items.length; j++) {
+      var bg = j % 2 === 0 ? "#ffffff" : "#f8fafc";
+      filasHtml +=
+        "<tr style='background:" + bg + "'>" +
+          "<td style='padding:7px 10px;font-family:monospace;font-size:12px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].codigo + "</td>" +
+          "<td style='padding:7px 10px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].desc + "</td>" +
+          "<td style='padding:7px 10px;text-align:center;font-weight:700;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].cantidad + "</td>" +
+        "</tr>";
+    }
+
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:600px;'>" +
+      "<div style='background:#1B5FA5;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>🛒 Nueva solicitud de insumos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Dermatología · Hospital del Salvador</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px;'>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;width:140px;'>N° Solicitud:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;font-weight:600;color:#185FA5;'>" + idSolicitud + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Responsable:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + responsable + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>RUT:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + idResp + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Lugar:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#185FA5;'>" + lugar + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Fecha:</td>" +
+              "<td style='padding:5px 8px;color:#1e293b;'>" + fecha + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Total ítems:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + items.length + "</td></tr>" +
+        "</table>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+            "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cant.</th>" +
+          "</tr>" +
+          filasHtml +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>Esta solicitud está en estado <strong>PENDIENTE</strong> de aprobación.</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS" +
+      "</div></div>";
+
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " ítems)");
+    return { status: "ok" };
+  } catch(err) {
+    Logger.log("Error notificarResumenSolicitud: " + err.toString());
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+function notificarResumenSolicitud(e) {
+  try {
+    var p           = e.parameter || {};
+    var idSolicitud = String(p.idSolicitud || "").trim();
+    var lugar       = String(p.lugar       || "").trim();
+    var responsable = String(p.responsable || "").trim();
+    var idResp      = String(p.idResp      || "").trim();
+    if (!idSolicitud) return { status: "error", mensaje: "Sin idSolicitud." };
+
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("SOLICITUDES");
+    if (!sheet) return { status: "error", mensaje: "Sin hoja SOLICITUDES." };
+    var datos = sheet.getDataRange().getValues();
+    var items = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      if (String(fila[0]||"").trim() === idSolicitud) {
+        items.push({ codigo: String(fila[2]||""), desc: String(fila[3]||""), cantidad: String(fila[4]||"") });
+      }
+    }
+    if (!items.length) return { status: "ok", mensaje: "Sin items." };
+
+    var destinos = obtenerDestinatarios();
+    var fecha    = new Date().toLocaleString("es-CL");
+    var asunto   = "🛒 Solicitud " + idSolicitud + " — " + lugar + " — " + fecha;
+    var filasHtml = "";
+    for (var j = 0; j < items.length; j++) {
+      var bg = j % 2 === 0 ? "#ffffff" : "#f8fafc";
+      filasHtml += "<tr style='background:" + bg + "'>" +
+        "<td style='padding:7px 10px;font-family:monospace;font-size:12px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].codigo + "</td>" +
+        "<td style='padding:7px 10px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].desc + "</td>" +
+        "<td style='padding:7px 10px;text-align:center;font-weight:700;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + items[j].cantidad + "</td>" +
+        "</tr>";
+    }
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:600px;'>" +
+      "<div style='background:#1B5FA5;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>🛒 Nueva solicitud de insumos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Dermatología · Hospital del Salvador</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px;'>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;width:140px;'>N° Solicitud:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;font-weight:600;color:#185FA5;'>" + idSolicitud + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Responsable:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + responsable + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>RUT:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + idResp + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Lugar:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#185FA5;'>" + lugar + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Fecha:</td>" +
+              "<td style='padding:5px 8px;color:#1e293b;'>" + fecha + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>Total ítems:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + items.length + "</td></tr>" +
+        "</table>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+            "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cant.</th>" +
+          "</tr>" + filasHtml +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>Esta solicitud está en estado <strong>PENDIENTE</strong> de aprobación.</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS" +
+      "</div></div>";
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    Logger.log("✓ Resumen solicitud enviado: " + idSolicitud + " (" + items.length + " items)");
+    return { status: "ok" };
+  } catch(err) {
+    Logger.log("Error notificarResumenSolicitud: " + err.toString());
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+function notificarSolicitud(datos) {
+  try {
+    var destinos = obtenerDestinatarios();
+    var fecha    = new Date().toLocaleString("es-CL");
+    var asunto   = "🛒 Nueva solicitud de insumos — " + (datos.lugar || "") + " — " + fecha;
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:600px;'>" +
+      "<div style='background:#1B5FA5;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>🛒 Nueva solicitud de insumos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Dermatología · Hospital del Salvador</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;margin-bottom:14px;font-size:13px;'>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;width:140px;'>Responsable:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#1e293b;'>" + (datos.responsable || "—") + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>RUT:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + (datos.idResp || "—") + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Lugar:</td>" +
+              "<td style='padding:5px 8px;font-weight:600;color:#185FA5;'>" + (datos.lugar || "—") + "</td></tr>" +
+          "<tr style='background:#f8fafc;'><td style='padding:5px 8px;color:#64748b;'>N° Solicitud:</td>" +
+              "<td style='padding:5px 8px;font-family:monospace;color:#1e293b;'>" + (datos.idSolicitud || "—") + "</td></tr>" +
+          "<tr><td style='padding:5px 8px;color:#64748b;'>Fecha:</td>" +
+              "<td style='padding:5px 8px;color:#1e293b;'>" + fecha + "</td></tr>" +
+        "</table>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+            "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+            "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cantidad</th>" +
+          "</tr>" +
+          "<tr>" +
+            "<td style='padding:7px 10px;font-family:monospace;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + (datos.codigo || "—") + "</td>" +
+            "<td style='padding:7px 10px;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + (datos.descripcion || datos.item || "—") + "</td>" +
+            "<td style='padding:7px 10px;text-align:center;font-weight:700;color:#1e293b;border-bottom:1px solid #f0f4f8;'>" + (datos.cantidad || "—") + "</td>" +
+          "</tr>" +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>Esta solicitud está en estado <strong>PENDIENTE</strong> de aprobación.</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS" +
+      "</div></div>";
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+  } catch(err) {
+    Logger.log("Error notificarSolicitud: " + err.toString());
+  }
+}
+
+function agregarTriggerVencimientos() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "alertaVencimientos") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  ScriptApp.newTrigger("alertaVencimientos")
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.MONDAY)
+    .atHour(8)
+    .create();
+  Logger.log("✓ Trigger semanal configurado: alertaVencimientos — Lunes 8AM");
+}
+
+function alertaVencimientos() {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("INVENTARIO");
+    if (!sheet || sheet.getLastRow() <= 1) return;
+    var hoy    = new Date();
+    var en1mes = new Date(hoy); en1mes.setMonth(en1mes.getMonth() + 1);
+    var en3mes = new Date(hoy); en3mes.setMonth(en3mes.getMonth() + 3);
+    var datos  = sheet.getDataRange().getValues();
+    var alerta1 = [], alerta3 = [];
+    for (var i = 1; i < datos.length; i++) {
+      var f = datos[i];
+      var venc = f[4];
+      if (!venc || String(venc).toLowerCase() === "no aplica" || String(venc).trim() === "") continue;
+      var fechaVenc = null;
+      if (venc instanceof Date) {
+        fechaVenc = venc;
+      } else {
+        var partes = String(venc).trim().split("/");
+        if (partes.length === 3) fechaVenc = new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]));
+      }
+      if (!fechaVenc || isNaN(fechaVenc.getTime()) || fechaVenc < hoy) continue;
+      var fila = { lugar: String(f[0]||""), cod: String(f[1]||""), desc: String(f[2]||""), cant: String(f[3]||""), venc: fechaVenc.toLocaleDateString("es-CL") };
+      if (fechaVenc <= en1mes) alerta1.push(fila);
+      else if (fechaVenc <= en3mes) alerta3.push(fila);
+    }
+    if (alerta1.length === 0 && alerta3.length === 0) { Logger.log("Sin alertas esta semana."); return; }
+    var destinos = obtenerDestinatarios();
+    var fecha    = hoy.toLocaleDateString("es-CL");
+    var asunto   = "⚠ Alerta vencimientos — Bodega Dermatología — " + fecha;
+    function filaHtml(f, color, emoji) {
+      return "<tr><td style='padding:6px 10px;border-bottom:1px solid #f0f4f8;'>" + f.lugar + "</td>" +
+        "<td style='padding:6px 10px;font-family:monospace;font-size:12px;border-bottom:1px solid #f0f4f8;'>" + f.cod + "</td>" +
+        "<td style='padding:6px 10px;border-bottom:1px solid #f0f4f8;'>" + f.desc + "</td>" +
+        "<td style='padding:6px 10px;text-align:center;border-bottom:1px solid #f0f4f8;'>" + f.cant + "</td>" +
+        "<td style='padding:6px 10px;text-align:center;font-weight:700;color:" + color + ";border-bottom:1px solid #f0f4f8;'>" + emoji + " " + f.venc + "</td></tr>";
+    }
+    var tabla = "";
+    if (alerta1.length > 0) {
+      tabla += "<tr style='background:#fee2e2;'><td colspan='5' style='padding:6px 10px;font-weight:700;color:#dc2626;'>🔴 Vencen en menos de 1 mes (" + alerta1.length + " ítems)</td></tr>";
+      for (var a = 0; a < alerta1.length; a++) tabla += filaHtml(alerta1[a], "#dc2626", "🔴");
+    }
+    if (alerta3.length > 0) {
+      tabla += "<tr style='background:#fef3c7;'><td colspan='5' style='padding:6px 10px;font-weight:700;color:#92400e;'>🟡 Vencen entre 1 y 3 meses (" + alerta3.length + " ítems)</td></tr>";
+      for (var b = 0; b < alerta3.length; b++) tabla += filaHtml(alerta3[b], "#d97706", "🟡");
+    }
+    var cuerpo =
+      "<div style='font-family:Arial,sans-serif;max-width:700px;'>" +
+      "<div style='background:#92400e;padding:16px 20px;border-radius:8px 8px 0 0;'>" +
+        "<h2 style='color:#fff;margin:0;font-size:18px;'>⚠ Alerta de vencimientos próximos</h2>" +
+        "<p style='color:rgba(255,255,255,.8);margin:4px 0 0;font-size:13px;'>Bodega Dermatología · Hospital del Salvador · " + fecha + "</p>" +
+      "</div>" +
+      "<div style='border:1px solid #d1dce8;border-top:none;padding:16px 20px;background:#fff;'>" +
+        "<table style='width:100%;border-collapse:collapse;font-size:13px;'>" +
+          "<tr style='background:#EBF3FC;'><th style='padding:7px 10px;text-align:left;color:#185FA5;'>Lugar</th>" +
+          "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Código</th>" +
+          "<th style='padding:7px 10px;text-align:left;color:#185FA5;'>Descripción</th>" +
+          "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Cant.</th>" +
+          "<th style='padding:7px 10px;text-align:center;color:#185FA5;'>Vencimiento</th></tr>" +
+          tabla +
+        "</table>" +
+        "<p style='font-size:12px;color:#64748b;margin-top:14px;'>🔴 menos de 1 mes &nbsp;|&nbsp; 🟡 entre 1 y 3 meses</p>" +
+      "</div>" +
+      "<div style='background:#f8fafc;border:1px solid #d1dce8;border-top:none;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;font-size:11px;color:#94a3b8;'>" +
+        "Sistema de Gestión de Insumos · Dermatología HDS · Reporte automático semanal" +
+      "</div></div>";
+    MailApp.sendEmail({ to: destinos.join(","), subject: asunto, htmlBody: cuerpo });
+    Logger.log("✓ Alerta enviada a: " + destinos.join(", "));
+  } catch(err) {
+    Logger.log("Error alertaVencimientos: " + err.toString());
+  }
+}
+
+// ============================================================
+// ============================================================
+//  HOJAS RESUMEN DE STOCK — Bodega Dermatología HDS
+//  Función genérica actualizarStockLugar(nombre)
+//  Crea/actualiza STOCK_<LUGAR> para cualquier lugar clínico
+// ============================================================
+
+// Colores de encabezado por lugar
+var COLOR_LUGAR = {
+  "CURACIONES":    "#185FA5",
+  "PABELLON":      "#7c3aed",
+  "UNACESS":       "#0F6E56",
+  "LASERTERAPIA":  "#b45309",
+  "TOMA_MUESTRAS": "#0369a1",
+  "BOX_MEDICOS":   "#be185d",
+  "FOTOTERAPIA":   "#065f46",
+  "AREA_TECNICA":  "#1e3a5f",
+  "OFICINA_ADMIN": "#374151"
+};
+
+// Lista de todos los lugares clínicos con hoja catálogo propia
+var LUGARES_STOCK = [
+  "CURACIONES", "PABELLON", "UNACESS", "LASERTERAPIA",
+  "TOMA_MUESTRAS", "BOX_MEDICOS", "FOTOTERAPIA", "AREA_TECNICA", "OFICINA_ADMIN"
+];
+
+// ── Función genérica ─────────────────────────────────────────
+function actualizarStockLugar(nombreLugar) {
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var lugarUP  = nombreLugar.toUpperCase();
+  var shLugar  = ss.getSheetByName(nombreLugar);
+  var shInv    = ss.getSheetByName("INVENTARIO");
+  var shMov    = ss.getSheetByName("MOVIMIENTOS");
+  var stockNom = "STOCK_" + lugarUP;
+  var shStock  = ss.getSheetByName(stockNom);
+
+  // Crear hoja STOCK si no existe
+  if (!shStock) {
+    shStock = ss.insertSheet(stockNom);
+    Logger.log("✓ Hoja creada: " + stockNom);
+  }
+
+  // 1 — Catálogo del lugar (A=código, B=desc, C=crítico, D=reposición, E=máximo)
+  // Los códigos SAP son numéricos; cualquier fila cuya col A no empiece por dígito
+  // es encabezado o fila vacía → se ignora automáticamente sin depender de iniLug.
+  var items = [];
+  if (shLugar && shLugar.getLastRow() > 0) {
+    var itemsData = shLugar.getDataRange().getValues();
+    for (var i = 0; i < itemsData.length; i++) {
+      var cod  = String(itemsData[i][0] || "").trim();
+      var desc = String(itemsData[i][1] || "").trim();
+      if (!cod || !/^\d/.test(cod)) continue; // omite encabezados y filas vacías
+      var critico    = (itemsData[i][2] !== "" && !isNaN(itemsData[i][2])) ? Number(itemsData[i][2]) : "";
+      var reposicion = (itemsData[i][3] !== "" && !isNaN(itemsData[i][3])) ? Number(itemsData[i][3]) : "";
+      var maximo     = (itemsData[i][4] !== "" && !isNaN(itemsData[i][4])) ? Number(itemsData[i][4]) : "";
+      items.push({ codigo: cod, desc: desc || cod, critico: critico, reposicion: reposicion, maximo: maximo });
+    }
+  }
+
+  // Normaliza texto: quita tildes, reemplaza espacios por _, mayúsculas
+  // Permite comparar "PABELLÓN" con "PABELLON" y "ÁREA TÉCNICA DERMA" con "AREA_TECNICA"
+  function normalizarLugar(s) {
+    return s.toUpperCase()
+      .replace(/[ÁÀÂÄ]/g,"A").replace(/[ÉÈÊË]/g,"E")
+      .replace(/[ÍÌÎÏ]/g,"I").replace(/[ÓÒÔÖ]/g,"O")
+      .replace(/[ÚÙÛÜ]/g,"U").replace(/Ñ/g,"N")
+      .replace(/\s+/g,"_");
+  }
+  var lugarNorm = normalizarLugar(lugarUP);
+
+  // 2 — Inventario inicial filtrado por lugar (comparación normalizada)
+  var invMap = {};
+  if (shInv && shInv.getLastRow() > 1) {
+    var invData = shInv.getDataRange().getValues();
+    for (var r = 1; r < invData.length; r++) {
+      var lugRaw = String(invData[r][0] || "").trim();
+      var lug    = normalizarLugar(lugRaw);
+      var cod    = String(invData[r][1] || "").trim();
+      var desc   = String(invData[r][2] || "").trim();
+      var cant   = Number(invData[r][3]) || 0;
+      // Coincidencia exacta normalizada O si el nombre del lugar contiene lugarNorm
+      var coincide = lug === lugarNorm ||
+                     lug.indexOf(lugarNorm) === 0 ||
+                     lugarNorm.indexOf(lug) === 0;
+      if (coincide && cod) {
+        if (!invMap[cod]) invMap[cod] = { desc: desc, cantidad: 0 };
+        invMap[cod].cantidad += cant;
+      }
+    }
+  }
+
+  // 3 — Movimientos filtrados por lugar (comparación normalizada)
+  var ingMap = {}, egrMap = {}, descMov = {};
+  if (shMov && shMov.getLastRow() > 1) {
+    var movData = shMov.getDataRange().getValues();
+    var mIni = String(movData[0][0] || "").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    for (var m = mIni; m < movData.length; m++) {
+      var tipo   = String(movData[m][1] || "").trim().toUpperCase();
+      var lugRaw = String(movData[m][4] || "").trim();
+      var lug    = normalizarLugar(lugRaw);
+      var cod    = String(movData[m][5] || "").trim();
+      var desc   = String(movData[m][6] || "").trim();
+      var cant   = Number(movData[m][7]) || 0;
+      var coincide = lug === lugarNorm ||
+                     lug.indexOf(lugarNorm) === 0 ||
+                     lugarNorm.indexOf(lug) === 0;
+      if (!coincide || !cod) continue;
+      if (desc) descMov[cod] = desc;
+      if (tipo === "INGRESO")     ingMap[cod] = (ingMap[cod] || 0) + cant;
+      else if (tipo === "EGRESO") egrMap[cod] = (egrMap[cod] || 0) + cant;
+    }
+  }
+
+  // 4 — Añadir códigos con movimiento que no estén en catálogo
+  var codsVistos = {};
+  items.forEach(function(it) { codsVistos[it.codigo] = true; });
+  Object.keys(ingMap).concat(Object.keys(egrMap)).forEach(function(cod) {
+    if (!codsVistos[cod]) {
+      codsVistos[cod] = true;
+      var d = descMov[cod] || (invMap[cod] ? invMap[cod].desc : cod);
+      items.push({ codigo: cod, desc: d, critico: "", reposicion: "", maximo: "" });
+    }
+  });
+
+  // 5 — Construir filas
+  var ahora = new Date().toLocaleString("es-CL");
+  var encabezado = [
+    "Código", "Descripción", "Inv. Inicial", "+Recibido", "−Egreso",
+    "Stock Actual", "Stock Crítico", "Stock Reposición", "Stock Máximo", "Estado", "Actualizado"
+  ];
+  var filas = [encabezado];
+
+  items.forEach(function(it) {
+    var ini    = invMap[it.codigo] ? invMap[it.codigo].cantidad : 0;
+    var ing    = ingMap[it.codigo] || 0;
+    var egr    = egrMap[it.codigo] || 0;
+    var actual = ini + ing + egr;
+    var estado = "";
+    if (it.critico !== "") {
+      if (actual <= it.critico)              estado = "🔴 CRÍTICO";
+      else if (actual <= it.reposicion)      estado = "🟡 REPONER";
+      else if (it.maximo && actual > it.maximo) estado = "🔵 SOBRE";
+      else                                   estado = "🟢 OK";
+    } else {
+      estado = actual <= 0 ? "🔴 CRÍTICO" : "🟢 OK";
+    }
+    filas.push([it.codigo, it.desc, ini, ing, egr, actual,
+                it.critico, it.reposicion, it.maximo, estado, ahora]);
+  });
+
+  // 6 — Escribir y formatear
+  shStock.clearContents();
+  shStock.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
+  var color = COLOR_LUGAR[lugarUP] || "#185FA5";
+  shStock.getRange(1, 1, 1, encabezado.length)
+    .setBackground(color).setFontColor("#ffffff").setFontWeight("bold");
+  if (filas.length > 1) {
+    shStock.getRange(2, 3, filas.length - 1, 4).setNumberFormat("0");
+    shStock.autoResizeColumns(1, encabezado.length);
+  }
+  Logger.log("✓ " + stockNom + " actualizado: " + (filas.length - 1) + " ítems");
+  return filas.length - 1;
+}
+
+// ── Alias retrocompatible ────────────────────────────────────
+function actualizarStockCuraciones() { actualizarStockLugar("CURACIONES"); }
+
+function archivarMovimientosAnuales() {
+  var ss   = SpreadsheetApp.getActiveSpreadsheet();
+  var ui   = SpreadsheetApp.getUi();
+
+  // Pedir año a archivar (por defecto el año anterior)
+  var anioActual  = new Date().getFullYear();
+  var anioArch    = anioActual - 1;
+
+  var resp = ui.prompt(
+    "📦 Archivar MOVIMIENTOS",
+    "¿Qué año deseas archivar?\n(Se moverán los registros de ese año a la hoja MOVIMIENTOS_" + anioArch + ")",
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+
+  var inputAnio = parseInt(resp.getResponseText().trim());
+  if (!isNaN(inputAnio) && inputAnio > 2000 && inputAnio < anioActual) {
+    anioArch = inputAnio;
+  } else if (!isNaN(inputAnio)) {
+    ui.alert("⚠️ Solo puedes archivar años anteriores al año en curso (" + anioActual + ").");
+    return;
+  }
+
+  var nombreArchivo = "MOVIMIENTOS_" + anioArch;
+
+  // Verificar si ya existe la hoja de archivo
+  if (ss.getSheetByName(nombreArchivo)) {
+    var conf = ui.alert(
+      "⚠️ Ya existe la hoja " + nombreArchivo,
+      "¿Deseas reemplazarla con los datos actuales?",
+      ui.ButtonSet.YES_NO
+    );
+    if (conf !== ui.Button.YES) return;
+    ss.deleteSheet(ss.getSheetByName(nombreArchivo));
+  }
+
+  var shMov = ss.getSheetByName("MOVIMIENTOS");
+  if (!shMov) { ui.alert("No se encontró la hoja MOVIMIENTOS."); return; }
+
+  var datos = shMov.getDataRange().getValues();
+  if (datos.length <= 1) { ui.alert("No hay datos en MOVIMIENTOS para archivar."); return; }
+
+  var encabezado = datos[0];
+  var filasMover = [];
+  var filasQuedan = [encabezado];
+
+  // Columna 0 = Fecha/Hora — detectar registros del año a archivar
+  for (var i = 1; i < datos.length; i++) {
+    var fila = datos[i];
+    var celda = fila[0];
+    var anioFila = null;
+
+    if (celda instanceof Date) {
+      anioFila = celda.getFullYear();
+    } else if (typeof celda === "string" && celda.length >= 4) {
+      // Formato "DD/MM/YYYY HH:MM:SS" → extraer año
+      var partes = celda.split(/[\s\/\-]/);
+      for (var p = 0; p < partes.length; p++) {
+        var n = parseInt(partes[p]);
+        if (n > 2000 && n < 2100) { anioFila = n; break; }
+      }
+    }
+
+    if (anioFila === anioArch) {
+      filasMover.push(fila);
+    } else {
+      filasQuedan.push(fila);
+    }
+  }
+
+  if (filasMover.length === 0) {
+    ui.alert("No se encontraron registros del año " + anioArch + " en MOVIMIENTOS.");
+    return;
+  }
+
+  // Crear hoja de archivo y copiar datos
+  var shArch = ss.insertSheet(nombreArchivo);
+  var todasArch = [encabezado].concat(filasMover);
+  shArch.getRange(1, 1, todasArch.length, encabezado.length).setValues(todasArch);
+
+  // Formato encabezado en hoja de archivo
+  shArch.getRange(1, 1, 1, encabezado.length)
+    .setBackground("#0f2d52")
+    .setFontColor("#ffffff")
+    .setFontWeight("bold");
+
+  // Nota de archivo
+  shArch.getRange(todasArch.length + 2, 1)
+    .setValue("📦 Archivado el " + new Date().toLocaleDateString("es-CL") + " · SIIDER · Dermatología HDS");
+
+  // Reescribir MOVIMIENTOS solo con encabezado + año actual
+  shMov.clearContents();
+  shMov.getRange(1, 1, filasQuedan.length, encabezado.length).setValues(filasQuedan);
+  shMov.getRange(1, 1, 1, encabezado.length)
+    .setBackground("#0f2d52")
+    .setFontColor("#ffffff")
+    .setFontWeight("bold");
+
+  ui.alert(
+    "✅ Archivado exitoso",
+    filasMover.length + " registros del año " + anioArch + " movidos a la hoja \"" + nombreArchivo + "\".\n" +
+    filasQuedan.length - 1 + " registros quedan en MOVIMIENTOS (año " + anioActual + ").",
+    ui.ButtonSet.OK
+  );
+
+  Logger.log("✓ Archivado " + filasMover.length + " filas → " + nombreArchivo);
+}
+
+// ── Clasificar insumos: escribe CLINICOS/NO CLINICOS en col F ──
+// Busca cada código de INSUMOS en las hojas de lugares clínicos
+// Si aparece en alguna → CLINICOS, si no → NO CLINICOS
+function clasificarInsumos() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+
+  var shIns = ss.getSheetByName("INSUMOS");
+  if (!shIns) { ui.alert("No se encontró la hoja INSUMOS."); return; }
+
+  // Hojas de lugares clínicos donde buscar
+  var LUGARES_CLINICOS = ["CURACIONES", "PABELLON", "UNACESS", "TOMA_MUESTRAS",
+                          "LASERTERAPIA", "BOX_MEDICOS", "FOTOTERAPIA", "AREA_TECNICA"];
+
+  // Construir mapa de códigos clínicos desde todas las hojas de lugares
+  var codigosClinicos = {};
+  LUGARES_CLINICOS.forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh || sh.getLastRow() < 2) return;
+    var data = sh.getDataRange().getValues();
+    var ini  = String(data[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+    for (var i = ini; i < data.length; i++) {
+      var cod = String(data[i][0]||"").trim();
+      if (cod) codigosClinicos[cod] = true;
+    }
+  });
+
+  // Leer INSUMOS y escribir col F
+  var insData = shIns.getDataRange().getValues();
+  var ini     = String(insData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+  var clinicos = 0, noClinicos = 0, yaTenia = 0;
+
+  for (var r = ini; r < insData.length; r++) {
+    var cod    = String(insData[r][0]||"").trim();
+    var actual = String(insData[r][5]||"").trim();
+    if (!cod) continue;
+
+    // Si ya tiene valor en col F, no sobreescribir
+    if (actual === "CLINICOS" || actual === "NO CLINICOS") { yaTenia++; continue; }
+
+    var valor = codigosClinicos[cod] ? "CLINICOS" : "NO CLINICOS";
+    shIns.getRange(r + 1, 6).setValue(valor);
+    if (valor === "CLINICOS") clinicos++; else noClinicos++;
+  }
+
+  ui.alert(
+    "Clasificacion completada",
+    clinicos   + " insumos marcados CLINICOS. " +
+    noClinicos + " marcados NO CLINICOS. " +
+    yaTenia    + " ya tenian valor (no modificados).",
+    ui.ButtonSet.OK
+  );
+}
+
+// ── Escribir col F (Bodega) en hojas de cada lugar ───────────
+// Lee col F de INSUMOS y la copia en cada hoja de lugar clínico
+// Permite que el sistema sepa de qué bodega sale cada insumo
+function clasificarInsumosLugares() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+
+  // 1 — Construir mapa código → bodega desde hoja INSUMOS
+  var shIns = ss.getSheetByName("INSUMOS");
+  if (!shIns) { ui.alert("No se encontro la hoja INSUMOS."); return; }
+
+  var insData = shIns.getDataRange().getValues();
+  var mapaBodega = {}; // cod → "CLINICOS" o "NO CLINICOS"
+  var iniIns = String(insData[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+  for (var i = iniIns; i < insData.length; i++) {
+    var cod  = String(insData[i][0]||"").trim();
+    var bod  = String(insData[i][5]||"").trim();
+    if (cod && bod) mapaBodega[cod] = bod;
+  }
+
+  // 2 — Hojas de lugares a procesar
+  var HOJAS_LUGARES = [
+    "CURACIONES", "PABELLON", "UNACESS", "TOMA_MUESTRAS",
+    "LASERTERAPIA", "BOX_MEDICOS", "FOTOTERAPIA",
+    "AREA_TECNICA", "OFICINA_ADMIN"
+  ];
+
+  var totalEscrito = 0, totalSinCodigo = 0;
+
+  HOJAS_LUGARES.forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh || sh.getLastRow() < 2) return;
+
+    var data = sh.getDataRange().getValues();
+    var ini  = String(data[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+
+    for (var r = ini; r < data.length; r++) {
+      var cod    = String(data[r][0]||"").trim();
+      var actual = String(data[r][5]||"").trim();
+      if (!cod) continue;
+
+      // No sobreescribir si ya tiene valor
+      if (actual === "CLINICOS" || actual === "NO CLINICOS") continue;
+
+      var bod = mapaBodega[cod];
+      if (bod) {
+        sh.getRange(r + 1, 6).setValue(bod);
+        totalEscrito++;
+      } else {
+        totalSinCodigo++;
+      }
+    }
+  });
+
+  ui.alert(
+    "Clasificacion completada",
+    totalEscrito    + " insumos clasificados en hojas de lugares. " +
+    totalSinCodigo  + " codigos sin match en INSUMOS.",
+    ui.ButtonSet.OK
+  );
+}
+
+// ── Diagnóstico col F en hojas de lugares ──────────────────
+function diagnosticarColF() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+  var HOJAS = ["CURACIONES","PABELLON","UNACESS","TOMA_MUESTRAS",
+               "LASERTERAPIA","BOX_MEDICOS","FOTOTERAPIA","AREA_TECNICA","OFICINA_ADMIN"];
+  var msg = "";
+  HOJAS.forEach(function(nombre) {
+    var sh = ss.getSheetByName(nombre);
+    if (!sh) { msg += nombre + ": hoja no encontrada. "; return; }
+    var data = sh.getDataRange().getValues();
+    var conF = 0, sinF = 0;
+    for (var i = 1; i < data.length; i++) {
+      var cod = String(data[i][0]||"").trim();
+      var f   = String(data[i][5]||"").trim();
+      if (!cod) continue;
+      if (f) conF++; else sinF++;
+    }
+    msg += nombre + ": " + conF + " con F, " + sinF + " sin F. ";
+  });
+  ui.alert("Diagnostico col F", msg, ui.ButtonSet.OK);
+}
+
+// ── Corrección manual SOL-260519-094240 ──────────────────────
+function corregirSOL260519094240() {
+  var ss  = SpreadsheetApp.getActiveSpreadsheet();
+  var ui  = SpreadsheetApp.getUi();
+  var mov = ss.getSheetByName("MOVIMIENTOS");
+  if (!mov) { ui.alert("No se encontro hoja MOVIMIENTOS."); return; }
+
+  var ahora = "19-05-2026, 10:15:12 p. m.";
+  var sol   = "SOL-260519-094240";
+  var cod   = "2002416175";
+  var desc  = "TORULA C/VASTAGO DE MADERA ESTERIL";
+  var qty   = 20;
+
+  mov.appendRow([ahora, "INGRESO", sol, "", "LASERTERAPIA", cod, desc, qty, "", "", ""]);
+  mov.appendRow([ahora, "EGRESO",  sol, "", "BODEGA INSUMOS CLINICOS", cod, desc, -qty, "", "", ""]);
+
+  ui.alert("Listo. Se agregaron 2 registros en MOVIMIENTOS para " + sol);
+}
+
+// ── Menú SIIDER en el sheet ───────────────────────────────────
+// ── Trigger onEdit: actualiza stock automáticamente al editar MOVIMIENTOS ──
+function onEdit(e) {
+  try {
+    var sheet = e && e.range && e.range.getSheet();
+    if (!sheet) return;
+    var nombre = sheet.getName();
+    // Si se edita MOVIMIENTOS o INVENTARIO → actualizar stock
+    if (nombre === SHEET_MOVIMIENTOS || nombre === SHEET_DATOS) {
+      actualizarStockCuraciones();
+    }
+  } catch(err) {
+    Logger.log("onEdit error: " + err);
+  }
+}
+
+// ── Actualizar stock de TODOS los lugares + bodegas ──────────
+function actualizarTodoElStock() {
+  var ui = SpreadsheetApp.getUi();
+  var resumen = [];
+  LUGARES_STOCK.forEach(function(lu) {
+    try {
+      var n = actualizarStockLugar(lu);
+      resumen.push("✓ " + lu + ": " + n + " ítems");
+    } catch(e) {
+      resumen.push("✗ " + lu + ": " + e.message);
+    }
+  });
+  try { actualizarStockBodega(); resumen.push("✓ BODEGA (general)"); } catch(e) {}
+  ui.alert("✅ Stock actualizado", resumen.join("\n"), ui.ButtonSet.OK);
+}
+
+// ── Funciones individuales por lugar (para el menú) ──────────
+function stockCuraciones()   { actualizarStockLugar("CURACIONES");   SpreadsheetApp.getUi().alert("✓ STOCK_CURACIONES actualizado."); }
+function stockPabellon()     { actualizarStockLugar("PABELLON");     SpreadsheetApp.getUi().alert("✓ STOCK_PABELLON actualizado."); }
+function stockUnacess()      { actualizarStockLugar("UNACESS");      SpreadsheetApp.getUi().alert("✓ STOCK_UNACESS actualizado."); }
+function stockLaserterapia() { actualizarStockLugar("LASERTERAPIA"); SpreadsheetApp.getUi().alert("✓ STOCK_LASERTERAPIA actualizado."); }
+function stockTomaMuestras() { actualizarStockLugar("TOMA_MUESTRAS");SpreadsheetApp.getUi().alert("✓ STOCK_TOMA_MUESTRAS actualizado."); }
+function stockBoxMedicos()   { actualizarStockLugar("BOX_MEDICOS");  SpreadsheetApp.getUi().alert("✓ STOCK_BOX_MEDICOS actualizado."); }
+function stockFototerapia()  { actualizarStockLugar("FOTOTERAPIA");  SpreadsheetApp.getUi().alert("✓ STOCK_FOTOTERAPIA actualizado."); }
+function stockAreaTecnica()  { actualizarStockLugar("AREA_TECNICA"); SpreadsheetApp.getUi().alert("✓ STOCK_AREA_TECNICA actualizado."); }
+function stockOficinaAdmin() { actualizarStockLugar("OFICINA_ADMIN");SpreadsheetApp.getUi().alert("✓ STOCK_OFICINA_ADMIN actualizado."); }
+
+function onOpen() {
+  var ui   = SpreadsheetApp.getUi();
+  var menu = ui.createMenu("⚙ SIIDER");
+
+  menu.addItem("📊 Actualizar TODO el stock (todos los lugares)", "actualizarTodoElStock")
+      .addSeparator()
+      .addSubMenu(ui.createMenu("📍 Actualizar lugar individual")
+        .addItem("Curaciones",      "stockCuraciones")
+        .addItem("Pabellón",        "stockPabellon")
+        .addItem("UNACESS",         "stockUnacess")
+        .addItem("Laserterapia",    "stockLaserterapia")
+        .addItem("Toma de muestras","stockTomaMuestras")
+        .addItem("Box médicos",     "stockBoxMedicos")
+        .addItem("Fototerapia",     "stockFototerapia")
+        .addItem("Área técnica",    "stockAreaTecnica")
+        .addItem("Oficina admin",   "stockOficinaAdmin")
+      )
+      .addSeparator()
+      .addItem("📦 Archivar movimientos anuales", "archivarMovimientosAnuales")
+      .addSeparator()
+      .addItem("🏷 Clasificar insumos bodega (INSUMOS)", "clasificarInsumos")
+      .addItem("🏷 Clasificar insumos lugares (hojas)",  "clasificarInsumosLugares")
+      .addItem("🔍 Diagnosticar col F en hojas",         "diagnosticarColF")
+      .addItem("🛠 Corregir SOL-260519-094240",          "corregirSOL260519094240")
+      .addToUi();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ENVIAR REPORTE POR CORREO — Panel Reportes de Gestión
+//  Parámetros GET:
+//    accion=enviarReporte
+//    destinatario = email destino
+//    asunto       = asunto del correo
+//    tipo         = consumo | semaforo | solicitudes | ranking
+//    htmlTabla    = contenido HTML de la tabla (URL-encoded)
+//    periodo      = texto descriptivo del período (ej: "Mayo 2026")
+// ══════════════════════════════════════════════════════════════
+function enviarReporte(e) {
+  try {
+    var p            = e.parameter || {};
+    var destinatario = p.destinatario || "";
     var asunto       = p.asunto      || "Reporte SIIDER — Dermatología HDS";
     var tipo         = p.tipo        || "";
     var periodo      = p.periodo     || "";
