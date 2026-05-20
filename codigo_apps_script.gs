@@ -951,14 +951,14 @@ function testMovimientos() {
 function obtenerDestinatarios() {
   try {
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    // Lee COLABORADORES: A=Nombre B=RUT C=Pass D=Correo E=Activo(si/no)
-    var sheet = ss.getSheetByName(SHEET_COLABORADORES);
+    // Lee ACCESOS: K=Activo(si/no) L=Correo
+    var sheet = ss.getSheetByName("ACCESOS");
     if (!sheet) return ["cmendez@hsalvador.cl"];
     var datos = sheet.getDataRange().getValues();
     var destinos = [];
     for (var i = 0; i < datos.length; i++) {
-      var correo = String(datos[i][3] || "").trim();  // columna D
-      var activo = String(datos[i][4] || "").trim().toLowerCase(); // columna E
+      var activo = String(datos[i][10] || "").trim().toLowerCase(); // columna K
+      var correo = String(datos[i][11] || "").trim();               // columna L
       if (correo && correo.indexOf("@") > -1 && activo === "si") {
         destinos.push(correo);
       }
