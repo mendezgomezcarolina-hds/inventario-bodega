@@ -951,16 +951,21 @@ function testMovimientos() {
 function obtenerDestinatarios() {
   try {
     var ss    = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("ACCESOS");
+    // Lee COLABORADORES: A=Nombre B=RUT C=Pass D=Correo E=Activo(si/no)
+    var sheet = ss.getSheetByName(SHEET_COLABORADORES);
     if (!sheet) return ["cmendez@hsalvador.cl"];
     var datos = sheet.getDataRange().getValues();
     var destinos = [];
     for (var i = 0; i < datos.length; i++) {
-      var correo = String(datos[i][9] || "").trim();
-      var activo = String(datos[i][10] || "").trim().toLowerCase();
+      var correo = String(datos[i][3] || "").trim();  // columna D
+      var activo = String(datos[i][4] || "").trim().toLowerCase(); // columna E
       if (correo && correo.indexOf("@") > -1 && activo === "si") {
         destinos.push(correo);
       }
+    }
+    // Siempre incluir a la supervisora
+    if (destinos.indexOf("cmendez@hsalvador.cl") === -1) {
+      destinos.push("cmendez@hsalvador.cl");
     }
     return destinos.length > 0 ? destinos : ["cmendez@hsalvador.cl"];
   } catch(err) {
