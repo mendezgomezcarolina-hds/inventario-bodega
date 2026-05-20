@@ -297,6 +297,7 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
     <li><a href="#stock"><span>9</span> Stock por lugar</a></li>
     <li><a href="#recepcion-bodega"><span>10</span> Recepción de bodega</a></li>
     <li><a href="#ajuste"><span>11</span> Ajuste de Stock</a></li>
+    <li><a href="#reportes"><span>12</span> Reportes de Gestión</a></li>
   </ul>
 </div>
 
@@ -378,6 +379,13 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
         </div>
         <div class="mod-desc">Corrección trimestral por diferencia entre conteo físico y stock calculado.</div>
       </div>
+      <div class="mod-card">
+        <div class="mod-head">
+          <div class="mod-ico" style="background:#e0f2fe">📊</div>
+          <div class="mod-name">Reportes de Gestión</div>
+        </div>
+        <div class="mod-desc">Consumo mensual, semáforo consolidado, estado de solicitudes y ranking de insumos. Exportable a Excel y enviable por correo.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -411,7 +419,7 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
         <tr>
           <td><span class="badge badge-teal">Supervisora</span></td>
           <td>EU Supervisora, 1ª Subrogante y 2ª Subrogante</td>
-          <td>Todos los módulos + Aprobación + Gestión de accesos</td>
+          <td>Todos los módulos + Aprobación + Reportes de Gestión + Gestión de accesos</td>
         </tr>
         <tr>
           <td><span class="badge badge-gold">Bodega</span></td>
@@ -998,10 +1006,107 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
 
 </div>
 
+<!-- ── 12. REPORTES DE GESTIÓN ── -->
+<div class="section" id="reportes">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--blue)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-4"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 12</div>
+      <div class="section-title">Reportes de Gestión</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="alert alert-info" style="margin-bottom:18px;">
+      <span class="alert-icon">🔒</span>
+      <span>El acceso a este módulo lo configura la Supervisora desde el panel <strong>⚙ Gestionar accesos</strong>. Por defecto está habilitado para la Supervisora y subrogantes.</span>
+    </div>
+
+    <p style="margin-bottom:16px;">El módulo de <strong>Reportes de Gestión</strong> permite visualizar, analizar y compartir información consolidada del servicio sin necesidad de revisar cada lugar por separado. Tiene cuatro reportes disponibles, accesibles desde pestañas.</p>
+
+    <!-- Reporte 1 -->
+    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">📊 Consumo Mensual</span></h3>
+    <p style="margin-bottom:10px;">Muestra los egresos de insumos agrupados por lugar y mes. Útil para justificar pedidos y elaborar reportes COMGES.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content"><h4>Seleccionar filtros</h4><p>Elige el año, mes y lugar que deseas analizar. Si dejas "Todos" en lugar, verás el consumo de todo el servicio.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content"><h4>Presionar Cargar</h4><p>El sistema calcula los egresos y los muestra como barras horizontales por mes. Aparecen tres indicadores: total de unidades egresadas, número de lugares con consumo y tipos de insumos distintos.</p></div>
+      </div>
+    </div>
+
+    <!-- Reporte 2 -->
+    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">🚦 Semáforo Consolidado</span></h3>
+    <p style="margin-bottom:10px;">Muestra el estado de stock de <strong>todos los lugares del servicio a la vez</strong>, sin tener que entrar lugar por lugar. Ideal para la ronda supervisora.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content"><h4>Filtrar por estado (opcional)</h4><p>Puedes ver todos los ítems o filtrar solo por 🔴 Críticos, 🟡 Bajos, o 🔵 Sobrestock para priorizar la atención.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content"><h4>Presionar Cargar</h4><p>El sistema consulta el stock de cada lugar y muestra tarjetas con contadores de estado. Los indicadores superiores resumen cuántos ítems están en cada nivel en todo el servicio.</p></div>
+      </div>
+    </div>
+
+    <!-- Reporte 3 -->
+    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">📋 Estado de Solicitudes</span></h3>
+    <p style="margin-bottom:10px;">Lista todas las solicitudes del servicio agrupadas por ID, con su estado, responsable, ítems solicitados y tiempo de respuesta calculado automáticamente.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content"><h4>Filtrar por estado</h4><p>Selecciona Pendientes, Aprobadas, Rechazadas o Recepcionadas según lo que necesites revisar.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content"><h4>Revisar tiempos de respuesta</h4><p>Cada tarjeta muestra el tiempo transcurrido entre la fecha de solicitud y la fecha de resolución (ej: <code>2d</code> = 2 días). Útil para detectar cuellos de botella en el proceso.</p></div>
+      </div>
+    </div>
+
+    <!-- Reporte 4 -->
+    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">🏆 Ranking de Insumos</span></h3>
+    <p style="margin-bottom:10px;">Muestra los insumos más consumidos por volumen de egreso, ordenados de mayor a menor. Filtrable por lugar y configurable en Top 10, 20 o 30. Útil para planificar pedidos y ajustar la paquetización.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content"><h4>Seleccionar lugar y cantidad de ítems</h4><p>Elige el lugar a analizar (o "Todos") y el número de ítems a mostrar en el ranking.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content"><h4>Presionar Cargar</h4><p>Se genera el ranking con barras proporcionales al consumo de cada ítem.</p></div>
+      </div>
+    </div>
+
+    <!-- Exportar -->
+    <h3 style="font-size:.9rem;font-weight:700;color:#16a34a;margin:22px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#dcfce7;padding:3px 8px;border-radius:6px;">📥 Exportar a Excel</span></h3>
+    <p style="margin-bottom:10px;">Después de cargar cualquier reporte, aparece una barra de acciones al pie de la pantalla. Presiona <strong>"Excel"</strong> para descargar los datos en formato <code>.xlsx</code> directamente al dispositivo. El archivo incluye los datos del reporte y una hoja de metadatos con la fecha de generación.</p>
+    <div class="alert" style="background:#f0fdf4;border-color:#86efac;margin-top:8px;">
+      <span class="alert-icon">✓</span>
+      <span>No requiere conexión adicional. El Excel se genera en el navegador y se descarga de inmediato.</span>
+    </div>
+
+    <!-- Enviar por correo -->
+    <h3 style="font-size:.9rem;font-weight:700;color:#d97706;margin:22px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#fef3c7;padding:3px 8px;border-radius:6px;">📧 Enviar por correo</span></h3>
+    <p style="margin-bottom:10px;">Desde la barra de acciones, presiona <strong>"Correo"</strong>. Se abre un modal donde ingresas el destinatario y el asunto (pre-rellenado con el tipo de reporte). Al confirmar, el sistema envía un correo con la tabla del reporte formateada en HTML.</p>
+    <div class="alert alert-warn" style="margin-top:8px;">
+      <span class="alert-icon">⚠️</span>
+      <span>El envío de correo requiere que el Apps Script esté correctamente implementado con permisos de <strong>GmailApp</strong> activos.</span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+<!-- Buenas prácticas: actualizar para incluir reportes -->
+</div>
+
 <div class="footer">
   SIIDER · Sistema Inteligente de Insumos de Dermatología<br>
   Desarrollado por <strong>EU Supervisora Carolina Méndez Gómez</strong> · Hospital del Salvador · 2026<br>
-  <span style="font-family:'DM Mono',monospace;font-size:.7rem;">v1.0 — Mayo 2026</span>
+  <span style="font-family:'DM Mono',monospace;font-size:.7rem;">v1.1 — Mayo 2026</span>
 </div>
 
 </body>
