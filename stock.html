@@ -132,6 +132,7 @@
     <div class="stat st-ok"><div class="stat-n" id="statOk">—</div><div class="stat-l">OK</div></div>
     <div class="stat st-wa"><div class="stat-n" id="statWa">—</div><div class="stat-l">Stock bajo</div></div>
     <div class="stat st-er"><div class="stat-n" id="statEr">—</div><div class="stat-l">Crítico</div></div>
+    <div class="stat st-in"><div class="stat-n" id="statSob">—</div><div class="stat-l">Sobrestock</div></div>
   </div>
 
   <!-- Selector de modo -->
@@ -145,6 +146,7 @@
     <div class="ftag" onclick="setFiltro('ok',this)">OK</div>
     <div class="ftag" onclick="setFiltro('warn',this)">Stock bajo</div>
     <div class="ftag" onclick="setFiltro('critical',this)">Crítico</div>
+    <div class="ftag" onclick="setFiltro('sobre',this)">Sobrestock</div>
   </div>
 
   <!-- Modo individual -->
@@ -281,6 +283,7 @@
     document.getElementById("statOk").textContent = "—";
     document.getElementById("statWa").textContent = "—";
     document.getElementById("statEr").textContent = "—";
+    document.getElementById("statSob").textContent = "—";
   }
 
   function setFiltro(f, el) {
@@ -304,19 +307,21 @@
   }
 
   function renderStock() {
-    var ok = 0, wa = 0, er = 0;
+    var ok = 0, wa = 0, er = 0, sob = 0;
     var filtrado = stockData.filter(function(it) {
       var nivel = getNivel(it);
-      if (nivel === "ok" || nivel === "sobre" || nivel === "sd") ok++;
+      if (nivel === "ok" || nivel === "sd") ok++;
+      else if (nivel === "sobre") sob++;
       else if (nivel === "warn") wa++;
       else if (nivel === "critical") er++;
       return filtroActual === "todos"
         || nivel === filtroActual
-        || (filtroActual === "ok" && (nivel === "ok" || nivel === "sobre" || nivel === "sd"));
+        || (filtroActual === "ok" && (nivel === "ok" || nivel === "sd"));
     });
     document.getElementById("statOk").textContent = ok;
     document.getElementById("statWa").textContent = wa;
     document.getElementById("statEr").textContent = er;
+    document.getElementById("statSob").textContent = sob;
 
     if (!filtrado.length) {
       document.getElementById("listaStock").innerHTML = '<div class="empty">Sin ítems para este filtro.</div>';
@@ -390,16 +395,18 @@
     loteDatos = filtrado;
 
     // Actualizar contadores usando getNivel (misma lógica que renderStock)
-    var ok = 0, wa = 0, er = 0;
+    var ok = 0, wa = 0, er = 0, sob = 0;
     for (var k = 0; k < filtrado.length; k++) {
       var nk = getNivel(filtrado[k]);
-      if (nk === "ok" || nk === "sobre" || nk === "sd") ok++;
+      if (nk === "ok" || nk === "sd") ok++;
+      else if (nk === "sobre") sob++;
       else if (nk === "warn") wa++;
       else if (nk === "critical") er++;
     }
     document.getElementById("statOk").textContent = ok;
     document.getElementById("statWa").textContent = wa;
     document.getElementById("statEr").textContent = er;
+    document.getElementById("statSob").textContent = sob;
 
     var html = "";
     for (var i = 0; i < filtrado.length; i++) {
