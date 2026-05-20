@@ -1006,7 +1006,7 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
 
 </div>
 
-<!-- ── 12. REPORTES DE GESTIÓN ── -->
+<!-- ── SECCIÓN 12: REPORTES DE GESTIÓN ── -->
 <div class="section" id="reportes">
   <div class="section-head">
     <div class="section-icon" style="background:var(--blue)">
@@ -1014,93 +1014,64 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
     </div>
     <div>
       <div class="section-num">Sección 12</div>
-      <div class="section-title">Reportes de Gestión</div>
+      <div class="section-title">Reportes de Gestión <span style="font-size:.72rem;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:99px;margin-left:8px;">Supervisora</span></div>
     </div>
   </div>
   <div class="section-body">
-    <div class="alert alert-info" style="margin-bottom:18px;">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Permite visualizar, analizar y compartir información consolidada del servicio. Tiene cuatro reportes disponibles, accesibles desde pestañas, con opción de exportar a Excel o enviar por correo.</p>
+
+    <div class="alert alert-info">
       <span class="alert-icon">🔒</span>
-      <span>El acceso a este módulo lo configura la Supervisora desde el panel <strong>⚙ Gestionar accesos</strong>. Por defecto está habilitado para la Supervisora y subrogantes.</span>
+      <span>El acceso se configura desde <strong>⚙ Gestionar accesos</strong>. Por defecto habilitado para la Supervisora y subrogantes.</span>
     </div>
 
-    <p style="margin-bottom:16px;">El módulo de <strong>Reportes de Gestión</strong> permite visualizar, analizar y compartir información consolidada del servicio sin necesidad de revisar cada lugar por separado. Tiene cuatro reportes disponibles, accesibles desde pestañas.</p>
-
-    <!-- Reporte 1 -->
-    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">📊 Consumo Mensual</span></h3>
-    <p style="margin-bottom:10px;">Muestra los egresos de insumos agrupados por lugar y mes. Útil para justificar pedidos y elaborar reportes COMGES.</p>
     <div class="steps">
       <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-content"><h4>Seleccionar filtros</h4><p>Elige el año, mes y lugar que deseas analizar. Si dejas "Todos" en lugar, verás el consumo de todo el servicio.</p></div>
+        <div class="step-num" style="background:var(--blue);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>📊 Reporte: Consumo Mensual</h4>
+          <p>Muestra los egresos de insumos agrupados por lugar y mes. Filtra por año, mes y lugar. Útil para justificar pedidos y elaborar reportes COMGES. Al cargar, aparecen tres indicadores: unidades egresadas totales, lugares con consumo e insumos distintos.</p>
+        </div>
       </div>
       <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-content"><h4>Presionar Cargar</h4><p>El sistema calcula los egresos y los muestra como barras horizontales por mes. Aparecen tres indicadores: total de unidades egresadas, número de lugares con consumo y tipos de insumos distintos.</p></div>
-      </div>
-    </div>
-
-    <!-- Reporte 2 -->
-    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">🚦 Semáforo Consolidado</span></h3>
-    <p style="margin-bottom:10px;">Muestra el estado de stock de <strong>todos los lugares del servicio a la vez</strong>, sin tener que entrar lugar por lugar. Ideal para la ronda supervisora.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-content"><h4>Filtrar por estado (opcional)</h4><p>Puedes ver todos los ítems o filtrar solo por 🔴 Críticos, 🟡 Bajos, o 🔵 Sobrestock para priorizar la atención.</p></div>
+        <div class="step-num" style="background:var(--blue);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>🚦 Reporte: Semáforo Consolidado</h4>
+          <p>Muestra el estado de stock de <strong>todos los lugares a la vez</strong> sin entrar lugar por lugar. Ideal para la ronda supervisora. Filtra por 🔴 Críticos, 🟡 Bajos o 🔵 Sobrestock para priorizar. Los indicadores superiores muestran el resumen de todo el servicio.</p>
+        </div>
       </div>
       <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-content"><h4>Presionar Cargar</h4><p>El sistema consulta el stock de cada lugar y muestra tarjetas con contadores de estado. Los indicadores superiores resumen cuántos ítems están en cada nivel en todo el servicio.</p></div>
-      </div>
-    </div>
-
-    <!-- Reporte 3 -->
-    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">📋 Estado de Solicitudes</span></h3>
-    <p style="margin-bottom:10px;">Lista todas las solicitudes del servicio agrupadas por ID, con su estado, responsable, ítems solicitados y tiempo de respuesta calculado automáticamente.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-content"><h4>Filtrar por estado</h4><p>Selecciona Pendientes, Aprobadas, Rechazadas o Recepcionadas según lo que necesites revisar.</p></div>
+        <div class="step-num" style="background:var(--blue);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>📋 Reporte: Estado de Solicitudes</h4>
+          <p>Lista todas las solicitudes del servicio por ID, con estado, responsable, ítems solicitados y tiempo de respuesta calculado automáticamente (ej: <code>2d</code> = 2 días entre solicitud y resolución). Filtrable por estado: Pendiente, Aprobado, Rechazado, Recepcionado.</p>
+        </div>
       </div>
       <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-content"><h4>Revisar tiempos de respuesta</h4><p>Cada tarjeta muestra el tiempo transcurrido entre la fecha de solicitud y la fecha de resolución (ej: <code>2d</code> = 2 días). Útil para detectar cuellos de botella en el proceso.</p></div>
-      </div>
-    </div>
-
-    <!-- Reporte 4 -->
-    <h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:18px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#EBF3FC;padding:3px 8px;border-radius:6px;">🏆 Ranking de Insumos</span></h3>
-    <p style="margin-bottom:10px;">Muestra los insumos más consumidos por volumen de egreso, ordenados de mayor a menor. Filtrable por lugar y configurable en Top 10, 20 o 30. Útil para planificar pedidos y ajustar la paquetización.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-content"><h4>Seleccionar lugar y cantidad de ítems</h4><p>Elige el lugar a analizar (o "Todos") y el número de ítems a mostrar en el ranking.</p></div>
+        <div class="step-num" style="background:var(--blue);color:#fff;">4</div>
+        <div class="step-content">
+          <h4>🏆 Reporte: Ranking de Insumos</h4>
+          <p>Muestra los insumos más consumidos ordenados por volumen de egreso. Filtrable por lugar y configurable en Top 10, 20 o 30. Útil para planificar pedidos y ajustar la paquetización por procedimiento.</p>
+        </div>
       </div>
       <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-content"><h4>Presionar Cargar</h4><p>Se genera el ranking con barras proporcionales al consumo de cada ítem.</p></div>
+        <div class="step-num" style="background:#16a34a;color:#fff;">5</div>
+        <div class="step-content">
+          <h4>Exportar a Excel</h4>
+          <p>Después de cargar cualquier reporte, aparece una barra al pie de la pantalla. Presiona <strong>"Excel"</strong> para descargar los datos en formato <code>.xlsx</code> al dispositivo. El archivo incluye los datos del reporte y una hoja "Info" con la fecha de generación.</p>
+          <span class="ok">✓ Se genera en el navegador sin conexión adicional. El nombre del archivo incluye el tipo y período (ej: <code>SIIDER_consumo_Mayo_2026.xlsx</code>).</span>
+        </div>
       </div>
-    </div>
-
-    <!-- Exportar -->
-    <h3 style="font-size:.9rem;font-weight:700;color:#16a34a;margin:22px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#dcfce7;padding:3px 8px;border-radius:6px;">📥 Exportar a Excel</span></h3>
-    <p style="margin-bottom:10px;">Después de cargar cualquier reporte, aparece una barra de acciones al pie de la pantalla. Presiona <strong>"Excel"</strong> para descargar los datos en formato <code>.xlsx</code> directamente al dispositivo. El archivo incluye los datos del reporte y una hoja de metadatos con la fecha de generación.</p>
-    <div class="alert" style="background:#f0fdf4;border-color:#86efac;margin-top:8px;">
-      <span class="alert-icon">✓</span>
-      <span>No requiere conexión adicional. El Excel se genera en el navegador y se descarga de inmediato.</span>
-    </div>
-
-    <!-- Enviar por correo -->
-    <h3 style="font-size:.9rem;font-weight:700;color:#d97706;margin:22px 0 10px;display:flex;align-items:center;gap:7px;"><span style="background:#fef3c7;padding:3px 8px;border-radius:6px;">📧 Enviar por correo</span></h3>
-    <p style="margin-bottom:10px;">Desde la barra de acciones, presiona <strong>"Correo"</strong>. Se abre un modal donde ingresas el destinatario y el asunto (pre-rellenado con el tipo de reporte). Al confirmar, el sistema envía un correo con la tabla del reporte formateada en HTML.</p>
-    <div class="alert alert-warn" style="margin-top:8px;">
-      <span class="alert-icon">⚠️</span>
-      <span>El envío de correo requiere que el Apps Script esté correctamente implementado con permisos de <strong>GmailApp</strong> activos.</span>
+      <div class="step">
+        <div class="step-num" style="background:#d97706;color:#fff;">6</div>
+        <div class="step-content">
+          <h4>Enviar por correo</h4>
+          <p>Desde la barra de acciones, presiona <strong>"Correo"</strong>. Ingresa el destinatario y asunto (pre-rellenado con el tipo de reporte). El sistema envía un correo con la tabla del reporte en HTML formateado.</p>
+          <span class="hint">⚠ Requiere que el Apps Script esté implementado con permisos de GmailApp activos.</span>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-
-<div class="wrap">
-<!-- Buenas prácticas: actualizar para incluir reportes -->
 </div>
 
 <div class="footer">
