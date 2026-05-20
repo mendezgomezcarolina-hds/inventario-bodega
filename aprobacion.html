@@ -144,6 +144,7 @@
     <div class="stat"><div class="stat-n" id="sTotal">—</div><div class="stat-l">Total</div></div>
     <div class="stat pend"><div class="stat-n" id="sPend">—</div><div class="stat-l">Pendientes</div></div>
     <div class="stat apro"><div class="stat-n" id="sApro">—</div><div class="stat-l">Aprobadas</div></div>
+    <div class="stat rech"><div class="stat-n" id="sRech">—</div><div class="stat-l">Rechazadas</div></div>
   </div>
 
   <!-- Botón actualizar -->
@@ -229,15 +230,17 @@
   function actualizarStats() {
     var grupos = agrupar(todasSolicitudes);
     var ids    = Object.keys(grupos);
-    var pend = 0, apro = 0;
+    var pend = 0, apro = 0, rech = 0;
     ids.forEach(function(id) {
       var est = estadoGrupo(grupos[id]);
       if (est === "PENDIENTE" || est === "PARCIAL") pend++;
       else if (est === "APROBADO") apro++;
+      else if (est === "RECHAZADO") rech++;
     });
     document.getElementById("sTotal").textContent = ids.length;
     document.getElementById("sPend").textContent  = pend;
     document.getElementById("sApro").textContent  = apro;
+    if (document.getElementById("sRech")) document.getElementById("sRech").textContent = rech;
   }
 
   function agrupar(lista) {
@@ -252,9 +255,16 @@
 
   function estadoGrupo(filas) {
     var estados = filas.map(function(f) { return (f.estado || "").toUpperCase().trim(); });
-    if (estados.every(function(e) { return e === "APROBADO"; }))  return "APROBADO";
-    if (estados.every(function(e) { return e === "RECHAZADO"; })) return "RECHAZADO";
-    if (estados.every(function(e) { return e === "PENDIENTE"; })) return "PENDIENTE";
+    var RESUELTO = ["APROBADO","RECEPCIONADO"];
+    var RECHAZ   = ["RECHAZADO"];
+    if (estados.every(function(e) { return RESUELTO.indexOf(e) !== -1; })) return "APROBADO";
+    if (estados.every(function(e) { return RECHAZ.indexOf(e) !== -1; }))   return "RECHAZADO";
+    if (estados.every(function(e) { return e === "PENDIENTE"; }))           return "PENDIENTE";
+    // Si hay mezcla de resueltos + pendientes → PARCIAL
+    // Si todos están resueltos (incluyendo RECEPCIONADO) → APROBADO
+    var hayPendiente = estados.some(function(e) { return e === "PENDIENTE"; });
+    var hayResuelto  = estados.some(function(e) { return RESUELTO.indexOf(e) !== -1 || RECHAZ.indexOf(e) !== -1; });
+    if (hayResuelto && !hayPendiente) return "APROBADO";
     return "PARCIAL";
   }
 
