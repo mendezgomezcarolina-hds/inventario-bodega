@@ -691,28 +691,7 @@
   }
 
   function nuevaSolicitud() {
-    listaItems = []; idSolicitud = ""; lugarSesion = ""; bodegaOrigen = "";
-    document.getElementById("estadoOk").style.display              = "none";
-    document.getElementById("responsableBadgeWrap").style.display  = "none";
-    document.getElementById("lugarBadgeWrap").style.display        = "none";
-    document.getElementById("inputItemWrap").style.display         = "none";
-    document.getElementById("divider").style.display               = "none";
-    document.getElementById("bodegaWrap") && (document.getElementById("bodegaWrap").style.display = "none");
-    document.getElementById("idSolicitudTxt").textContent          = "";
-    renderLista();
-    // Si hay sesión activa, volver solo al selector de lugar
-    if (responsableSesion) {
-      document.getElementById("responsableBadgeWrap").style.display = "block";
-      document.getElementById("lugarSesionWrap").style.display      = "block";
-      document.getElementById("responsableSesionWrap").style.display = "none";
-      // Forzar el select al placeholder para que el usuario elija explícitamente
-      var selLugar = document.getElementById("lugar");
-      if (selLugar) selLugar.selectedIndex = 0;
-    } else {
-      responsableSesion = ""; responsableIdSesion = "";
-      document.getElementById("responsableSesionWrap").style.display = "block";
-      document.getElementById("lugarSesionWrap").style.display       = "none";
-    }
+    window.location.reload();
   }
 
   function mostrarToast(msg, tipo) {
