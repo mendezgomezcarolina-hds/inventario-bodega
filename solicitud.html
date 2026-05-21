@@ -673,14 +673,14 @@
     var entry = listaItems[_envioIdx];
     var url   = SCRIPT_URL +
       "?accion=solicitud" +
-      "&lugar="       + encodeURIComponent(entry.lugar) +
+      "&lugar="       + encodeURIComponent(entry.lugar || lugarSesion) +
       "&item="        + encodeURIComponent(entry.item) +
       "&codigo="      + encodeURIComponent(entry.codigo || entry.item) +
       "&descripcion=" + encodeURIComponent(entry.item || entry.codigo) +
       "&cantidad="    + encodeURIComponent(entry.cantidad) +
       "&usuario="     + encodeURIComponent(responsableSesion) +
       "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
-      "&idSolicitud=" + encodeURIComponent(idSolicitud) +
+      "&idSolicitud=" + encodeURIComponent(_idEnvio) +
       "&bodegaOrigen=" + encodeURIComponent(bodegaOrigen);
 
     enviarImagen(url);
