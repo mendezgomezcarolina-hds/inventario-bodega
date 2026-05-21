@@ -703,6 +703,9 @@
       document.getElementById("responsableBadgeWrap").style.display = "block";
       document.getElementById("lugarSesionWrap").style.display      = "block";
       document.getElementById("responsableSesionWrap").style.display = "none";
+      // Forzar el select al placeholder para que el usuario elija explícitamente
+      var selLugar = document.getElementById("lugar");
+      if (selLugar) selLugar.selectedIndex = 0;
     } else {
       responsableSesion = ""; responsableIdSesion = "";
       document.getElementById("responsableSesionWrap").style.display = "block";
