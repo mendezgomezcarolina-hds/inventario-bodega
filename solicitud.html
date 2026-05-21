@@ -629,18 +629,21 @@
   // ── Enviar (secuencial con imagen — compatible iOS) ───────────
   var _envioIdx    = 0;
   var _envioErrores = 0;
+  var _idEnvio     = "";
 
   function enviarTodo() {
     if (!listaItems.length) { mostrarToast("Agrega al menos un insumo.", "warn"); return; }
     if (!bodegaOrigen) { mostrarToast("Selecciona la bodega de origen.", "warn"); return; }
     if (!SCRIPT_URL) { pedirURL(); return; }
+    if (!idSolicitud) { idSolicitud = generarId(); } // Seguridad: nunca enviar sin SOL-ID
 
     var btn = document.getElementById("btnEnviar");
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
-    _envioIdx     = 0;
-    _envioErrores = 0;
+    _envioIdx      = 0;
+    _envioErrores  = 0;
+    _idEnvio       = idSolicitud; // Capturar ANTES del flujo async
     enviarSiguiente();
   }
 
@@ -659,7 +662,7 @@
       var btn = document.getElementById("btnEnviar");
       btn.disabled = false;
       btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
-      document.getElementById("idConfirmado").textContent = idSolicitud;
+      document.getElementById("idConfirmado").textContent = _idEnvio || idSolicitud;
       document.getElementById("listaWrap").style.display     = "none";
       document.getElementById("inputItemWrap").style.display = "none";
       document.getElementById("divider").style.display       = "none";
