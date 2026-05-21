@@ -630,6 +630,7 @@
   var _envioIdx    = 0;
   var _envioErrores = 0;
   var _idEnvio     = "";
+  var _lugarEnvio  = "";
 
   function enviarTodo() {
     if (!listaItems.length) { mostrarToast("Agrega al menos un insumo.", "warn"); return; }
@@ -643,7 +644,8 @@
 
     _envioIdx      = 0;
     _envioErrores  = 0;
-    _idEnvio       = idSolicitud; // Capturar ANTES del flujo async
+    _idEnvio       = idSolicitud;   // Capturar ANTES del flujo async
+    _lugarEnvio    = lugarSesion;   // Capturar lugar ANTES del flujo async
     enviarSiguiente();
   }
 
@@ -673,7 +675,7 @@
     var entry = listaItems[_envioIdx];
     var url   = SCRIPT_URL +
       "?accion=solicitud" +
-      "&lugar="       + encodeURIComponent(entry.lugar || lugarSesion) +
+      "&lugar="       + encodeURIComponent(_lugarEnvio || entry.lugar || lugarSesion) +
       "&item="        + encodeURIComponent(entry.item) +
       "&codigo="      + encodeURIComponent(entry.codigo || entry.item) +
       "&descripcion=" + encodeURIComponent(entry.item || entry.codigo) +
