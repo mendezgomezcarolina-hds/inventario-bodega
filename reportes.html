@@ -143,6 +143,7 @@
     <button class="tab"    onclick="cambiarTab('semaforo',this)"><i class="ti ti-traffic-cone"></i> Semáforo</button>
     <button class="tab"    onclick="cambiarTab('solicitudes',this)"><i class="ti ti-clipboard-list"></i> Solicitudes</button>
     <button class="tab"    onclick="cambiarTab('ranking',this)"><i class="ti ti-medal"></i> Ranking</button>
+    <button class="tab"    onclick="cambiarTab('stock',this)"><i class="ti ti-package"></i> Stock</button>
   </div>
 
   <!-- CONSUMO -->
@@ -234,6 +235,49 @@
       </div>
     </div>
     <div id="r-ranking"><div class="empty">Selecciona filtros y presiona Cargar.</div></div>
+  </div>
+
+  <!-- STOCK HISTÓRICO -->
+  <div class="panel" id="panel-stock">
+    <div class="aviso"><i class="ti ti-info-circle"></i>Stock reconstruido a una fecha de corte. Con vencimientos por lugar e ítem.</div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-filter"></i> Filtros</div>
+      <div class="fil-row">
+        <label>Fecha</label>
+        <input type="date" id="st-fecha" />
+      </div>
+      <div class="fil-row">
+        <label>Lugar</label>
+        <select id="st-lugar"><option value="">Todos</option></select>
+      </div>
+      <div class="fil-row">
+        <label>Venc.</label>
+        <select id="st-venc" style="flex:1;">
+          <option value="todos">Todos</option>
+          <option value="vigentes">🟢 Vigentes</option>
+          <option value="porvencer">🟡 Por vencer (≤30d)</option>
+          <option value="vencidos">🔴 Vencidos</option>
+        </select>
+      </div>
+      <div class="fil-row">
+        <label>Buscar</label>
+        <input type="text" id="st-busqueda" placeholder="código o descripción..." />
+      </div>
+      <div class="fil-row" style="margin-top:4px;">
+        <label style="display:inline-flex;align-items:center;gap:5px;font-size:.7rem;cursor:pointer;font-weight:600;color:var(--text);">
+          <input type="checkbox" id="st-cero" checked style="margin:0;" /> Mostrar saldo 0
+        </label>
+        <button class="btn btn-primary" onclick="cargarStock()" style="margin-left:auto;"><i class="ti ti-refresh"></i> Cargar</button>
+      </div>
+      <div id="st-info" style="font-size:.62rem;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:none;"></div>
+    </div>
+    <div id="st-stats" class="stats-4" style="display:none">
+      <div class="stat st-ok"><div class="stat-n" id="st-s1">—</div><div class="stat-l">Con stock</div></div>
+      <div class="stat st-in"><div class="stat-n" id="st-s2">—</div><div class="stat-l">Unidades</div></div>
+      <div class="stat st-wa"><div class="stat-n" id="st-s3">—</div><div class="stat-l">Por vencer</div></div>
+      <div class="stat st-er"><div class="stat-n" id="st-s4">—</div><div class="stat-l">Vencidos</div></div>
+    </div>
+    <div id="r-stock"><div class="empty">Selecciona fecha y presiona Cargar.</div></div>
   </div>
 
 </div><!-- /container -->
@@ -632,10 +676,140 @@ function cargarRanking(){
   });
 }
 
+// ════════════════════════════════════════════════════════════════
+// PANEL 5 — STOCK HISTÓRICO POR LUGAR
+// ════════════════════════════════════════════════════════════════
+function cargarStock(){
+  spin("r-stock");
+  document.getElementById("st-stats").style.display="none";
+  document.getElementById("st-info").style.display="none";
+  ocultarAcciones();
+
+  var fecha = document.getElementById("st-fecha").value;
+  if(!fecha){ toast("Selecciona una fecha de corte.","er"); empty("r-stock","Selecciona fecha y presiona Cargar."); return; }
+  var lugar = document.getElementById("st-lugar").value;
+  var venc  = document.getElementById("st-venc").value;
+  var busq  = document.getElementById("st-busqueda").value.trim();
+  var cero  = document.getElementById("st-cero").checked;
+
+  var url = SCRIPT_URL + "?accion=stockHistorico"
+    + "&fecha="       + encodeURIComponent(fecha)
+    + "&lugar="       + encodeURIComponent(lugar)
+    + "&filtroVenc="  + encodeURIComponent(venc)
+    + "&busqueda="    + encodeURIComponent(busq)
+    + "&mostrarCero=" + (cero?"true":"false");
+
+  jsonp(url, function(d){
+    if(!d || d.status !== "ok"){
+      empty("r-stock", "Error: " + ((d && d.mensaje) || "no se pudo cargar el reporte"));
+      return;
+    }
+    renderStock(d, lugar, fecha, venc, busq, cero);
+  });
+}
+
+function renderStock(d, lugarFiltro, fecha, venc, busq, cero){
+  var items = d.items || [];
+
+  // KPIs
+  var conStock  = items.filter(function(it){return it.cantidad>0;}).length;
+  var sinStock  = items.filter(function(it){return it.cantidad<=0;}).length;
+  var unidades  = items.reduce(function(a,it){return a + (it.cantidad>0?it.cantidad:0);},0);
+  var porVencer = items.filter(function(it){return it.estadoVenc==="porvencer" && it.cantidad>0;}).length;
+  var vencidos  = items.filter(function(it){return it.estadoVenc==="vencido"   && it.cantidad>0;}).length;
+
+  document.getElementById("st-s1").textContent = conStock;
+  document.getElementById("st-s2").textContent = fmt(unidades);
+  document.getElementById("st-s3").textContent = porVencer;
+  document.getElementById("st-s4").textContent = vencidos;
+  document.getElementById("st-stats").style.display = "grid";
+
+  var info = "Saldo cero: " + sinStock + " ítem" + (sinStock===1?"":"s");
+  if(d.fechaMinima) info += " · Inventario inicial: " + d.fechaMinima;
+  var ie = document.getElementById("st-info");
+  ie.textContent = info;
+  ie.style.display = "block";
+
+  if(!items.length){
+    empty("r-stock", "No hay datos para la fecha y filtros seleccionados.");
+    return;
+  }
+
+  // Agrupar por lugar
+  var porLugar = {};
+  items.forEach(function(it){
+    if(!porLugar[it.lugar]) porLugar[it.lugar] = [];
+    porLugar[it.lugar].push(it);
+  });
+
+  var filas = [["Lugar","Código","Descripción","Cantidad","Vencimiento","Días al venc","Estado"]];
+  var html = "";
+
+  Object.keys(porLugar).sort().forEach(function(lu){
+    var its = porLugar[lu];
+    var total = its.reduce(function(a,it){return a + (it.cantidad>0?it.cantidad:0);},0);
+    var col = "#185FA5";
+
+    html += '<div class="lugar-hdr" style="background:'+col+'11;border-color:'+col+'44;">';
+    html += '<span class="lugar-nom" style="color:'+col+'">📍 '+lu+'</span>';
+    html += '<span class="lugar-tot" style="color:'+col+'">'+fmt(total)+' uds.</span></div>';
+
+    html += '<div class="lugar-body" style="overflow-x:auto;">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:.7rem;">';
+    html += '<thead><tr style="background:#f8fafc;">';
+    html += '<th style="padding:5px 8px;text-align:left;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Cód</th>';
+    html += '<th style="padding:5px 8px;text-align:left;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Descripción</th>';
+    html += '<th style="padding:5px 8px;text-align:right;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Ctd</th>';
+    html += '<th style="padding:5px 8px;text-align:center;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Venc</th>';
+    html += '<th style="padding:5px 8px;text-align:center;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Est</th>';
+    html += '</tr></thead><tbody>';
+
+    its.forEach(function(it, idx){
+      var bg = idx%2===0 ? "#fff" : "#f8fafc";
+      var rowOpacity = it.cantidad<=0 ? 'opacity:0.45;' : '';
+      var estClass, estEmoji, estLabel;
+      if(it.estadoVenc==="vencido"){       estClass="b-er"; estEmoji="🔴"; estLabel="Vencido"; }
+      else if(it.estadoVenc==="porvencer"){estClass="b-wa"; estEmoji="🟡"; estLabel="Por vencer"; }
+      else if(it.estadoVenc==="vigente"){  estClass="b-ok"; estEmoji="🟢"; estLabel="Vigente"; }
+      else {                                estClass="b-gr"; estEmoji="—";  estLabel="Sin venc"; }
+
+      var diasTxt = (it.dias!==null && it.dias!==undefined) ? (it.dias+"d") : "";
+      filas.push([lu, it.codigo, it.descripcion, it.cantidad, it.vencimiento||"", diasTxt, estLabel]);
+
+      html += '<tr style="background:'+bg+';'+rowOpacity+'">';
+      html += '<td style="padding:5px 8px;font-family:\'DM Mono\',monospace;font-size:.62rem;color:var(--muted);border-bottom:1px solid #f0f4f8;">'+it.codigo+'</td>';
+      html += '<td style="padding:5px 8px;border-bottom:1px solid #f0f4f8;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+it.descripcion+'</td>';
+      html += '<td style="padding:5px 8px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;border-bottom:1px solid #f0f4f8;">'+fmt(it.cantidad)+'</td>';
+      html += '<td style="padding:5px 8px;text-align:center;font-family:\'DM Mono\',monospace;font-size:.6rem;color:var(--muted);border-bottom:1px solid #f0f4f8;">'+(it.vencimiento||"—")+(diasTxt?'<br><span style="font-size:.54rem;color:var(--muted);">'+diasTxt+'</span>':'')+'</td>';
+      html += '<td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f0f4f8;"><span class="badge '+estClass+'" title="'+estLabel+'">'+estEmoji+'</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+
+  document.getElementById("r-stock").innerHTML = html;
+
+  var periodoTxt = "al " + (d.fechaCorte || fecha) + (lugarFiltro ? " · " + lugarFiltro : "");
+  _reporteActual = {
+    tipo: "stock",
+    titulo: "Stock Histórico por Lugar",
+    periodo: periodoTxt,
+    filas: filas,
+    params: { fecha: fecha, lugar: lugarFiltro, filtroVenc: venc, busqueda: busq, mostrarCero: cero?"true":"false" }
+  };
+  mostrarAcciones("📦 Stock " + periodoTxt);
+}
+
 // ── Init ─────────────────────────────────────────────────────────
 window.onload=function(){
   poblarSelect("c-lugar");
   poblarSelect("rk-lugar");
+  poblarSelect("st-lugar");
+  // Fecha de corte por defecto: hoy
+  var hoy = new Date();
+  var iso = hoy.getFullYear() + "-" + String(hoy.getMonth()+1).padStart(2,"0") + "-" + String(hoy.getDate()).padStart(2,"0");
+  document.getElementById("st-fecha").value = iso;
+  document.getElementById("st-fecha").max = iso;
 };
 </script>
 </body>

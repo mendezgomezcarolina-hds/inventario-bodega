@@ -63,6 +63,7 @@ function doGet(e) {
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
   if (accion === "enviarReporte")      return responder(enviarReporte(e),                          callback);
+  if (accion === "stockHistorico")     return responder(stockHistorico(e),                         callback);
 
   return responder(escribir(e), callback);
 }
@@ -1939,4 +1940,223 @@ function testGmail() {
     name: "SIIDER · Dermatología HDS"
   });
   Logger.log("Correo enviado OK a: " + Session.getActiveUser().getEmail());
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STOCK HISTÓRICO POR LUGAR — Panel Reportes
+//  Reconstruye saldo por (lugar, código, vencimiento) a una
+//  fecha de corte. Agrupa por vencimiento (no por lote).
+//  Parámetros GET:
+//    accion       = stockHistorico
+//    fecha        = yyyy-mm-dd  (fecha de corte, OBLIGATORIA)
+//    lugar        = nombre del lugar o vacío (= todos)
+//    filtroVenc   = todos | vigentes | porvencer | vencidos
+//    busqueda     = texto libre (código o descripción)
+//    mostrarCero  = true | false  (incluir ítems con saldo 0)
+// ══════════════════════════════════════════════════════════════
+function stockHistorico(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var p  = e.parameter || {};
+
+    var fechaStr    = (p.fecha       || "").trim();
+    var lugarFiltro = (p.lugar       || "").trim();
+    var filtroVenc  = (p.filtroVenc  || "todos").toLowerCase();
+    var busqueda    = (p.busqueda    || "").trim().toLowerCase();
+    var mostrarCero = String(p.mostrarCero || "").toLowerCase() === "true";
+
+    if (!fechaStr) return { status: "error", mensaje: "Falta fecha de corte." };
+
+    // Parse fecha de corte (yyyy-mm-dd o dd-mm-yyyy) → fin del día
+    var fechaCorte = parseFechaSH_(fechaStr, true);
+    if (!fechaCorte) return { status: "error", mensaje: "Fecha de corte inválida." };
+
+    var grupos     = {}; // key = lugar|codigo|venc → { lugar, codigo, descripcion, vencimiento, vencDate, cantidad }
+    var fechaMinima = null; // fecha más antigua de INVENTARIO
+
+    // ── INVENTARIO (saldo inicial) ────────────────────────────
+    // Columnas: A=Lugar, B=Código, C=Ítem, D=Cantidad, E=Vencimiento, F=Fecha/Hora
+    var invSheet = ss.getSheetByName(SHEET_DATOS);
+    if (invSheet && invSheet.getLastRow() > 1) {
+      var invDatos = invSheet.getDataRange().getValues();
+      var iniInv = String(invDatos[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
+
+      for (var i = iniInv; i < invDatos.length; i++) {
+        var f = invDatos[i];
+        var lu   = String(f[0] || "").trim();
+        var cod  = String(f[1] || "").trim();
+        var desc = String(f[2] || "").trim();
+        var qty  = parseFloat(f[3] || 0) || 0;
+        var fechaInv = parseFechaSH_(f[5], false);
+
+        if (!lu || !cod) continue;
+
+        // Track fecha mínima permitida
+        if (fechaInv && (fechaMinima === null || fechaInv.getTime() < fechaMinima.getTime())) {
+          fechaMinima = fechaInv;
+        }
+
+        // Si inventario fue capturado DESPUÉS de la fecha de corte, no aplica
+        if (fechaInv && fechaInv.getTime() > fechaCorte.getTime()) continue;
+
+        var vencDate = parseFechaSH_(f[4], false);
+        var vencStr  = vencDate ? fmtDateSH_(vencDate) : "";
+
+        var key = lu + "|" + cod + "|" + vencStr;
+        if (!grupos[key]) {
+          grupos[key] = {
+            lugar: lu, codigo: cod, descripcion: desc,
+            vencimiento: vencStr, vencDate: vencDate, cantidad: 0
+          };
+        }
+        grupos[key].cantidad += qty;
+        if (desc && !grupos[key].descripcion) grupos[key].descripcion = desc;
+      }
+    }
+
+    // ── MOVIMIENTOS ───────────────────────────────────────────
+    // Columnas: A=Fecha, B=Tipo, C=NSol, D=Mes, E=Lugar, F=Código, G=Descripción, H=Cantidad, I=Vencimiento
+    // Cantidad: INGRESO/AJUSTE+ positivo, EGRESO/AJUSTE- negativo
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (movSheet && movSheet.getLastRow() > 1) {
+      var movDatos = movSheet.getDataRange().getValues();
+      var iniMov = String(movDatos[0][0] || "").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+
+      for (var j = iniMov; j < movDatos.length; j++) {
+        var m = movDatos[j];
+        var fechaMov = parseFechaSH_(m[0], false);
+        if (!fechaMov || fechaMov.getTime() > fechaCorte.getTime()) continue;
+
+        var lu2   = String(m[4] || "").trim();
+        var cod2  = String(m[5] || "").trim();
+        var desc2 = String(m[6] || "").trim();
+        var qty2  = parseFloat(m[7] || 0) || 0;
+        if (!lu2 || !cod2) continue;
+
+        var vencDate2 = parseFechaSH_(m[8], false);
+        var vencStr2  = vencDate2 ? fmtDateSH_(vencDate2) : "";
+
+        var key2 = lu2 + "|" + cod2 + "|" + vencStr2;
+        if (!grupos[key2]) {
+          grupos[key2] = {
+            lugar: lu2, codigo: cod2, descripcion: desc2,
+            vencimiento: vencStr2, vencDate: vencDate2, cantidad: 0
+          };
+        }
+        grupos[key2].cantidad += qty2; // signed: + INGRESO/AJUSTE+, − EGRESO/AJUSTE-
+        if (desc2 && !grupos[key2].descripcion) grupos[key2].descripcion = desc2;
+      }
+    }
+
+    // ── Construir items con filtros ───────────────────────────
+    var msPorDia = 86400000;
+    var items = [];
+
+    for (var k in grupos) {
+      var g = grupos[k];
+
+      // Redondear para evitar basura de coma flotante
+      g.cantidad = Math.round(g.cantidad * 100) / 100;
+
+      // Saldo negativo se trata como cero
+      var ctd = g.cantidad < 0 ? 0 : g.cantidad;
+
+      // Filtro: mostrar saldo 0
+      if (!mostrarCero && ctd <= 0) continue;
+
+      // Filtro: lugar
+      if (lugarFiltro && g.lugar !== lugarFiltro) continue;
+
+      // Filtro: búsqueda
+      if (busqueda) {
+        var hay = (g.codigo + " " + g.descripcion).toLowerCase();
+        if (hay.indexOf(busqueda) === -1) continue;
+      }
+
+      // Días al vencimiento + estado
+      var dias = null, estadoVenc = "sinvenc";
+      if (g.vencDate) {
+        var diff = (g.vencDate.getTime() - fechaCorte.getTime()) / msPorDia;
+        dias = Math.ceil(diff);
+        if (dias < 0) estadoVenc = "vencido";
+        else if (dias <= 30) estadoVenc = "porvencer";
+        else estadoVenc = "vigente";
+      }
+
+      // Filtro: estado vencimiento
+      if (filtroVenc === "vigentes"  && estadoVenc !== "vigente")  continue;
+      if (filtroVenc === "porvencer" && estadoVenc !== "porvencer") continue;
+      if (filtroVenc === "vencidos"  && estadoVenc !== "vencido")  continue;
+
+      items.push({
+        codigo: g.codigo,
+        descripcion: g.descripcion || g.codigo,
+        lugar: g.lugar,
+        cantidad: ctd,
+        vencimiento: g.vencimiento || "",
+        dias: dias,
+        estadoVenc: estadoVenc
+      });
+    }
+
+    // Ordenar: lugar ASC, días al venc ASC (FEFO), código ASC
+    items.sort(function(a, b) {
+      if (a.lugar !== b.lugar) return a.lugar.localeCompare(b.lugar);
+      if (a.dias === null && b.dias !== null) return 1;
+      if (a.dias !== null && b.dias === null) return -1;
+      if (a.dias !== null && b.dias !== null && a.dias !== b.dias) return a.dias - b.dias;
+      return a.codigo.localeCompare(b.codigo);
+    });
+
+    return {
+      status: "ok",
+      fechaCorte: fmtDateSH_(fechaCorte),
+      fechaMinima: fechaMinima ? fmtDateSH_(fechaMinima) : "",
+      items: items,
+      total: items.length
+    };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// Parser robusto de fecha — acepta:
+//   "yyyy-mm-dd"      (HTML date input)
+//   "dd-mm-yyyy"      o "dd/mm/yyyy"   (toLocaleString es-CL, formatearFecha)
+//   "dd-mm-yyyy HH:MM:SS" o "dd/mm/yyyy HH:MM:SS"
+//   Date object       (cuando Sheets devuelve Date directo)
+// Si finDelDia=true, ajusta a 23:59:59 del día.
+function parseFechaSH_(s, finDelDia) {
+  if (!s && s !== 0) return null;
+  if (s instanceof Date) {
+    if (isNaN(s.getTime())) return null;
+    if (finDelDia) { var d=new Date(s.getTime()); d.setHours(23,59,59,999); return d; }
+    return s;
+  }
+  var str = String(s).trim();
+  if (!str) return null;
+
+  // ISO yyyy-mm-dd
+  var m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) {
+    var y = parseInt(m[1],10), mo = parseInt(m[2],10)-1, d = parseInt(m[3],10);
+    return new Date(y, mo, d, finDelDia?23:0, finDelDia?59:0, finDelDia?59:0);
+  }
+  // dd-mm-yyyy o dd/mm/yyyy con tiempo opcional
+  m = str.match(/^(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})(?:[\s,]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (m) {
+    var d2 = parseInt(m[1],10), mo2 = parseInt(m[2],10)-1, y2 = parseInt(m[3],10);
+    var hh = finDelDia ? 23 : (m[4] ? parseInt(m[4],10) : 0);
+    var mm = finDelDia ? 59 : (m[5] ? parseInt(m[5],10) : 0);
+    var ss2 = finDelDia ? 59 : (m[6] ? parseInt(m[6],10) : 0);
+    return new Date(y2, mo2, d2, hh, mm, ss2);
+  }
+  return null;
+}
+
+function fmtDateSH_(d) {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "";
+  var dd = String(d.getDate()).padStart(2, "0");
+  var mm = String(d.getMonth()+1).padStart(2, "0");
+  return dd + "-" + mm + "-" + d.getFullYear();
 }
