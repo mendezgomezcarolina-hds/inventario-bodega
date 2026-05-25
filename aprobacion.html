@@ -357,7 +357,7 @@
           '</div>' +
           '<div id="venc-body-' + i + '" style="padding:6px 0 4px 0;' + showBody + '">' +
             '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">' +
-              '<input type="number" min="0" id="cant-input-' + i + '" value="' + cantVal + '" onchange="cantidades[' + i + ']=this.value;validarVenc(' + i + ')" style="width:62px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
+              '<input type="number" min="0" id="cant-input-' + i + '" value="' + cantVal + '" oninput="cantidades[' + i + ']=+this.value;validarVenc(' + i + ')" style="width:62px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
               '<input type="date" id="venc-main-' + i + '" value="' + (vencMain[i]||"") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
               '<button onclick="addVencExtra(' + i + ')" style="font-size:.72rem;padding:4px 8px;border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);background:transparent;cursor:pointer;white-space:nowrap;">+ fecha</button>' +
             '</div>' +
@@ -433,18 +433,20 @@
     else { al.style.display='none'; }
   }
   function buildFechaVenc(i) {
-    var main = document.getElementById('venc-main-'+i);
-    var mainFecha = main ? main.value : (vencMain[i]||'');
+    var mainEl   = document.getElementById('venc-main-'+i);
+    var cantEl   = document.getElementById('cant-input-'+i);
+    var mainFecha = mainEl ? mainEl.value : (vencMain[i]||'');
+    var cantTotal = cantEl ? +(cantEl.value||0) : +(cantidades[i]||0);
     var extras = vencExtras[i]||[];
-    // Sin extras: retorna solo la fecha simple
+    // Sin extras: fecha simple
     if (!extras.length) return mainFecha;
-    // Con extras: construir siempre "qty:fecha|qty:fecha"
+    // Con extras: construir "qty:fecha|qty:fecha"
     var partes = [];
-    var cantMain = +(cantidades[i]||0) - extras.reduce(function(a,r){return a+(+r.qty||0);},0);
+    var sumaExtras = extras.reduce(function(a,r){return a+(+r.qty||0);},0);
+    var cantMain = cantTotal - sumaExtras;
     if (cantMain > 0 && mainFecha) partes.push(cantMain+':'+mainFecha);
-    extras.forEach(function(v){ if(v.qty && v.fecha) partes.push(v.qty+':'+v.fecha); });
-    // Si solo quedó una parte, igual usar formato qty:fecha (con pipe vacío no, sino directo)
-    if (partes.length === 1) return partes[0]; // "qty:fecha" — GS debe parsear esto
+    extras.forEach(function(v){ if(v.qty && v.fecha) partes.push((+v.qty)+':'+v.fecha); });
+    if (!partes.length) return mainFecha; // fallback
     return partes.join('|');
   }
 
