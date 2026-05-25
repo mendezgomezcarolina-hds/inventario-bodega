@@ -253,7 +253,7 @@ function escribirSolicitud(e) {
     const p = e.parameter || {};
     if (!p.item || !p.cantidad) throw new Error("Sin datos de insumo.");
     if (sheet.getLastRow() === 0)
-      sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Supervisor","Bodega Origen"]);
+      sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Bodega Origen"]);
     sheet.appendRow([
       p.idSolicitud  || "",
       p.lugar        || "",
@@ -264,7 +264,6 @@ function escribirSolicitud(e) {
       p.usuarioId    || "",
       new Date().toLocaleString("es-CL"),
       "PENDIENTE",
-      "",
       "",
       p.bodegaOrigen || ""
     ]);
@@ -352,7 +351,7 @@ function actualizarEstado(e) {
         var eCod    = String(ef[2] || "").trim();
         var eDesc   = String(ef[3] || "").trim();
         var eQty    = Math.abs(parseFloat(ef[4]) || 0);
-        var eBodega = String(ef[11] || "").trim(); // col L = Bodega Origen
+        var eBodega = String(ef[10] || "").trim(); // col K = Bodega Origen
         // Fallback: buscar bodega en hoja INSUMOS col F
         if (!eBodega) {
           var shIns = ss.getSheetByName("INSUMOS");
@@ -368,7 +367,31 @@ function actualizarEstado(e) {
           }
         }
         if (eBodega && eCod && eQty > 0) {
-          movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
+          // Parsear múltiples vencimientos: "50:DD-MM-YYYY|50:DD-MM-YYYY" o fecha simple
+          var vencParts = fechaVencAp && fechaVencAp.indexOf("|") > -1
+            ? fechaVencAp.split("|")
+            : [fechaVencAp ? "0:" + fechaVencAp : ""];
+          var escritos = false;
+          for (var vi = 0; vi < vencParts.length; vi++) {
+            var part = vencParts[vi].trim();
+            var colon = part.indexOf(":");
+            var vQty, vFecha;
+            if (colon > -1) {
+              vQty   = parseFloat(part.substring(0, colon)) || eQty;
+              vFecha = part.substring(colon + 1).trim();
+            } else {
+              vQty   = eQty;
+              vFecha = part;
+            }
+            if (vQty > 0) {
+              movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -vQty, vFecha, supervisor, ""]);
+              escritos = true;
+            }
+          }
+          // Si no se escribió nada (sin vencimientos), escribir una fila con cantidad total
+          if (!escritos) {
+            movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
+          }
         }
       }
       try { actualizarStockLugar(eBodega || ""); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
