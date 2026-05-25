@@ -253,19 +253,20 @@ function escribirSolicitud(e) {
     const p = e.parameter || {};
     if (!p.item || !p.cantidad) throw new Error("Sin datos de insumo.");
     if (sheet.getLastRow() === 0)
-      sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Supervisor"]);
+      sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Supervisor","Bodega Origen"]);
     sheet.appendRow([
-      p.idSolicitud || "",
-      p.lugar       || "",
-      p.codigo      || p.item || "",
-      p.descripcion || p.item || "",
-      p.cantidad    || "",
-      p.usuario     || "Anónimo",
-      p.usuarioId   || "",
+      p.idSolicitud  || "",
+      p.lugar        || "",
+      p.codigo       || p.item || "",
+      p.descripcion  || p.item || "",
+      p.cantidad     || "",
+      p.usuario      || "Anónimo",
+      p.usuarioId    || "",
       new Date().toLocaleString("es-CL"),
       "PENDIENTE",
       "",
-      ""
+      "",
+      p.bodegaOrigen || ""
     ]);
     return { status: "ok" };
   } catch(err) {
@@ -350,7 +351,7 @@ function actualizarEstado(e) {
         var eCod    = String(ef[2] || "").trim();
         var eDesc   = String(ef[3] || "").trim();
         var eQty    = Math.abs(parseFloat(ef[4]) || 0);
-        var eBodega = String(ef[10] || "").trim();
+        var eBodega = String(ef[11] || "").trim(); // col L = Bodega Origen
         // Fallback: buscar bodega en hoja INSUMOS col F
         if (!eBodega) {
           var shIns = ss.getSheetByName("INSUMOS");
