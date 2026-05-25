@@ -433,20 +433,18 @@
     else { al.style.display='none'; }
   }
   function buildFechaVenc(i) {
-    var mainEl   = document.getElementById('venc-main-'+i);
-    var cantEl   = document.getElementById('cant-input-'+i);
+    var mainEl    = document.getElementById('venc-main-'+i);
+    var cantEl    = document.getElementById('cant-input-'+i);
     var mainFecha = mainEl ? mainEl.value : (vencMain[i]||'');
-    var cantTotal = cantEl ? +(cantEl.value||0) : +(cantidades[i]||0);
-    var extras = vencExtras[i]||[];
+    var cantMain  = cantEl ? +(cantEl.value||0) : +(cantidades[i]||0);
+    var extras    = vencExtras[i]||[];
     // Sin extras: fecha simple
     if (!extras.length) return mainFecha;
-    // Con extras: construir "qty:fecha|qty:fecha"
+    // Con extras: el campo principal es qty del lote principal (no el total)
     var partes = [];
-    var sumaExtras = extras.reduce(function(a,r){return a+(+r.qty||0);},0);
-    var cantMain = cantTotal - sumaExtras;
     if (cantMain > 0 && mainFecha) partes.push(cantMain+':'+mainFecha);
-    extras.forEach(function(v){ if(v.qty && v.fecha) partes.push((+v.qty)+':'+v.fecha); });
-    if (!partes.length) return mainFecha; // fallback
+    extras.forEach(function(v){ if(+v.qty > 0 && v.fecha) partes.push((+v.qty)+':'+v.fecha); });
+    if (!partes.length) return mainFecha;
     return partes.join('|');
   }
 
@@ -505,9 +503,11 @@
     var f    = item.f;
     var dec  = item.dec;
 
-    var cantAprobada = (cantidades[item.i] !== undefined && cantidades[item.i] !== "")
-      ? cantidades[item.i]
-      : (f.cantidad || "");
+    var _cantMain   = +(cantidades[item.i] !== undefined ? cantidades[item.i] : (f.cantidad||0));
+    var _sumExtras  = (vencExtras[item.i]||[]).reduce(function(a,r){return a+(+r.qty||0);},0);
+    var cantAprobada = (vencExtras[item.i]||[]).length > 0
+      ? (_cantMain + _sumExtras) || (f.cantidad||"")
+      : (_cantMain || f.cantidad||"");
     var fechaVenc = buildFechaVenc(item.i);
     var url = SCRIPT_URL +
       "?accion=actualizarEstado" +
