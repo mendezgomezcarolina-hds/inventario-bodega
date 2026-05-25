@@ -301,7 +301,7 @@
       "&descripcion="  + encodeURIComponent(it.item) +
       "&estado="       + encodeURIComponent(it.est) +
       "&cantRecibida=" + encodeURIComponent(it.cant) +
-      ;
+      "";
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") _gErr++;
       _gIdx++;
