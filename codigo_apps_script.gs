@@ -316,6 +316,7 @@ function actualizarEstado(e) {
     const idBuscado   = p.idSolicitud || "";
     const itemBuscado = p.item        || "";
     const lugarBusc   = p.lugar       || "";
+    const fechaVencAp = p.fechaVenc   || "";
     if (!nuevoEstado || !idBuscado) throw new Error("Faltan parámetros.");
     const datos = sheet.getDataRange().getValues();
     let actualizados = 0;
@@ -367,7 +368,7 @@ function actualizarEstado(e) {
           }
         }
         if (eBodega && eCod && eQty > 0) {
-          movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, "", supervisor, ""]);
+          movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
         }
       }
       try { actualizarStockLugar(eBodega || ""); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
