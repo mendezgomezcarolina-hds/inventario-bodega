@@ -188,7 +188,7 @@
         '<div class="item-bot">' +
           '<div class="cg"><span class="cl">Solicitado</span><span class="cn">' + (it.cantidad||'—') + '</span></div>' +
           '<div class="cg"><span class="cl">Recibido</span><input class="ci" type="number" min="0" value="' + (it.cantidad||0) + '" id="rec-' + it.fila + '"/></div>' +
-          '<div class="cg"><span class="cl">Vencimiento</span><input class="cd" type="date" id="vrl-' + it.fila + '"/></div>' +
+          
           '<div class="bts">' +
             '<button class="bap" id="ap-' + it.fila + '" onclick="togDecRL(' + it.fila + ',\'APROBADO\')">&#10003;</button>' +
             '<button class="bre" id="re-' + it.fila + '" onclick="togDecRL(' + it.fila + ',\'RECHAZADO\')">&#10007;</button>' +
@@ -267,7 +267,6 @@
       var dec = decisiones[parseInt(items[i].fila)];
       if (dec && dec.est) {
         var recInput  = document.getElementById("rec-" + items[i].fila);
-        var vencInput = document.getElementById("vrl-" + items[i].fila);
         _gItems.push({
           fila:  items[i].fila,
           id:    items[i].id,
@@ -276,7 +275,6 @@
           item:   items[i].item,
           est:    dec.est,
           cant:   recInput  ? recInput.value  : items[i].cantidad,
-          venc:   vencInput ? vencInput.value : ""
         });
       }
     }
@@ -303,7 +301,7 @@
       "&descripcion="  + encodeURIComponent(it.item) +
       "&estado="       + encodeURIComponent(it.est) +
       "&cantRecibida=" + encodeURIComponent(it.cant) +
-      "&fechaVenc="    + encodeURIComponent(it.venc || "");
+      ;
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") _gErr++;
       _gIdx++;

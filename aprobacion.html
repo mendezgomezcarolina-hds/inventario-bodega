@@ -194,6 +194,8 @@
   var solicitudActual  = [];
   var decisiones       = {}; // { idx: 'APROBADO' | 'RECHAZADO' | null }
   var cantidades       = {}; // { idx: cantidad aprobada }
+  var vencMain         = {}; // { idx: fecha principal }
+  var vencExtras       = {}; // { idx: [{qty, fecha}] }
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
@@ -308,9 +310,12 @@
     solicitudActual = grupos[id] || [];
     decisiones = {};
     cantidades  = {};
+    vencMain    = {};
+    vencExtras  = {};
     for (var i = 0; i < solicitudActual.length; i++) {
       var est = (solicitudActual[i].estado || "").toUpperCase().trim();
-      decisiones[i] = (est === "APROBADO" || est === "RECHAZADO") ? est : null;
+      decisiones[i]  = (est === "APROBADO" || est === "RECHAZADO") ? est : null;
+      vencExtras[i]  = [];
     }
     document.getElementById("vistaLista").style.display   = "none";
     document.getElementById("vistaDetalle").style.display = "block";
@@ -332,30 +337,37 @@
       var f   = solicitudActual[i];
       var dec = decisiones[i];
       var est = (f.estado || "").toUpperCase().trim();
-      var resuelto = est === "APROBADO" || est === "RECHAZADO";
 
       var apCls = dec === "APROBADO"  ? "btn-ap activo" : "btn-ap" + (dec === "RECHAZADO" ? " inactivo" : "");
       var reCls = dec === "RECHAZADO" ? "btn-re activo" : "btn-re" + (dec === "APROBADO"  ? " inactivo" : "");
-
       var cantVal  = cantidades[i] !== undefined ? cantidades[i] : (f.cantidad || "");
-      var showCant = dec === "APROBADO" ? "" : "display:none;";
+      var showBody = dec === "APROBADO" ? "" : "display:none;";
+
       html +=
-        '<div class="item-fila" id="ifila-' + i + '">' +
-          '<div style="flex:1">' +
-            '<div class="item-nom">' + (f.item || "—") + '</div>' +
-            '<div class="item-sub">Cód: ' + (f.codigo || "—") + ' · Solicitado: ' + (f.cantidad || "—") + '</div>' +
-          '</div>' +
-          '<div class="item-btns" style="align-items:center">' +
-            '<div class="cant-apro" id="cant-wrap-' + i + '" style="' + showCant + '">' +
-              '<label>Cant. aprobada</label>' +
-              '<input type="number" min="0" id="cant-input-' + i + '" value="' + cantVal + '" onchange="cantidades[' + i + ']=this.value" />' +
+        '<div class="item-fila" id="ifila-' + i + '" style="flex-direction:column;align-items:stretch;">' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<div style="flex:1">' +
+              '<div class="item-nom">' + (f.item || "—") + '</div>' +
+              '<div class="item-sub">Cód: ' + (f.codigo || "—") + ' · Solicitado: ' + (f.cantidad || "—") + '</div>' +
             '</div>' +
-            '<button class="' + apCls + '" onclick="toggleDec(' + i + ',\'APROBADO\')" title="Aprobar">✓</button>' +
-            '<button class="' + reCls + '" onclick="toggleDec(' + i + ',\'RECHAZADO\')" title="Rechazar">✕</button>' +
+            '<div class="item-btns" style="align-items:center">' +
+              '<button class="' + apCls + '" onclick="toggleDec(' + i + ',\'APROBADO\')" title="Aprobar">✓</button>' +
+              '<button class="' + reCls + '" onclick="toggleDec(' + i + ',\'RECHAZADO\')" title="Rechazar">✕</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="venc-body-' + i + '" style="padding:6px 0 4px 0;' + showBody + '">' +
+            '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">' +
+              '<input type="number" min="0" id="cant-input-' + i + '" value="' + cantVal + '" onchange="cantidades[' + i + ']=this.value;validarVenc(' + i + ')" style="width:62px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
+              '<input type="date" id="venc-main-' + i + '" value="' + (vencMain[i]||"") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
+              '<button onclick="addVencExtra(' + i + ')" style="font-size:.72rem;padding:4px 8px;border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);background:transparent;cursor:pointer;white-space:nowrap;">+ fecha</button>' +
+            '</div>' +
+            '<div id="venc-extras-' + i + '"></div>' +
+            '<div id="venc-al-' + i + '" style="font-size:.72rem;color:var(--er);display:none;margin-top:2px;"></div>' +
           '</div>' +
         '</div>';
     }
     document.getElementById("detItems").innerHTML = html;
+    for (var ii = 0; ii < solicitudActual.length; ii++) { renderVencExtras(ii); }
     actualizarProgreso();
   }
 
@@ -387,6 +399,53 @@
   var _envIdx = 0;
   var _envItems = [];
   var _envErr = 0;
+
+  function addVencExtra(i) {
+    if (!vencExtras[i]) vencExtras[i] = [];
+    vencExtras[i].push({qty:'',fecha:''});
+    renderVencExtras(i);
+  }
+  function delVencExtra(i,j) {
+    vencExtras[i].splice(j,1);
+    renderVencExtras(i);
+    validarVenc(i);
+  }
+  function renderVencExtras(i) {
+    var el = document.getElementById('venc-extras-'+i);
+    if (!el) return;
+    var h = '';
+    (vencExtras[i]||[]).forEach(function(v,j){
+      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">';
+      h += '<input type="number" placeholder="Cant." min="1" value="'+(v.qty||'')+'" oninput="vencExtras['+i+']['+j+'].qty=+this.value;validarVenc('+i+')" style="width:58px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+      h += '<input type="date" value="'+(v.fecha||'')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+      h += '<button onclick="delVencExtra('+i+','+j+')" style="font-size:.72rem;padding:3px 6px;border:1.5px solid var(--er);border-radius:6px;color:var(--er);background:transparent;cursor:pointer;">✕</button>';
+      h += '</div>';
+    });
+    el.innerHTML = h;
+  }
+  function validarVenc(i) {
+    var tot = +(cantidades[i]||0);
+    var rows = vencExtras[i]||[];
+    var al = document.getElementById('venc-al-'+i);
+    if (!al||!rows.length){if(al)al.style.display='none';return;}
+    var suma = rows.reduce(function(a,r){return a+(+r.qty||0);},0);
+    if (suma !== tot) { al.style.display='block'; al.textContent='Suma '+suma+' ≠ '+tot; }
+    else { al.style.display='none'; }
+  }
+  function buildFechaVenc(i) {
+    // Construye string de fechas: "DD-MM-YYYY" o "50:DD-MM-YYYY|50:DD-MM-YYYY" si hay múltiples
+    var main = document.getElementById('venc-main-'+i);
+    var mainFecha = main ? main.value : (vencMain[i]||'');
+    var extras = vencExtras[i]||[];
+    if (!extras.length) return mainFecha;
+    var partes = [];
+    if (mainFecha) {
+      var cantMain = +(cantidades[i]||0) - extras.reduce(function(a,r){return a+(+r.qty||0);},0);
+      if (cantMain>0) partes.push(cantMain+':'+mainFecha);
+    }
+    extras.forEach(function(v){if(v.qty&&v.fecha)partes.push(v.qty+':'+v.fecha);});
+    return partes.join('|');
+  }
 
   function guardarDecisiones() {
     var pendientes = [];
@@ -446,13 +505,15 @@
     var cantAprobada = (cantidades[item.i] !== undefined && cantidades[item.i] !== "")
       ? cantidades[item.i]
       : (f.cantidad || "");
+    var fechaVenc = buildFechaVenc(item.i);
     var url = SCRIPT_URL +
       "?accion=actualizarEstado" +
       "&idSolicitud="   + encodeURIComponent(f.id || "") +
       "&item="          + encodeURIComponent(f.item || "") +
       "&lugar="         + encodeURIComponent(f.lugar || "") +
       "&estado="        + encodeURIComponent(dec) +
-      "&cantAprobada="  + encodeURIComponent(cantAprobada);
+      "&cantAprobada="  + encodeURIComponent(cantAprobada) +
+      "&fechaVenc="     + encodeURIComponent(fechaVenc);
 
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") _envErr++;
