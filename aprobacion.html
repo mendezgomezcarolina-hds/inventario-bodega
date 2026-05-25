@@ -433,17 +433,18 @@
     else { al.style.display='none'; }
   }
   function buildFechaVenc(i) {
-    // Construye string de fechas: "DD-MM-YYYY" o "50:DD-MM-YYYY|50:DD-MM-YYYY" si hay múltiples
     var main = document.getElementById('venc-main-'+i);
     var mainFecha = main ? main.value : (vencMain[i]||'');
     var extras = vencExtras[i]||[];
+    // Sin extras: retorna solo la fecha simple
     if (!extras.length) return mainFecha;
+    // Con extras: construir siempre "qty:fecha|qty:fecha"
     var partes = [];
-    if (mainFecha) {
-      var cantMain = +(cantidades[i]||0) - extras.reduce(function(a,r){return a+(+r.qty||0);},0);
-      if (cantMain>0) partes.push(cantMain+':'+mainFecha);
-    }
-    extras.forEach(function(v){if(v.qty&&v.fecha)partes.push(v.qty+':'+v.fecha);});
+    var cantMain = +(cantidades[i]||0) - extras.reduce(function(a,r){return a+(+r.qty||0);},0);
+    if (cantMain > 0 && mainFecha) partes.push(cantMain+':'+mainFecha);
+    extras.forEach(function(v){ if(v.qty && v.fecha) partes.push(v.qty+':'+v.fecha); });
+    // Si solo quedó una parte, igual usar formato qty:fecha (con pipe vacío no, sino directo)
+    if (partes.length === 1) return partes[0]; // "qty:fecha" — GS debe parsear esto
     return partes.join('|');
   }
 

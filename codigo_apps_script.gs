@@ -367,28 +367,40 @@ function actualizarEstado(e) {
           }
         }
         if (eBodega && eCod && eQty > 0) {
-          // Parsear múltiples vencimientos: "50:DD-MM-YYYY|50:DD-MM-YYYY" o fecha simple
-          var vencParts = fechaVencAp && fechaVencAp.indexOf("|") > -1
-            ? fechaVencAp.split("|")
-            : [fechaVencAp ? "0:" + fechaVencAp : ""];
+          // Parsear vencimientos:
+          // "YYYY-MM-DD"          → fecha simple, usar eQty completo
+          // "qty:YYYY-MM-DD"      → un lote con qty específico
+          // "qty:fecha|qty:fecha" → múltiples lotes
           var escritos = false;
-          for (var vi = 0; vi < vencParts.length; vi++) {
-            var part = vencParts[vi].trim();
-            var colon = part.indexOf(":");
-            var vQty, vFecha;
-            if (colon > -1) {
-              vQty   = parseFloat(part.substring(0, colon)) || eQty;
-              vFecha = part.substring(colon + 1).trim();
-            } else {
-              vQty   = eQty;
-              vFecha = part;
+          if (!fechaVencAp) {
+            // Sin vencimiento
+            movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, "", supervisor, ""]);
+            escritos = true;
+          } else if (fechaVencAp.indexOf("|") > -1 || fechaVencAp.indexOf(":") > -1) {
+            // Formato múltiple o qty:fecha
+            var vencParts = fechaVencAp.indexOf("|") > -1 ? fechaVencAp.split("|") : [fechaVencAp];
+            for (var vi = 0; vi < vencParts.length; vi++) {
+              var part = vencParts[vi].trim();
+              if (!part) continue;
+              var colon = part.indexOf(":");
+              var vQty, vFecha;
+              if (colon > -1) {
+                vQty   = parseFloat(part.substring(0, colon)) || 0;
+                vFecha = part.substring(colon + 1).trim();
+              } else {
+                vQty   = eQty;
+                vFecha = part;
+              }
+              if (vQty > 0) {
+                movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -vQty, vFecha, supervisor, ""]);
+                escritos = true;
+              }
             }
-            if (vQty > 0) {
-              movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -vQty, vFecha, supervisor, ""]);
-              escritos = true;
-            }
+          } else {
+            // Fecha simple
+            movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
+            escritos = true;
           }
-          // Si no se escribió nada (sin vencimientos), escribir una fila con cantidad total
           if (!escritos) {
             movSheet.appendRow([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
           }
