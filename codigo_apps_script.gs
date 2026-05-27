@@ -731,13 +731,14 @@ function registrarEgreso(e) {
     var usuario = String(p.usuario     || "").trim();
     var usuId   = String(p.usuarioId   || "").trim();
     var nSol    = String(p.nSol        || "").trim();
+    var fechaVenc = String(p.fechaVenc || "").trim();
     if (!lugar || !cod || !qty) return { status: "error", mensaje: "Faltan datos." };
     var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
     if (movSheet.getLastRow() === 0)
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
     movSheet.appendRow([
-      new Date().toLocaleString("es-CL"), "EGRESO", nSol, "", lugar, cod, desc, -Math.abs(qty), "", usuario, usuId
+      new Date().toLocaleString("es-CL"), "EGRESO", nSol, "", lugar, cod, desc, -Math.abs(qty), fechaVenc, usuario, usuId
     ]);
     try { actualizarStockLugar(lugar); } catch(e2) { Logger.log("Stock no actualizado: " + e2); }
     return { status: "ok" };
