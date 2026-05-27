@@ -1281,10 +1281,15 @@ var LUGARES_STOCK = [
 function actualizarStockLugar(nombreLugar) {
   var ss       = SpreadsheetApp.getActiveSpreadsheet();
   var lugarUP  = nombreLugar.toUpperCase();
-  var shLugar  = ss.getSheetByName(nombreLugar);
+  
+  // Para bodegas, el catálogo está en INSUMOS, no en una hoja "BODEGA..."
+  var BODEGAS = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+  var esBodega = BODEGAS.indexOf(nombreLugar) > -1;
+  
+  var shLugar  = esBodega ? ss.getSheetByName("INSUMOS") : ss.getSheetByName(nombreLugar);
   var shInv    = ss.getSheetByName("INVENTARIO");
   var shMov    = ss.getSheetByName("MOVIMIENTOS");
-  var stockNom = "STOCK_" + lugarUP;
+  var stockNom = "STOCK_" + lugarUP.replace(/\s+/g, "_");
   var shStock  = ss.getSheetByName(stockNom);
 
   // Crear hoja STOCK si no existe
