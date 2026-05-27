@@ -108,8 +108,7 @@
     .lote-wrap{margin-bottom:80px;}
 
     /* Barra inferior fija */
-    .barra-guardar{position:fixed;bottom:0;left:0;right:0;background:var(--s);border-top:1px solid var(--border);padding:12px 16px;z-index:50;display:none;}
-    .barra-guardar.show{display:block;}
+    .barra-guardar{position:fixed;bottom:0;left:0;right:0;background:var(--s);border-top:1px solid var(--border);padding:12px 16px;z-index:50;display:block;}
     .barra-inner{max-width:520px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;}
     .barra-resumen{font-size:.78rem;color:var(--muted);}
     .barra-resumen strong{color:var(--text);}
@@ -150,22 +149,16 @@
     <div class="stat st-in"><div class="stat-n" id="statSob">—</div><div class="stat-l">Sobrestock</div></div>
   </div>
 
-  <!-- Selector de modo -->
-  <div class="modo-bar">
-    <button class="modo-btn on" id="btnModoInd" onclick="setModo('individual',this)"><i class="ti ti-list-details"></i> Individual</button>
-    <button class="modo-btn" id="btnModoLote" onclick="setModo('lote',this)"><i class="ti ti-table"></i> Registro en lote</button>
-  </div>
-
+  <!-- Filtros (solo modo lote) -->
   <div class="filtros">
-    <div class="ftag on" onclick="setFiltro('todos',this)">Todos</div>
-    <div class="ftag" onclick="setFiltro('ok',this)">OK</div>
-    <div class="ftag" onclick="setFiltro('warn',this)">Stock bajo</div>
-    <div class="ftag" onclick="setFiltro('critical',this)">Crítico</div>
-    <div class="ftag" onclick="setFiltro('sobre',this)">Sobrestock</div>
+    <div class="ftag on" id="fTodos" onclick="setFiltro('todos',this)">Todos</div>
+    <div class="ftag" id="fOk" onclick="setFiltro('ok',this)">OK</div>
+    <div class="ftag" id="fBajo" onclick="setFiltro('bajo',this)">Stock bajo</div>
+    <div class="ftag" id="fCritico" onclick="setFiltro('critical',this)">Crítico</div>
+    <div class="ftag" id="fSobre" onclick="setFiltro('sobre',this)">Sobrestock</div>
   </div>
 
-  <!-- Modo individual -->
-  <!-- Leyenda semáforo por días (solo bodegas) -->
+  <!-- Leyenda de niveles (para BODEGA) -->
   <div id="leyendaDias" style="display:none;background:#fff;border:1px solid #d1dce8;border-radius:10px;padding:11px 14px;margin-bottom:10px;">
     <div class="ley-title" style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:7px;">Niveles de stock en unidades</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;">
@@ -176,10 +169,9 @@
       <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#f1f5f9;color:#94a3b8;"><div style="font-size:1rem;margin-bottom:2px;">⚪</div><div style="font-size:.68rem;font-weight:700;">Sin datos</div><div style="font-size:.62rem;">Sin umbral</div></div>
     </div>
   </div>
-  <div id="listaStock"></div>
 
-  <!-- Modo lote -->
-  <div class="lote-wrap" id="modoLote" style="display:none;">
+  <!-- Modo LOTE (único modo) -->
+  <div class="lote-wrap" id="modoLote">
     <div class="lote-header">
       <span>Insumo</span>
       <span>Usado hoy</span>
@@ -284,8 +276,12 @@
     renderLote();
   }
 
+  function normalizarTexto(str) {
+    return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
   function filtrarPorBusqueda() {
-    busquedaActual = document.getElementById("buscarInsumo").value.toLowerCase();
+    busquedaActual = document.getElementById("buscarInsumo").value;
     document.getElementById("btnLimpiar").classList.toggle("show", busquedaActual.length > 0);
     renderLote();
   }
@@ -299,19 +295,16 @@
 
   function cargarStock() {
     var lugar = document.getElementById("selLugar").value;
-    if (!lugar) { document.getElementById("listaStock").innerHTML = ""; resetStats(); return; }
-    document.getElementById("listaStock").innerHTML = '<div class="empty"><div class="spinner"></div>Calculando stock...</div>';
+    if (!lugar) { resetStats(); return; }
     resetStats();
     jsonp(SCRIPT_URL + "?accion=stockLugar&lugar=" + encodeURIComponent(lugar), function(data, err) {
       if (!data || err || data.status !== "ok") {
-        document.getElementById("listaStock").innerHTML = '<div class="empty">Error al cargar stock.</div>';
+        toast("Error al cargar stock.", "warn");
         return;
       }
       stockData = data.items || [];
-    // Mostrar leyenda solo si es bodega (semáforo por días)
-    var ley = document.getElementById("leyendaDias");
-    if (ley) ley.style.display = "";
-      renderStock();
+      var ley = document.getElementById("leyendaDias");
+      if (ley) ley.style.display = lugar === "BODEGA INSUMOS CLINICOS" ? "block" : "none";
       renderLote();
     });
   }
@@ -321,13 +314,6 @@
     document.getElementById("statWa").textContent = "—";
     document.getElementById("statEr").textContent = "—";
     document.getElementById("statSob").textContent = "—";
-  }
-
-  function setFiltro(f, el) {
-    filtroActual = f;
-    document.querySelectorAll(".ftag").forEach(function(t) { t.classList.remove("on"); });
-    el.classList.add("on");
-    renderStock();
   }
 
   function getNivel(it) {
@@ -343,86 +329,6 @@
     return it.stock <= 0 ? "critical" : it.stock <= (it.minimo || 5) ? "warn" : "ok";
   }
 
-  function renderStock() {
-    var ok = 0, wa = 0, er = 0, sob = 0;
-    var filtrado = stockData.filter(function(it) {
-      var nivel = getNivel(it);
-      if (nivel === "ok" || nivel === "sd") ok++;
-      else if (nivel === "sobre") sob++;
-      else if (nivel === "warn") wa++;
-      else if (nivel === "critical") er++;
-      return filtroActual === "todos"
-        || nivel === filtroActual
-        || (filtroActual === "ok" && (nivel === "ok" || nivel === "sd"));
-    });
-    document.getElementById("statOk").textContent = ok;
-    document.getElementById("statWa").textContent = wa;
-    document.getElementById("statEr").textContent = er;
-    document.getElementById("statSob").textContent = sob;
-
-    if (!filtrado.length) {
-      document.getElementById("listaStock").innerHTML = '<div class="empty">Sin ítems para este filtro.</div>';
-      return;
-    }
-    var html = "";
-    for (var i = 0; i < filtrado.length; i++) {
-      var it = filtrado[i];
-      var nivel = getNivel(it);
-      // Punto de color semáforo
-      var dotColor = nivel === "ok"       ? "#16a34a"
-                   : nivel === "warn"     ? "#d97706"
-                   : nivel === "critical" ? "#dc2626"
-                   : nivel === "sobre"    ? "#7c3aed"
-                   : "#e2e8f0"; // SD
-      var semDot = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-top:3px;"></span>';
-      var badgeCls = nivel === "ok" || nivel === "sobre" ? "sb-ok" : nivel === "warn" ? "sb-wa" : nivel === "critical" ? "sb-er" : "sb-sd";
-      var btnDis   = it.stock <= 0 ? ' disabled' : '';
-      html += '<div class="item-card ' + (nivel !== "ok" && nivel !== "sobre" ? nivel : "") + '">' +
-        '<div style="display:flex;gap:8px;align-items:flex-start;">' +
-          semDot +
-          '<div>' +
-            '<div class="item-nom">' + it.descripcion + '</div>' +
-            '<div class="item-cod">' + it.codigo + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="item-right">' +
-          '<span class="sbadge ' + badgeCls + '">' + it.stock + ' un.</span>' +
-          '<button class="btn-uso"' + btnDis + ' onclick="abrirModal(' + i + ')">' +
-            (it.stock <= 0 ? 'Sin stock' : 'Registrar uso') +
-          '</button>' +
-        '</div>' +
-      '</div>';
-    }
-    document.getElementById("listaStock").innerHTML = html;
-    // Store filtered reference
-    window._filtrado = filtrado;
-  }
-
-  // ── Modal egreso ──────────────────────────────────────────
-  function abrirModal(idx) {
-    var it = window._filtrado[idx];
-    itemSelCod   = it.codigo;
-    itemSelNom   = it.descripcion;
-    itemSelStock = it.stock;
-    document.getElementById("modalNom").textContent   = it.descripcion;
-    document.getElementById("modalStock").textContent = "Stock actual: " + it.stock + " unidades";
-    document.getElementById("modalCant").value = "";
-    document.getElementById("modalBg").classList.add("show");
-    setTimeout(function() { document.getElementById("modalCant").focus(); }, 200);
-  }
-
-  function cerrarModal() { document.getElementById("modalBg").classList.remove("show"); }
-
-  // ── Modo selector ──────────────────────────────────────────
-  function setModo(modo, btn) {
-    modoActual = modo;
-    document.querySelectorAll(".modo-btn").forEach(function(b){ b.classList.remove("on"); });
-    btn.classList.add("on");
-    document.getElementById("listaStock").style.display  = modo === "individual" ? "block" : "none";
-    document.getElementById("modoLote").style.display    = modo === "lote"       ? "block" : "none";
-    document.getElementById("barraGuardar").classList.toggle("show", modo === "lote");
-  }
-
   // ── Render lista lote ──────────────────────────────────────
   function renderLote() {
     var lugar = document.getElementById("selLugar").value;
@@ -432,6 +338,7 @@
     
     // Filtrar por búsqueda + estado
     var ok = 0, wa = 0, er = 0, sob = 0;
+    var busquedaNorm = normalizarTexto(busquedaActual);
     var filtrado = stockData.filter(function(it) {
       var nivel = getNivel(it);
       if (nivel === "ok" || nivel === "sd") ok++;
@@ -440,10 +347,10 @@
       else if (nivel === "critical") er++;
       
       var cumpleBusqueda = !busquedaActual || 
-        it.codigo.toLowerCase().includes(busquedaActual) || 
-        it.descripcion.toLowerCase().includes(busquedaActual);
+        normalizarTexto(it.codigo).includes(busquedaNorm) || 
+        normalizarTexto(it.descripcion).includes(busquedaNorm);
       
-      var cumpleFiltro = filtroActual === "todos" || nivel === filtroActual;
+      var cumpleFiltro = filtroActual === "todos" || nivel === filtroActual || (filtroActual === "ok" && (nivel === "ok" || nivel === "sd")) || (filtroActual === "bajo" && nivel === "warn");
       return cumpleBusqueda && cumpleFiltro;
     });
     
@@ -477,7 +384,7 @@
           '</div>';
       
       if (esBodega) {
-        html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" style="width:70px;padding:5px 3px;border:1.5px solid var(--border);border-radius:6px;font-size:.7rem;outline:none;background:#f8fafc;border-color:#d97706;" /></div>';
+        html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" style="width:100px;padding:7px 5px;border:1.5px solid var(--border);border-radius:6px;font-size:.8rem;outline:none;background:#f8fafc;border-color:#d97706;" /></div>';
       }
       
       html += '</div>';
@@ -564,31 +471,6 @@
       });
     }
     enviarSiguiente(0);
-  }
-
-  function confirmarEgreso() {
-    var cant = parseInt(document.getElementById("modalCant").value || "0");
-    var lugar = document.getElementById("selLugar").value;
-    if (!cant || cant < 1) { toast("Ingresa una cantidad válida.", "warn"); return; }
-    if (cant > itemSelStock) { toast("Cantidad supera el stock disponible.", "warn"); return; }
-    cerrarModal();
-    toast("Registrando egreso...", "");
-    var nSol = "USO-" + new Date().toISOString().replace(/[-T:.Z]/g,"").slice(0,14);
-    var url = SCRIPT_URL + "?accion=registrarEgreso" +
-      "&lugar="       + encodeURIComponent(lugar) +
-      "&codigo="      + encodeURIComponent(itemSelCod) +
-      "&descripcion=" + encodeURIComponent(itemSelNom) +
-      "&cantidad="    + encodeURIComponent(cant) +
-      "&usuario="     + encodeURIComponent(usuarioNombre) +
-      "&usuarioId="   + encodeURIComponent(usuarioId) +
-      "&nSol="        + encodeURIComponent(nSol);
-    jsonp(url, function(data, err) {
-      if (!data || err || data.status !== "ok") {
-        toast("Error al registrar. Intenta nuevamente.", "er"); return;
-      }
-      toast("✓ Egreso registrado correctamente.", "ok");
-      cargarStock();
-    });
   }
 </script>
 </body>
