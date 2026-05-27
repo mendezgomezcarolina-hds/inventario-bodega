@@ -367,6 +367,29 @@
     itemSelNom   = it.descripcion;
     itemSelStock = it.stock;
     document.getElementById("modalNom").textContent   = it.descripcion;
+  var busquedaActual = "";
+  var filtroActual = "todos";
+
+  function setFiltro(f, el) {
+    filtroActual = f;
+    document.querySelectorAll(".ftag").forEach(function(t) { t.classList.remove("on"); });
+    el.classList.add("on");
+    renderLote();
+  }
+
+  function filtrarPorBusqueda() {
+    busquedaActual = document.getElementById("buscarInsumo").value.toLowerCase();
+    document.getElementById("btnLimpiar").classList.toggle("show", busquedaActual.length > 0);
+    renderLote();
+  }
+
+  function limpiarBusqueda() {
+    document.getElementById("buscarInsumo").value = "";
+    busquedaActual = "";
+    document.getElementById("btnLimpiar").classList.remove("show");
+    renderLote();
+  }
+
     document.getElementById("modalStock").textContent = "Stock actual: " + it.stock + " unidades";
     document.getElementById("modalCant").value = "";
     document.getElementById("modalBg").classList.add("show");
