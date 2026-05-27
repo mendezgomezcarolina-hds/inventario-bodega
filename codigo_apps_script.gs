@@ -607,7 +607,8 @@ function registrarCorreccion(e) {
       usuario, usuId
     ]);
 
-    try { actualizarStockCuraciones(); } catch(e) { Logger.log("Stock no actualizado: " + e); }
+    // IMPORTANTE: actualizar el stock del lugar específico
+    try { actualizarStockLugar(lugar); } catch(e) { Logger.log("Stock no actualizado: " + e); }
     return { status: "ok", diferencia: diferencia, tipo: tipo };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
