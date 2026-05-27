@@ -172,10 +172,9 @@
       <div style="border-radius:8px;padding:7px 5px;text-align:center;background:#f1f5f9;color:#94a3b8;"><div style="font-size:1rem;margin-bottom:2px;">⚪</div><div style="font-size:.68rem;font-weight:700;">Sin datos</div><div style="font-size:.62rem;">Sin umbral</div></div>
     </div>
   </div>
-  <div id="listaStock"></div>
 
   <!-- Modo lote -->
-  <div class="lote-wrap" id="modoLote" style="display:none;">
+  <div class="lote-wrap" id="modoLote">
     <div class="lote-header">
       <span>Insumo</span>
       <span>Usado hoy</span>
@@ -273,7 +272,6 @@
     // Mostrar leyenda solo si es bodega (semáforo por días)
     var ley = document.getElementById("leyendaDias");
     if (ley) ley.style.display = "";
-      renderStock();
       renderLote();
     });
   }
@@ -290,7 +288,6 @@
     document.querySelectorAll(".ftag").forEach(function(t) { t.classList.remove("on"); });
     el.classList.add("on");
     renderStock();
-  }
 
   function getNivel(it) {
     // Usar estado del script si viene (bodegas) o calcular por unidades (otros)
@@ -305,60 +302,6 @@
     return it.stock <= 0 ? "critical" : it.stock <= (it.minimo || 5) ? "warn" : "ok";
   }
 
-  function renderStock() {
-    var ok = 0, wa = 0, er = 0, sob = 0;
-    var filtrado = stockData.filter(function(it) {
-      var nivel = getNivel(it);
-      if (nivel === "ok" || nivel === "sd") ok++;
-      else if (nivel === "sobre") sob++;
-      else if (nivel === "warn") wa++;
-      else if (nivel === "critical") er++;
-      return filtroActual === "todos"
-        || nivel === filtroActual
-        || (filtroActual === "ok" && (nivel === "ok" || nivel === "sd"));
-    });
-    document.getElementById("statOk").textContent = ok;
-    document.getElementById("statWa").textContent = wa;
-    document.getElementById("statEr").textContent = er;
-    document.getElementById("statSob").textContent = sob;
-
-    if (!filtrado.length) {
-      document.getElementById("listaStock").innerHTML = '<div class="empty">Sin ítems para este filtro.</div>';
-      return;
-    }
-    var html = "";
-    for (var i = 0; i < filtrado.length; i++) {
-      var it = filtrado[i];
-      var nivel = getNivel(it);
-      // Punto de color semáforo
-      var dotColor = nivel === "ok"       ? "#16a34a"
-                   : nivel === "warn"     ? "#d97706"
-                   : nivel === "critical" ? "#dc2626"
-                   : nivel === "sobre"    ? "#7c3aed"
-                   : "#e2e8f0"; // SD
-      var semDot = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-top:3px;"></span>';
-      var badgeCls = nivel === "ok" || nivel === "sobre" ? "sb-ok" : nivel === "warn" ? "sb-wa" : nivel === "critical" ? "sb-er" : "sb-sd";
-      var btnDis   = it.stock <= 0 ? ' disabled' : '';
-      html += '<div class="item-card ' + (nivel !== "ok" && nivel !== "sobre" ? nivel : "") + '">' +
-        '<div style="display:flex;gap:8px;align-items:flex-start;">' +
-          semDot +
-          '<div>' +
-            '<div class="item-nom">' + it.descripcion + '</div>' +
-            '<div class="item-cod">' + it.codigo + '</div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="item-right">' +
-          '<span class="sbadge ' + badgeCls + '">' + it.stock + ' un.</span>' +
-          '<button class="btn-uso"' + btnDis + ' onclick="abrirModal(' + i + ')">' +
-            (it.stock <= 0 ? 'Sin stock' : 'Registrar uso') +
-          '</button>' +
-        '</div>' +
-      '</div>';
-    }
-    document.getElementById("listaStock").innerHTML = html;
-    // Store filtered reference
-    window._filtrado = filtrado;
-  }
 
   // ── Modal egreso ──────────────────────────────────────────
   function abrirModal(idx) {
@@ -399,17 +342,10 @@
   function cerrarModal() { document.getElementById("modalBg").classList.remove("show"); }
 
   // ── Modo selector ──────────────────────────────────────────
-  function setModo(modo, btn) {
-    modoActual = modo;
-    document.querySelectorAll(".modo-btn").forEach(function(b){ b.classList.remove("on"); });
-    btn.classList.add("on");
-    document.getElementById("listaStock").style.display  = modo === "individual" ? "block" : "none";
-    document.getElementById("modoLote").style.display    = modo === "lote"       ? "block" : "none";
-    document.getElementById("barraGuardar").classList.toggle("show", modo === "lote");
-  }
 
   // ── Render lista lote ──────────────────────────────────────
   function renderLote() {
+  // setModo eliminado - Ahora solo modo lote
     var lugar = document.getElementById("selLugar").value;
     var esBodega = lugar === "BODEGA INSUMOS CLINICOS";
     var header = document.getElementById("loteHeader");
