@@ -953,11 +953,14 @@ function guardarAccesos(e) {
 }
 
 // ── Test manual ───────────────────────────────────────────────
-function testWrite() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_DATOS)
-    || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  sheet.appendRow(["TEST","TEST","1","","", new Date().toLocaleString("es-CL"),"Test",""]);
-  Logger.log("OK → " + sheet.getName());
+function testActualizarBodega() {
+  try {
+    Logger.log("Iniciando actualización de BODEGA INSUMOS CLINICOS...");
+    actualizarStockLugar("BODEGA INSUMOS CLINICOS");
+    Logger.log("✓ Actualización completada. Revisa la hoja STOCK_BODEGA_INSUMOS_CLINICOS");
+  } catch(err) {
+    Logger.log("✗ Error: " + err.toString());
+  }
 }
 
 // ── Test MOVIMIENTOS (ejecutar directo desde el editor) ───────
