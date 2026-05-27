@@ -410,25 +410,46 @@
 
   // ── Render lista lote ──────────────────────────────────────
   function renderLote() {
-    var lista = document.getElementById("listaLote");
-    if (!lista) return;
-    var filtrado = stockData;
-    if (!filtrado.length) { lista.innerHTML = "<div style='padding:20px;text-align:center;color:var(--muted);font-size:.85rem;'>Sin datos</div>"; return; }
-    loteDatos = filtrado;
-
-    // Actualizar contadores usando getNivel (misma lógica que renderStock)
-    var ok = 0, wa = 0, er = 0, sob = 0;
-    for (var k = 0; k < filtrado.length; k++) {
-      var nk = getNivel(filtrado[k]);
-      if (nk === "ok" || nk === "sd") ok++;
-      else if (nk === "sobre") sob++;
-      else if (nk === "warn") wa++;
-      else if (nk === "critical") er++;
+    var lugar = document.getElementById("selLugar").value;
+    var esBodega = lugar === "BODEGA INSUMOS CLINICOS";
+    var header = document.getElementById("loteHeader");
+    
+    // Actualizar header según lugar
+    if (esBodega) {
+      header.className = "lote-header con-vence";
+      header.innerHTML = '<span>Insumo</span><span>Usado hoy</span><span>Vencimiento</span>';
+    } else {
+      header.className = "lote-header sin-vence";
+      header.innerHTML = '<span>Insumo</span><span>Usado hoy</span>';
     }
+    
+    // Filtrar por búsqueda + estado
+    var ok = 0, wa = 0, er = 0, sob = 0;
+    var filtrado = stockData.filter(function(it) {
+      var nivel = getNivel(it);
+      if (nivel === "ok" || nivel === "sd") ok++;
+      else if (nivel === "sobre") sob++;
+      else if (nivel === "warn") wa++;
+      else if (nivel === "critical") er++;
+      
+      var cumpleBusqueda = !busquedaActual || 
+        it.codigo.toLowerCase().includes(busquedaActual) || 
+        it.descripcion.toLowerCase().includes(busquedaActual);
+      
+      var cumpleFiltro = filtroActual === "todos" || nivel === filtroActual;
+      return cumpleBusqueda && cumpleFiltro;
+    });
+    
     document.getElementById("statOk").textContent = ok;
     document.getElementById("statWa").textContent = wa;
     document.getElementById("statEr").textContent = er;
     document.getElementById("statSob").textContent = sob;
+
+    if (!filtrado.length) { 
+      document.getElementById("listaLote").innerHTML = "<div class='empty'>Sin ítems para este filtro.</div>"; 
+      return; 
+    }
+    loteDatos = filtrado;
 
     var html = "";
     for (var i = 0; i < filtrado.length; i++) {
@@ -437,22 +458,27 @@
       var cls   = nivel === "critical" ? "critical" : nivel === "warn" ? "warn" : "";
       var dotColor = nivel === "ok" || nivel === "sd" || nivel === "sobre" ? "#16a34a" : nivel === "warn" ? "#d97706" : "#dc2626";
       var stCls = nivel === "critical" ? "ls-er" : nivel === "warn" ? "ls-wa" : "ls-ok";
+      
       html +=
-        '<div class="lote-row ' + cls + '" id="lrow-' + i + '">' +
+        '<div class="lote-row ' + cls + ' ' + (esBodega ? "con-vence" : "sin-vence") + '" id="lrow-' + i + '">' +
           '<div>' +
             '<div style="display:flex;align-items:flex-start;gap:7px;">' +
             '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + dotColor + ';flex-shrink:0;margin-top:4px;"></span>' +
-            '<div class="lote-nom">' + it.descripcion + '</div>' +
+            '<div><div class="lote-nom">' + it.descripcion + '</div><div class="lote-info" style="padding-left:0;"><span class="lote-stock ' + stCls + '">' + it.stock + ' un.</span></div></div>' +
           '</div>' +
-          '<div class="lote-info" style="padding-left:17px;"><span class="lote-stock ' + stCls + '">' + it.stock + ' un.</span></div>' +
           '</div>' +
           '<div class="lote-input-wrap">' +
-            '<label>Cantidad</label>' +
-            '<input class="lote-input" type="number" min="0" id="linp-' + i + '" placeholder="0" oninput="actualizarBarraLote()" />' +
-          '</div>' +
-        '</div>';
+            '<label class="lote-input-label">Cant.</label>' +
+            '<input class="lote-cantidad" type="number" min="0" id="linp-' + i + '" placeholder="0" oninput="actualizarBarraLote()" />' +
+          '</div>';
+      
+      if (esBodega) {
+        html += '<div class="lote-input-wrap"><label class="lote-input-label">Fecha</label><input class="lote-fecha con-vence" type="date" id="lfec-' + i + '" /></div>';
+      }
+      
+      html += '</div>';
     }
-    lista.innerHTML = html;
+    document.getElementById("listaLote").innerHTML = html;
   }
 
   function actualizarBarraLote() {
