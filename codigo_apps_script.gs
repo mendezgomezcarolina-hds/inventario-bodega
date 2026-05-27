@@ -679,6 +679,7 @@ function stockLugar(e) {
         if (!mapaInv[mCod]) mapaInv[mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0 };
         if (mTip === "INGRESO")       mapaInv[mCod].ingresos += mQty;
         else if (mTip === "EGRESO")   mapaInv[mCod].egresos  += mQty;
+        else if (mTip === "AJUSTE+" || mTip === "AJUSTE-") mapaInv[mCod].cantidad += mQty; // ajustes se suman directo
 
         // Acumular egresos últimos 90 días para consumo promedio (solo bodegas)
 
