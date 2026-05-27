@@ -498,12 +498,20 @@
   // ── Guardar lote ───────────────────────────────────────────
   function guardarLote() {
     var lugar = document.getElementById("selLugar").value;
+    var esBodega = lugar === "BODEGA INSUMOS CLINICOS";
     if (!lugar) { toast("Selecciona un lugar primero.", "warn"); return; }
     var pendientes = [];
     for (var i = 0; i < loteDatos.length; i++) {
       var inp = document.getElementById("linp-" + i);
       var v   = inp ? parseInt(inp.value || "0") : 0;
-      if (v > 0) pendientes.push({ it: loteDatos[i], cant: v });
+      if (v > 0) {
+        var fec = "";
+        if (esBodega) {
+          var fechaInp = document.getElementById("lfec-" + i);
+          fec = fechaInp ? fechaInp.value : "";
+        }
+        pendientes.push({ it: loteDatos[i], cant: v, fechaVenc: fec });
+      }
     }
     if (!pendientes.length) { toast("Sin cantidades para guardar.", "warn"); return; }
     toast("Enviando " + pendientes.length + " egresos...", "");
@@ -522,6 +530,10 @@
         for (var j = 0; j < loteDatos.length; j++) {
           var i2 = document.getElementById("linp-" + j);
           if (i2) { i2.value = ""; i2.classList.remove("tiene-valor"); }
+          if (esBodega) {
+            var f2 = document.getElementById("lfec-" + j);
+            if (f2) f2.value = "";
+          }
         }
         actualizarBarraLote();
         cargarStock();
@@ -537,6 +549,11 @@
         "&usuario="     + encodeURIComponent(usuarioNombre) +
         "&usuarioId="   + encodeURIComponent(usuarioId) +
         "&nSol="        + encodeURIComponent(nSol);
+      
+      if (esBodega && p.fechaVenc) {
+        url += "&fechaVenc=" + encodeURIComponent(p.fechaVenc);
+      }
+      
       jsonp(url, function(data, err) {
         if (!data || err || data.status !== "ok") errores++; else enviados++;
         enviarSiguiente(idx + 1);
