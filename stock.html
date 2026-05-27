@@ -25,6 +25,14 @@
     .lugar-card i{font-size:16px;color:var(--muted);}
     .lugar-card select{flex:1;font-family:'DM Sans',sans-serif;font-size:.9rem;border:none;background:transparent;color:var(--text);outline:none;}
 
+    /* Buscador */
+    .search-card{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+    .search-card i{font-size:16px;color:var(--muted);flex-shrink:0;}
+    .search-card input{flex:1;font-family:'DM Sans',sans-serif;font-size:.9rem;border:none;background:transparent;color:var(--text);outline:none;}
+    .search-card input::placeholder{color:var(--muted);}
+    .search-clear{font-size:16px;color:var(--muted);cursor:pointer;flex-shrink:0;display:none;}
+    .search-clear.show{display:block;}
+
     /* Stats */
     .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
     .stat{background:var(--s);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center;}
@@ -128,6 +136,13 @@
     </select>
   </div>
 
+  <!-- BUSCADOR DE INSUMOS (NUEVO) -->
+  <div class="search-card">
+    <i class="ti ti-search"></i>
+    <input type="text" id="buscarInsumo" placeholder="Buscar insumo por código o nombre..." oninput="filtrarPorBusqueda()">
+    <i class="ti ti-x search-clear" id="btnLimpiar" onclick="limpiarBusqueda()"></i>
+  </div>
+
   <div class="stats">
     <div class="stat st-ok"><div class="stat-n" id="statOk">—</div><div class="stat-l">OK</div></div>
     <div class="stat st-wa"><div class="stat-n" id="statWa">—</div><div class="stat-l">Stock bajo</div></div>
@@ -135,11 +150,7 @@
     <div class="stat st-in"><div class="stat-n" id="statSob">—</div><div class="stat-l">Sobrestock</div></div>
   </div>
 
-  <!-- Selector de modo -->
-  <div class="modo-bar">
-    <button class="modo-btn on" id="btnModoInd" onclick="setModo('individual',this)"><i class="ti ti-list-details"></i> Individual</button>
-    <button class="modo-btn" id="btnModoLote" onclick="setModo('lote',this)"><i class="ti ti-table"></i> Registro en lote</button>
-  </div>
+  <!-- Selector de modo ELIMINADO - Ahora solo modo lote -->
 
   <div class="filtros">
     <div class="ftag on" onclick="setFiltro('todos',this)">Todos</div>
@@ -185,19 +196,7 @@
   </div>
 </div>
 
-<!-- Modal egreso -->
-<div class="modal-bg" id="modalBg">
-  <div class="modal">
-    <h3>Registrar uso</h3>
-    <div class="modal-nom" id="modalNom"></div>
-    <div class="modal-stock" id="modalStock"></div>
-    <input type="number" id="modalCant" placeholder="0" min="1"/>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn-confirm" onclick="confirmarEgreso()">Confirmar</button>
-    </div>
-  </div>
-</div>
+<!-- Modal ELIMINADO - Ahora solo modo lote -->
 <div id="toast"></div>
 
 <script>
