@@ -420,11 +420,17 @@
     var q     = norm(document.getElementById("itemQ").value).trim();
     var lista = document.getElementById("itemLista");
     lista.innerHTML = "";
+    
+    // Si no hay búsqueda, mostrar placeholder
+    if (!q) {
+      lista.innerHTML = '<div class="ri-empty">Escribe para buscar...</div>';
+      lista.style.display = "block";
+      return;
+    }
+    
     lista.style.display = "block";
     listaAbierta = true;
-    var fuente = q
-      ? itemsData.filter(function(it){ return norm(it.descripcion).indexOf(q)>-1 || norm(String(it.codigo)).indexOf(q)>-1; })
-      : itemsData;
+    var fuente = itemsData.filter(function(it){ return norm(it.descripcion).indexOf(q)>-1 || norm(String(it.codigo)).indexOf(q)>-1; });
     if (!fuente.length) {
       lista.innerHTML = '<div class="ri-empty">Sin resultados</div>';
       return;
