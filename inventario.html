@@ -549,6 +549,46 @@
     renderLista();
   }
 
+  function enviarUnItemJSONP(entry) {
+    return new Promise((resolve) => {
+      const cbName = "cbEnv_" + Math.random().toString(36).slice(2);
+      const params = new URLSearchParams({
+        lugar:       entry.lugar,
+        item:        entry.item,
+        codigo:      entry.codigo || entry.item,
+        descripcion: entry.item,
+        cantidad:    entry.cantidad,
+        vencimiento: entry.vencimiento,
+        usuario:     responsableSesion,
+        usuarioId:   responsableIdSesion,
+        callback:    cbName
+      });
+
+      const timeout = setTimeout(() => {
+        delete window[cbName];
+        if (s.parentNode) s.parentNode.removeChild(s);
+        resolve({ status: "error", mensaje: "Tiempo de espera agotado" });
+      }, 15000);
+
+      window[cbName] = function(data) {
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (s.parentNode) s.parentNode.removeChild(s);
+        resolve(data);
+      };
+
+      const s = document.createElement("script");
+      s.src = SCRIPT_URL + "?" + params.toString();
+      s.onerror = function() {
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (s.parentNode) s.parentNode.removeChild(s);
+        resolve({ status: "error", mensaje: "Error de red al conectar con el servidor" });
+      };
+      document.head.appendChild(s);
+    });
+  }
+
   async function enviarTodo() {
     if (listaItems.length === 0) {
       mostrarToast("Agrega al menos un ítem antes de enviar.", "warn");
@@ -561,20 +601,13 @@
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
     let errores = 0;
+    let ultimoError = "";
     for (const entry of listaItems) {
-      try {
-        const params = new URLSearchParams({
-          lugar:       entry.lugar,
-          item:        entry.item,
-          codigo:      entry.codigo || entry.item,
-          descripcion: entry.item,
-          cantidad:    entry.cantidad,
-          vencimiento: entry.vencimiento,
-          usuario:     responsableSesion,
-          usuarioId:   responsableIdSesion
-        });
-        await fetch(SCRIPT_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" });
-      } catch { errores++; }
+      const data = await enviarUnItemJSONP(entry);
+      if (!data || data.status !== "ok") {
+        errores++;
+        ultimoError = (data && data.mensaje) || "Error desconocido";
+      }
     }
 
     btn.disabled = false;
@@ -584,7 +617,7 @@
       mostrarToast(`✓ ${listaItems.length} registro${listaItems.length > 1 ? "s" : ""} enviado${listaItems.length > 1 ? "s" : ""} correctamente.`, "ok");
       limpiarLista();
     } else {
-      mostrarToast(`${errores} error(es) al enviar. Intenta nuevamente.`, "fail");
+      mostrarToast(`${errores} error(es) al enviar: ${ultimoError}`, "fail");
     }
   }
 
