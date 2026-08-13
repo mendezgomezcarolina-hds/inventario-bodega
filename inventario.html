@@ -402,7 +402,7 @@
     document.getElementById("responsableIdTxt").textContent    = responsableIdSesion;
     document.getElementById("lugarSesionWrap").style.display = "block";
     if (!SCRIPT_URL) pedirURL();
-    else { cargarLugares(); cargarItems(); }
+    else { cargarLugares(); }
   };
 
   function pedirURL() {
@@ -411,7 +411,6 @@
       SCRIPT_URL = url.trim();
       localStorage.setItem("inv_script_url", SCRIPT_URL);
       cargarLugares();
-      cargarItems();
     }
   }
 
@@ -432,28 +431,65 @@
     } catch { sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; }
   }
 
+  function jsonpInv(url, cb) {
+    var name  = "_cbIt_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 12000);
+    window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
+    var s = document.createElement("script");
+    s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
+    s.onerror = function() { clearTimeout(timer); delete window[name]; cb(null, "Error de red"); };
+    document.head.appendChild(s);
+  }
+
+  function poblarSelectItemsInv(sel) {
+    sel.innerHTML = '<option value="" disabled selected>Selecciona un insumo…</option>';
+    for (var i = 0; i < itemsData.length; i++) {
+      var it = itemsData[i];
+      var o  = document.createElement("option");
+      o.value = it.codigo;
+      o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
+      sel.appendChild(o);
+    }
+  }
+
+  // Carga solo los ítems de la bodega/lugar seleccionado (no el listado completo)
   function cargarItems() {
     var sel = document.getElementById("item");
-    var cbName = "_cbIt_" + Date.now();
-    window[cbName] = function(data) {
-      delete window[cbName];
-      if (!data || data.status !== "ok") {
-        sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; return;
+    var lugar = lugarSesion;
+    sel.innerHTML = '<option value="" disabled selected>Cargando…</option>';
+
+    if (!lugar) {
+      // Sin lugar aún: no cargar nada (se carga recién al confirmar lugar)
+      itemsData = [];
+      poblarSelectItemsInv(sel);
+      return;
+    }
+
+    var lugarUp = lugar.toUpperCase();
+    var esBodega = lugarUp.indexOf("BODEGA INSUMOS") > -1;
+    var url = SCRIPT_URL + "?accion=itemsPorLugar&lugar=" + encodeURIComponent(lugar);
+    if (esBodega) {
+      var tipoBodega = lugarUp.indexOf("NO") > -1 ? "NO CLINICOS" : "CLINICOS";
+      url += "&bodega=" + encodeURIComponent(tipoBodega);
+    }
+
+    jsonpInv(url, function(data, err) {
+      if (err || !data || data.status !== "ok") {
+        sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>';
+        return;
       }
       itemsData = data.items || [];
-      sel.innerHTML = '<option value="" disabled selected>Selecciona un insumo…</option>';
-      for (var i = 0; i < itemsData.length; i++) {
-        var it = itemsData[i];
-        var o  = document.createElement("option");
-        o.value = it.codigo;
-        o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
-        sel.appendChild(o);
+      if (!itemsData.length) {
+        sel.innerHTML = '<option value="" disabled selected>Sin insumos para este lugar</option>';
+        mostrarToast("No hay insumos clasificados para " + lugar + ".", "warn");
+        return;
       }
-    };
-    var s = document.createElement("script");
-    s.src = SCRIPT_URL + "?accion=items&callback=" + cbName;
-    s.onerror = function() { delete window[cbName]; sel.innerHTML = '<option value="" disabled selected>Error al cargar</option>'; };
-    document.head.appendChild(s);
+      poblarSelectItemsInv(sel);
+      // refrescar buscador visible con la lista ya filtrada
+      var q = document.getElementById("itemQ");
+      if (q) q.value = "";
+      if (typeof filtrarItemsInv === "function") filtrarItemsInv();
+    });
   }
 
   let responsableSesion   = "";
@@ -478,7 +514,9 @@
     document.getElementById("lugarBadgeWrap").style.display  = "block";
     document.getElementById("inputItemWrap").style.display   = "block";
     document.getElementById("responsableEnviarTxt").textContent = responsableSesion;
-    document.getElementById("item").focus();
+    cargarItems();
+    var itemQEl = document.getElementById("itemQ");
+    if (itemQEl) itemQEl.focus();
   }
 
   function cambiarLugar() {
