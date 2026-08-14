@@ -358,7 +358,7 @@
   // ── JSONP helper ──────────────────────────────────────────────
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbCount);
-    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 10000);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 30000);
     window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
     var s = document.createElement("script");
     s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
@@ -632,9 +632,7 @@
   function eliminarItem(i) { listaItems.splice(i, 1); renderLista(); }
   function limpiarLista()  { listaItems = []; renderLista(); limpiarItem(); }
 
-  // ── Enviar (secuencial con imagen — compatible iOS) ───────────
-  var _envioIdx    = 0;
-  var _envioErrores = 0;
+  // ── Enviar (un solo lote para todos los ítems) ─────────────────
   var _idEnvio     = "";
   var _lugarEnvio  = "";
 
@@ -648,26 +646,45 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Enviando…';
 
-    _envioIdx      = 0;
-    _envioErrores  = 0;
-    _idEnvio       = idSolicitud;   // Capturar ANTES del flujo async
-    _lugarEnvio    = lugarSesion;   // Capturar lugar ANTES del flujo async
-    enviarSiguiente();
-  }
+    _idEnvio    = idSolicitud;
+    _lugarEnvio = lugarSesion;
 
-  function enviarSiguiente() {
-    if (_envioIdx >= listaItems.length) {
-      // Todos los ítems guardados — enviar UN solo correo resumen
+    var itemsLote = listaItems.map(function(entry) {
+      return {
+        lugar: _lugarEnvio || entry.lugar || lugarSesion,
+        item: entry.item,
+        codigo: entry.codigo || entry.item,
+        descripcion: entry.item || entry.codigo,
+        cantidad: entry.cantidad
+      };
+    });
+
+    var url = SCRIPT_URL + "?accion=solicitudLote" +
+      "&items="        + encodeURIComponent(JSON.stringify(itemsLote)) +
+      "&usuario="      + encodeURIComponent(responsableSesion) +
+      "&usuarioId="    + encodeURIComponent(responsableIdSesion) +
+      "&idSolicitud="  + encodeURIComponent(_idEnvio) +
+      "&bodegaOrigen=" + encodeURIComponent(bodegaOrigen);
+
+    jsonp(url, function(data, err) {
+      if (!data || err || data.status !== "ok") {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
+        mostrarToast("Error al enviar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
+        return;
+      }
+
+      // Correo resumen (fire-and-forget, no bloquea la confirmación)
       var urlNotif = SCRIPT_URL +
         "?accion=notificarResumenSolicitud" +
         "&idSolicitud=" + encodeURIComponent(idSolicitud) +
         "&lugar="       + encodeURIComponent(listaItems[0] ? listaItems[0].lugar : "") +
         "&responsable=" + encodeURIComponent(responsableSesion) +
         "&idResp="      + encodeURIComponent(responsableIdSesion);
-      jsonp(urlNotif, function(d, err) {
-        if (err) Logger && Logger.log && Logger.log("Notif error: " + err);
+      jsonp(urlNotif, function(d, nerr) {
+        if (nerr) Logger && Logger.log && Logger.log("Notif error: " + nerr);
       });
-      var btn = document.getElementById("btnEnviar");
+
       btn.disabled = false;
       btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Enviar solicitud';
       document.getElementById("idConfirmado").textContent = _idEnvio || idSolicitud;
@@ -675,25 +692,7 @@
       document.getElementById("inputItemWrap").style.display = "none";
       document.getElementById("divider").style.display       = "none";
       document.getElementById("estadoOk").style.display      = "block";
-      return;
-    }
-
-    var entry = listaItems[_envioIdx];
-    var url   = SCRIPT_URL +
-      "?accion=solicitud" +
-      "&lugar="       + encodeURIComponent(_lugarEnvio || entry.lugar || lugarSesion) +
-      "&item="        + encodeURIComponent(entry.item) +
-      "&codigo="      + encodeURIComponent(entry.codigo || entry.item) +
-      "&descripcion=" + encodeURIComponent(entry.item || entry.codigo) +
-      "&cantidad="    + encodeURIComponent(entry.cantidad) +
-      "&usuario="     + encodeURIComponent(responsableSesion) +
-      "&usuarioId="   + encodeURIComponent(responsableIdSesion) +
-      "&idSolicitud=" + encodeURIComponent(_idEnvio) +
-      "&bodegaOrigen=" + encodeURIComponent(bodegaOrigen);
-
-    enviarImagen(url);
-    _envioIdx++;
-    setTimeout(enviarSiguiente, 400); // pausa entre ítems
+    });
   }
 
   function nuevaSolicitud() {

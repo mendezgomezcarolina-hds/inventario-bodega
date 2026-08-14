@@ -199,7 +199,7 @@
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
-    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 20000);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 30000);
     window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
     var s = document.createElement("script");
     s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
@@ -396,9 +396,6 @@
   }
 
   // Envío secuencial sin async/await
-  var _envIdx = 0;
-  var _envItems = [];
-  var _envErr = 0;
 
   function addVencExtra(i) {
     if (!vencExtras[i]) vencExtras[i] = [];
@@ -465,22 +462,35 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Guardando\u2026';
 
-    _envIdx   = 0;
-    _envItems = pendientes;
-    _envErr   = 0;
-    enviarUno();
-  }
+    // Arma el lote completo: un solo envío al servidor para todos los ítems,
+    // en vez de una llamada (y un recálculo de stock) por cada uno.
+    var itemsLote = [];
+    for (var pi = 0; pi < pendientes.length; pi++) {
+      var item = pendientes[pi];
+      var f    = item.f;
+      var dec  = item.dec;
+      var _cantMain   = +(cantidades[item.i] !== undefined ? cantidades[item.i] : (f.cantidad||0));
+      var _sumExtras  = (vencExtras[item.i]||[]).reduce(function(a,r){return a+(+r.qty||0);},0);
+      var cantAprobada = (vencExtras[item.i]||[]).length > 0
+        ? (_cantMain + _sumExtras) || (f.cantidad||"")
+        : (_cantMain || f.cantidad||"");
+      itemsLote.push({
+        idSolicitud: f.id || "", item: f.item || "", lugar: f.lugar || "",
+        estado: dec, cantAprobada: cantAprobada, fechaVenc: buildFechaVenc(item.i)
+      });
+    }
 
-  function enviarUno() {
-    if (_envIdx >= _envItems.length) {
-      var btn = document.getElementById("btnGuardar");
+    var url = SCRIPT_URL + "?accion=actualizarEstadoLote" +
+      "&items=" + encodeURIComponent(JSON.stringify(itemsLote)) +
+      "&supervisor=" + encodeURIComponent(supervisorNombre || "");
+
+    jsonp(url, function(data, err) {
       btn.disabled = false;
       btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Guardar decisiones';
 
-      if (_envErr === 0) {
-        // Actualizar local
-        for (var k = 0; k < _envItems.length; k++) {
-          var it = _envItems[k];
+      if (data && !err && data.status === "ok") {
+        for (var k = 0; k < pendientes.length; k++) {
+          var it = pendientes[k];
           for (var j = 0; j < todasSolicitudes.length; j++) {
             var s = todasSolicitudes[j];
             if (s.id === it.f.id && s.item === it.f.item && s.lugar === it.f.lugar) {
@@ -493,35 +503,9 @@
         toast("\u2713 Decisiones guardadas correctamente.", "ok");
         setTimeout(function() { volverLista(); renderLista(); }, 1200);
       } else {
-        toast(_envErr + " error(es) al guardar.", "fail");
+        toast("Error al guardar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
         renderDetalle();
       }
-      return;
-    }
-
-    var item = _envItems[_envIdx];
-    var f    = item.f;
-    var dec  = item.dec;
-
-    var _cantMain   = +(cantidades[item.i] !== undefined ? cantidades[item.i] : (f.cantidad||0));
-    var _sumExtras  = (vencExtras[item.i]||[]).reduce(function(a,r){return a+(+r.qty||0);},0);
-    var cantAprobada = (vencExtras[item.i]||[]).length > 0
-      ? (_cantMain + _sumExtras) || (f.cantidad||"")
-      : (_cantMain || f.cantidad||"");
-    var fechaVenc = buildFechaVenc(item.i);
-    var url = SCRIPT_URL +
-      "?accion=actualizarEstado" +
-      "&idSolicitud="   + encodeURIComponent(f.id || "") +
-      "&item="          + encodeURIComponent(f.item || "") +
-      "&lugar="         + encodeURIComponent(f.lugar || "") +
-      "&estado="        + encodeURIComponent(dec) +
-      "&cantAprobada="  + encodeURIComponent(cantAprobada) +
-      "&fechaVenc="     + encodeURIComponent(fechaVenc);
-
-    jsonp(url, function(data, err) {
-      if (!data || err || data.status !== "ok") _envErr++;
-      _envIdx++;
-      setTimeout(enviarUno, 300);
     });
   }
 

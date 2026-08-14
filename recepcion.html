@@ -194,7 +194,7 @@
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
-    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 20000);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 30000);
     window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
     var s = document.createElement("script");
     s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
@@ -353,9 +353,6 @@
     document.getElementById("vistaLista").style.display   = "block";
   }
 
-  // ── Guardar decisiones ────────────────────────────────────────
-  var _gIdx = 0; var _gItems = []; var _gErr = 0;
-
   function guardarDecisiones() {
     var items = [];
     for (var i = 0; i < solicitudActual.length; i++) {
@@ -366,7 +363,7 @@
         var cant = cantInput ? cantInput.value : p.cantSolicitada;
         var vencInput = document.getElementById("venc-" + p.fila);
         var venc = (vencInput && vencInput.value) ? vencInput.value : "no aplica";
-        items.push({ fila: p.fila, est: dec.est, cant: cant, venc: venc });
+        items.push({ fila: p.fila, estado: dec.est, cantRecibida: cant, fechaVencimiento: venc });
       }
     }
     if (!items.length) { toast("Sin decisiones para guardar.", "warn"); return; }
@@ -375,35 +372,19 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Guardando\u2026';
 
-    _gIdx = 0; _gItems = items; _gErr = 0;
-    guardarUno();
-  }
+    var url = SCRIPT_URL + "?accion=actualizarRecepcionLote" +
+      "&items=" + encodeURIComponent(JSON.stringify(items));
 
-  function guardarUno() {
-    if (_gIdx >= _gItems.length) {
-      var btn = document.getElementById("btnGuardar");
+    jsonp(url, function(data, err) {
       btn.disabled = false;
       btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Guardar';
-      if (_gErr === 0) {
+      if (data && !err && data.status === "ok") {
         toast("\u2713 Guardado correctamente.", "ok");
         setTimeout(function() { cargarPedidos(); volverLista(); }, 1200);
       } else {
-        toast(_gErr + " error(es) al guardar.", "fail");
+        toast("Error al guardar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
         actualizarProg();
       }
-      return;
-    }
-    var it  = _gItems[_gIdx];
-    var url = SCRIPT_URL + "?accion=actualizarRecepcion" +
-      "&fila="             + encodeURIComponent(it.fila) +
-      "&estado="           + encodeURIComponent(it.est) +
-      "&cantRecibida="     + encodeURIComponent(it.cant) +
-      "&fechaVencimiento=" + encodeURIComponent(it.venc || "no aplica");
-
-    jsonp(url, function(data, err) {
-      if (!data || err || data.status !== "ok") _gErr++;
-      _gIdx++;
-      setTimeout(guardarUno, 300);
     });
   }
 

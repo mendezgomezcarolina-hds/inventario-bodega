@@ -55,10 +55,13 @@ function doGet(e) {
   if (accion === "guardarAccesos")            return responder(guardarAccesos(e),                      callback);
   if (accion === "recepcionarSolicitud")      return responder(recepcionarSolicitud(e),                  callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
+  if (accion === "solicitudLote")       return responder(escribirSolicitudLote(e),                  callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
   if (accion === "actualizarEstado")    return responder(actualizarEstado(e),                       callback);
+  if (accion === "actualizarEstadoLote") return responder(actualizarEstadoLote(e),                  callback);
   if (accion === "listarRecepcion")     return responder(listarRecepcion(e),                        callback);
   if (accion === "actualizarRecepcion") return responder(actualizarRecepcion(e),                    callback);
+  if (accion === "actualizarRecepcionLote") return responder(actualizarRecepcionLote(e),            callback);
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
@@ -273,6 +276,51 @@ function escribirSolicitud(e) {
   }
 }
 
+// ── Escribir VARIOS ítems de una solicitud en una sola llamada ─
+// Recibe items = JSON string: [{item,codigo,descripcion,cantidad}, ...]
+// más los datos comunes de la solicitud (idSolicitud, lugar, usuario, etc.)
+// Escribe todas las filas de una vez con setValues, en vez de un appendRow
+// (y una llamada HTTP) por cada ítem.
+function escribirSolicitudLote(e) {
+  try {
+    const ss  = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    if (!sheet) sheet = ss.insertSheet(SHEET_SOLICITUDES);
+    const p = e.parameter || {};
+    let items;
+    try { items = JSON.parse(p.items || "[]"); } catch(pe) { throw new Error("items inválido: " + pe); }
+    if (!items.length) throw new Error("Sin ítems para procesar.");
+    if (sheet.getLastRow() === 0)
+      sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Bodega Origen"]);
+
+    const ahora = new Date().toLocaleString("es-CL");
+    const filas = [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (!it.item || !it.cantidad) continue;
+      filas.push([
+        p.idSolicitud  || "",
+        it.lugar       || p.lugar || "",
+        it.codigo      || it.item || "",
+        it.descripcion || it.item || "",
+        it.cantidad    || "",
+        p.usuario      || "Anónimo",
+        p.usuarioId    || "",
+        ahora,
+        "PENDIENTE",
+        "",
+        p.bodegaOrigen || ""
+      ]);
+    }
+    if (!filas.length) throw new Error("Ningún ítem tenía datos válidos.");
+
+    sheet.getRange(sheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+    return { status: "ok", escritos: filas.length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 // ── Listar solicitudes ────────────────────────────────────────
 function listarSolicitudes(e) {
   try {
@@ -431,6 +479,122 @@ function actualizarEstado(e) {
   }
 }
 
+// ── Actualizar estado de VARIOS ítems en una sola llamada ─────
+// Recibe items = JSON string: [{idSolicitud,item,lugar,estado,cantAprobada,fechaVenc}, ...]
+// Escribe todo SOLICITUDES de una vez, agrupa los EGRESO de MOVIMIENTOS en un solo
+// batch, y recalcula el stock UNA sola vez por cada bodega distinta involucrada
+// (en vez de una vez por cada ítem) — esto es lo que hace lenta la aprobación
+// con muchos ítems.
+function actualizarEstadoLote(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    if (!sheet) throw new Error("Hoja SOLICITUDES no existe.");
+    const p = e.parameter || {};
+    const supervisor = p.supervisor || "";
+    let items;
+    try { items = JSON.parse(p.items || "[]"); } catch(pe) { throw new Error("items inválido: " + pe); }
+    if (!items.length) throw new Error("Sin items para procesar.");
+
+    const datos = sheet.getDataRange().getValues();
+    let procesados = 0;
+    const bodegasARecalcular = {};       // set de bodegas a recalcular al final
+    const egresos = [];                  // filas a agregar a MOVIMIENTOS
+    const ahora = new Date().toLocaleString("es-CL");
+    const shIns = ss.getSheetByName("INSUMOS");
+    const insData = shIns ? shIns.getDataRange().getValues() : [];
+
+    function buscarBodegaPorCodigo(cod) {
+      for (var bi = 1; bi < insData.length; bi++) {
+        if (String(insData[bi][0]||"").trim() === cod) {
+          var tipoBodega = String(insData[bi][5]||"").trim().toUpperCase();
+          return tipoBodega === "CLINICOS" ? "BODEGA INSUMOS CLINICOS" : "BODEGA INSUMOS NO CLINICOS";
+        }
+      }
+      return "";
+    }
+
+    for (let k = 0; k < items.length; k++) {
+      const it = items[k];
+      const idBuscado    = it.idSolicitud || "";
+      const itemBuscado  = it.item        || "";
+      const lugarBusc    = it.lugar       || "";
+      const nuevoEstado  = (it.estado     || "").toUpperCase();
+      const cantAprobada = it.cantAprobada != null ? String(it.cantAprobada) : "";
+      const fechaVencAp  = it.fechaVenc   || "";
+      if (!nuevoEstado || !idBuscado) continue;
+
+      for (let i = 0; i < datos.length; i++) {
+        const f = datos[i];
+        const coincide = String(f[0]) === idBuscado &&
+                         (!itemBuscado || String(f[3]) === itemBuscado) &&
+                         (!lugarBusc   || String(f[1]) === lugarBusc);
+        if (!coincide) continue;
+
+        const estadoPrevioFila = String(f[8] || "").trim().toUpperCase();
+        const esNuevoAprobado  = nuevoEstado === "APROBADO" && estadoPrevioFila !== "APROBADO";
+
+        if (nuevoEstado === "APROBADO" && cantAprobada !== "") {
+          sheet.getRange(i+1, 12).setValue(cantAprobada);
+        }
+        sheet.getRange(i+1, 9).setValue(nuevoEstado);
+        sheet.getRange(i+1, 10).setValue(ahora);
+        sheet.getRange(i+1, 11).setValue(supervisor);
+        procesados++;
+
+        if (esNuevoAprobado) {
+          const eCod  = String(f[2] || "").trim();
+          const eDesc = String(f[3] || "").trim();
+          const eQtyAprobada = parseFloat(cantAprobada);
+          const eQty = (cantAprobada !== "" && !isNaN(eQtyAprobada))
+            ? Math.abs(eQtyAprobada)
+            : Math.abs(parseFloat(f[4]) || 0);
+          let eBodega = String(f[10] || "").trim();
+          if (!eBodega) eBodega = buscarBodegaPorCodigo(eCod);
+
+          if (eBodega && eCod && eQty > 0) {
+            bodegasARecalcular[eBodega] = true;
+            if (!fechaVencAp) {
+              egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, "", supervisor, ""]);
+            } else if (fechaVencAp.indexOf("|") > -1 || fechaVencAp.indexOf(":") > -1) {
+              const vencParts = fechaVencAp.indexOf("|") > -1 ? fechaVencAp.split("|") : [fechaVencAp];
+              for (let vi = 0; vi < vencParts.length; vi++) {
+                const part = vencParts[vi].trim();
+                if (!part) continue;
+                const colon = part.indexOf(":");
+                let vQty, vFecha;
+                if (colon > -1) { vQty = parseFloat(part.substring(0, colon)) || 0; vFecha = part.substring(colon+1).trim(); }
+                else { vQty = eQty; vFecha = part; }
+                if (vQty > 0) egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -vQty, vFecha, supervisor, ""]);
+              }
+            } else {
+              egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
+            }
+          }
+        }
+        break; // ya encontrada y procesada esta fila, siguiente item
+      }
+    }
+
+    if (egresos.length) {
+      let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+      if (movSheet.getLastRow() === 0)
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+      movSheet.getRange(movSheet.getLastRow()+1, 1, egresos.length, egresos[0].length).setValues(egresos);
+    }
+
+    const bodegas = Object.keys(bodegasARecalcular);
+    for (let bj = 0; bj < bodegas.length; bj++) {
+      try { actualizarStockLugar(bodegas[bj]); } catch(ex) { Logger.log("Stock no actualizado (" + bodegas[bj] + "): " + ex); }
+    }
+
+    return { status: "ok", procesados, bodegasRecalculadas: bodegas };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 // ── Listar RECEPCION_BODEGA por mes ──────────────────────────
 // Columnas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
 //           F=CantSolicitada G=CantRecibida H=Estado I=Fecha/Hora J=FechaVencimiento
@@ -514,6 +678,73 @@ function actualizarRecepcion(e) {
     }
 
     return { status: "ok", fila };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Actualizar recepción de VARIAS filas en una sola llamada ──
+// Recibe items = JSON string: [{fila,estado,cantRecibida,fechaVencimiento}, ...]
+// Escribe todas las filas de RECEPCION_BODEGA, agrupa los INGRESO en un solo
+// batch en MOVIMIENTOS, y recalcula el stock UNA sola vez por lugar distinto
+// (en vez de una vez por cada ítem recepcionado).
+function actualizarRecepcionLote(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_RECEPCION);
+    if (!sheet) throw new Error("Hoja RECEPCION_BODEGA no existe.");
+    const p = e.parameter || {};
+    let items;
+    try { items = JSON.parse(p.items || "[]"); } catch(pe) { throw new Error("items inválido: " + pe); }
+    if (!items.length) throw new Error("Sin items para procesar.");
+
+    const ahora = new Date().toLocaleString("es-CL");
+    const ingresos = [];
+    const lugaresARecalcular = {};
+    let procesados = 0;
+
+    for (let k = 0; k < items.length; k++) {
+      const it   = items[k];
+      const fila = parseInt(it.fila || "0");
+      const est  = (it.estado || "").toUpperCase();
+      const cant = it.cantRecibida != null ? String(it.cantRecibida) : "";
+      if (!fila || !est) continue;
+
+      const filaDatos = sheet.getRange(fila, 1, 1, 9).getValues()[0];
+      const mes    = String(filaDatos[0] || "");
+      const nSol   = String(filaDatos[1] || "");
+      const lugar  = String(filaDatos[2] || "");
+      const codigo = String(filaDatos[3] || "");
+      const descr  = String(filaDatos[4] || "");
+      const estadoPrevio = String(filaDatos[7] || "").trim().toUpperCase();
+
+      sheet.getRange(fila, 7).setValue(cant);
+      sheet.getRange(fila, 8).setValue(est);
+      sheet.getRange(fila, 9).setValue(ahora);
+      const fechaVenc = it.fechaVencimiento || "";
+      sheet.getRange(fila, 10).setValue(fechaVenc);
+      procesados++;
+
+      if (est === "APROBADO" && estadoPrevio !== "APROBADO") {
+        ingresos.push([ahora, "INGRESO", nSol, mes, lugar, codigo, descr, cant, fechaVenc]);
+        if (lugar) lugaresARecalcular[lugar] = true;
+      }
+    }
+
+    if (ingresos.length) {
+      let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+      if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+      if (movSheet.getLastRow() === 0)
+        movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+      movSheet.getRange(movSheet.getLastRow()+1, 1, ingresos.length, ingresos[0].length).setValues(ingresos);
+    }
+
+    const lugares = Object.keys(lugaresARecalcular);
+    for (let lj = 0; lj < lugares.length; lj++) {
+      try { actualizarStockLugar(lugares[lj]); } catch(ex) { Logger.log("Stock lugar no actualizado (" + lugares[lj] + "): " + ex); }
+    }
+
+    return { status: "ok", procesados, lugaresRecalculados: lugares };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
