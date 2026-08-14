@@ -316,6 +316,7 @@ function actualizarEstado(e) {
     const itemBuscado = p.item        || "";
     const lugarBusc   = p.lugar       || "";
     const fechaVencAp = p.fechaVenc   || "";
+    const cantAprobada = p.cantAprobada || "";
     if (!nuevoEstado || !idBuscado) throw new Error("Faltan parámetros.");
     const datos = sheet.getDataRange().getValues();
     let actualizados = 0;
@@ -328,6 +329,13 @@ function actualizarEstado(e) {
       if (coincide) {
         const estadoPrevioFila = String(f[8] || "").trim().toUpperCase();
         if (estadoPrevioFila !== "APROBADO") huboPrevioNoAprobado = true;
+        // Si se aprueba con una cantidad distinta a la solicitada, se
+        // sobreescribe la columna Cantidad (E) con lo realmente aprobado —
+        // así el resto de los paneles (recepción por lugar, etc.) reflejan
+        // lo aprobado y no lo originalmente pedido.
+        if (nuevoEstado === "APROBADO" && cantAprobada !== "") {
+          sheet.getRange(i+1, 5).setValue(cantAprobada);
+        }
         sheet.getRange(i+1, 9).setValue(nuevoEstado);
         sheet.getRange(i+1, 10).setValue(new Date().toLocaleString("es-CL"));
         sheet.getRange(i+1, 11).setValue(supervisor);
