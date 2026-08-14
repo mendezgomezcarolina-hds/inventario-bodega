@@ -319,12 +319,15 @@ function actualizarEstado(e) {
     if (!nuevoEstado || !idBuscado) throw new Error("Faltan parámetros.");
     const datos = sheet.getDataRange().getValues();
     let actualizados = 0;
+    let huboPrevioNoAprobado = false;
     for (let i = 0; i < datos.length; i++) {
       const f = datos[i];
       const coincide = String(f[0]) === idBuscado &&
                        (!itemBuscado || String(f[3]) === itemBuscado) &&
                        (!lugarBusc   || String(f[1]) === lugarBusc);
       if (coincide) {
+        const estadoPrevioFila = String(f[8] || "").trim().toUpperCase();
+        if (estadoPrevioFila !== "APROBADO") huboPrevioNoAprobado = true;
         sheet.getRange(i+1, 9).setValue(nuevoEstado);
         sheet.getRange(i+1, 10).setValue(new Date().toLocaleString("es-CL"));
         sheet.getRange(i+1, 11).setValue(supervisor);
@@ -334,7 +337,10 @@ function actualizarEstado(e) {
     if (actualizados === 0) throw new Error("Fila no encontrada: " + idBuscado + " / " + itemBuscado);
 
     // Si se APRUEBA → escribir EGRESO de bodega inmediatamente
-    if (nuevoEstado === "APROBADO") {
+    // Protección contra duplicados: si TODAS las filas coincidentes ya estaban
+    // APROBADO antes de esta llamada, es un reintento (falso error por timeout
+    // previo) — no se vuelve a escribir el EGRESO ni se recalcula el stock.
+    if (nuevoEstado === "APROBADO" && huboPrevioNoAprobado) {
       var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
       if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
       if (movSheet.getLastRow() === 0)
