@@ -194,7 +194,7 @@
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
-    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 10000);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 20000);
     window[name] = function(data) { clearTimeout(timer); delete window[name]; cb(data, null); };
     var s = document.createElement("script");
     s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;

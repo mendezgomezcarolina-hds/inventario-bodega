@@ -463,13 +463,14 @@ function actualizarRecepcion(e) {
     const cant = p.cantRecibida || "";
     if (!fila || !est) throw new Error("Faltan fila o estado.");
 
-    // Leer datos de la fila
+    // Leer datos de la fila (incluye estado previo en columna H = índice 7)
     const filaDatos = sheet.getRange(fila, 1, 1, 9).getValues()[0];
     const mes    = String(filaDatos[0] || "");
     const nSol   = String(filaDatos[1] || "");
     const lugar  = String(filaDatos[2] || "");
     const codigo = String(filaDatos[3] || "");
     const descr  = String(filaDatos[4] || "");
+    const estadoPrevio = String(filaDatos[7] || "").trim().toUpperCase();
 
     // Actualizar RECEPCION_BODEGA
     sheet.getRange(fila, 7).setValue(cant);
@@ -481,7 +482,10 @@ function actualizarRecepcion(e) {
 
     // Si APROBADO → registrar INGRESO al lugar en MOVIMIENTOS
     // (el EGRESO de bodega ya se registró al aprobar la solicitud)
-    if (est === "APROBADO") {
+    // Protección contra duplicados: si esta fila YA estaba APROBADO antes de esta
+    // llamada, significa que el INGRESO ya se registró en un intento anterior
+    // (aunque la app haya marcado error por timeout) — no se vuelve a escribir.
+    if (est === "APROBADO" && estadoPrevio !== "APROBADO") {
       let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
       if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
       if (movSheet.getLastRow() === 0)
