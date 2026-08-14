@@ -417,7 +417,7 @@ function actualizarEstado(e) {
 
 // ── Listar RECEPCION_BODEGA por mes ──────────────────────────
 // Columnas: A=Mes B=N°Sol C=Lugar D=Codigo E=Descripcion
-//           F=CantSolicitada G=CantRecibida H=Estado I=Fecha/Hora
+//           F=CantSolicitada G=CantRecibida H=Estado I=Fecha/Hora J=FechaVencimiento
 function listarRecepcion(e) {
   try {
     const ss    = SpreadsheetApp.getActiveSpreadsheet();
@@ -441,7 +441,8 @@ function listarRecepcion(e) {
         codigo: String(f[3]||""), item: String(f[4]||""),
         cantSolicitada: String(f[5]||"").replace(/-/g,"").trim(),
         cantRecibida:   String(f[6]||"").replace(/-/g,"").trim(),
-        estado: estadoFila, fecha: fecha
+        estado: estadoFila, fecha: fecha,
+        fechaVencimiento: String(f[9]||"")
       });
     }
     return { status: "ok", pedidos };
@@ -476,6 +477,7 @@ function actualizarRecepcion(e) {
     sheet.getRange(fila, 9).setValue(new Date().toLocaleString("es-CL"));
 
     const fechaVenc = p.fechaVencimiento || "";
+    sheet.getRange(fila, 10).setValue(fechaVenc);
 
     // Si APROBADO → registrar INGRESO al lugar en MOVIMIENTOS
     // (el EGRESO de bodega ya se registró al aprobar la solicitud)
