@@ -187,7 +187,7 @@
         '<div class="item-sub">Cód: ' + (it.codigo||'—') + '</div>' +
         '<div class="item-bot">' +
           '<div class="cg"><span class="cl">Solicitado</span><span class="cn">' + (it.cantidad||'—') + '</span></div>' +
-          '<div class="cg"><span class="cl">Recibido</span><input class="ci" type="number" min="0" value="' + (it.cantidad||0) + '" id="rec-' + it.fila + '"/></div>' +
+          '<div class="cg"><span class="cl">Recibido</span><input class="ci" type="number" min="0" value="' + (it.cantAprobada || it.cantidad || 0) + '" id="rec-' + it.fila + '"/></div>' +
           
           '<div class="bts">' +
             '<button class="bap" id="ap-' + it.fila + '" onclick="togDecRL(' + it.fila + ',\'APROBADO\')">&#10003;</button>' +

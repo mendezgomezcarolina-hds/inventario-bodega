@@ -329,12 +329,11 @@ function actualizarEstado(e) {
       if (coincide) {
         const estadoPrevioFila = String(f[8] || "").trim().toUpperCase();
         if (estadoPrevioFila !== "APROBADO") huboPrevioNoAprobado = true;
-        // Si se aprueba con una cantidad distinta a la solicitada, se
-        // sobreescribe la columna Cantidad (E) con lo realmente aprobado —
-        // así el resto de los paneles (recepción por lugar, etc.) reflejan
-        // lo aprobado y no lo originalmente pedido.
+        // Cantidad aprobada se guarda en columna L (12), SIN tocar la columna
+        // E (Cantidad solicitada) — así ambos valores quedan disponibles por
+        // separado para los paneles que muestran "Solicitado" vs "Aprobado/Recibido".
         if (nuevoEstado === "APROBADO" && cantAprobada !== "") {
-          sheet.getRange(i+1, 5).setValue(cantAprobada);
+          sheet.getRange(i+1, 12).setValue(cantAprobada);
         }
         sheet.getRange(i+1, 9).setValue(nuevoEstado);
         sheet.getRange(i+1, 10).setValue(new Date().toLocaleString("es-CL"));
@@ -364,7 +363,10 @@ function actualizarEstado(e) {
         if (!esFilaAprobada) continue;
         var eCod    = String(ef[2] || "").trim();
         var eDesc   = String(ef[3] || "").trim();
-        var eQty    = Math.abs(parseFloat(ef[4]) || 0);
+        var eQtyAprobada = parseFloat(ef[11]); // col L = Cantidad Aprobada (si se aprobó con cantidad distinta)
+        var eQty    = (ef[11] !== "" && ef[11] != null && !isNaN(eQtyAprobada))
+          ? Math.abs(eQtyAprobada)
+          : Math.abs(parseFloat(ef[4]) || 0); // fallback: cantidad solicitada
         var eBodega = String(ef[10] || "").trim(); // col K = Bodega Origen
         // Fallback: buscar bodega en hoja INSUMOS col F
         if (!eBodega) {
@@ -794,6 +796,7 @@ function listarSolicitudesPorLugar(e) {
         codigo:       String(f[2] || ""),
         item:         String(f[3] || ""),
         cantidad:     String(f[4] || ""),
+        cantAprobada: String(f[11] || ""),
         responsable:  String(f[5] || ""),
         idResp:       String(f[6] || ""),
         fecha:        fecha,
