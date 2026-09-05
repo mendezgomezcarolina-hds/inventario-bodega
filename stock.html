@@ -222,6 +222,7 @@
   var loteDatos     = []; // [{codigo, desc, stock, idx}]
   var busquedaActual = "";
   var filtroActual = "todos";
+  var cantidadesLote = {}; // codigo → {cant, venc} — persiste entre redibujados/búsquedas
 
   function jsonp(url, cb) {
     var name  = "_s_" + Date.now() + "_" + (++_n);
@@ -369,6 +370,8 @@
       var cls   = nivel === "critical" ? "critical" : nivel === "warn" ? "warn" : "";
       var dotColor = nivel === "ok" || nivel === "sd" || nivel === "sobre" ? "#16a34a" : nivel === "warn" ? "#d97706" : "#dc2626";
       var stCls = nivel === "critical" ? "ls-er" : nivel === "warn" ? "ls-wa" : "ls-ok";
+      var guardado = cantidadesLote[it.codigo] || {};
+      var valCant  = guardado.cant != null ? guardado.cant : "";
       html +=
         '<div class="lote-row ' + cls + '" id="lrow-' + i + '">' +
           '<div>' +
@@ -380,25 +383,43 @@
           '</div>' +
           '<div class="lote-input-wrap">' +
             '<label>Cantidad</label>' +
-            '<input class="lote-input" type="number" min="0" id="linp-' + i + '" placeholder="0" oninput="actualizarBarraLote()" />' +
+            '<input class="lote-input' + (valCant !== "" && valCant > 0 ? ' tiene-valor' : '') + '" type="number" min="0" id="linp-' + i + '" placeholder="0" value="' + valCant + '" oninput="onInputLote(' + i + ')" />' +
           '</div>';
       
       if (esBodega) {
-        html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" style="width:140px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;outline:none;background:#f8fafc;border-color:#d97706;" /></div>';
+        var valVenc = guardado.venc || "";
+        html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" value="' + valVenc + '" style="width:140px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onInputLote(' + i + ')" /></div>';
       }
       
       html += '</div>';
     }
     lista.innerHTML = html;
+    actualizarBarraLote();
+  }
+
+  // Se llama al escribir en cualquier campo — persiste el valor por código,
+  // así no se pierde si luego se busca otro insumo y la lista se redibuja.
+  function onInputLote(i) {
+    var it = loteDatos[i];
+    if (!it) return;
+    var inp = document.getElementById("linp-" + i);
+    var v   = inp ? inp.value : "";
+    var fechaInp = document.getElementById("lfec-" + i);
+    var venc = fechaInp ? fechaInp.value : "";
+    if ((v && parseInt(v) > 0) || venc) {
+      cantidadesLote[it.codigo] = { cant: v, venc: venc };
+    } else {
+      delete cantidadesLote[it.codigo];
+    }
+    if (inp) inp.classList.toggle("tiene-valor", parseInt(v || "0") > 0);
+    actualizarBarraLote();
   }
 
   function actualizarBarraLote() {
     var items = 0, total = 0;
-    for (var i = 0; i < loteDatos.length; i++) {
-      var v = parseInt(document.getElementById("linp-" + i) ? document.getElementById("linp-" + i).value || "0" : "0");
+    for (var cod in cantidadesLote) {
+      var v = parseInt(cantidadesLote[cod].cant || "0");
       if (v > 0) { items++; total += v; }
-      var inp = document.getElementById("linp-" + i);
-      if (inp) inp.classList.toggle("tiene-valor", v > 0);
     }
     var resumen = document.getElementById("barraResumen");
     resumen.innerHTML = items === 0
@@ -412,16 +433,14 @@
     var esBodega = lugar === "BODEGA INSUMOS CLINICOS";
     if (!lugar) { toast("Selecciona un lugar primero.", "warn"); return; }
     var pendientes = [];
-    for (var i = 0; i < loteDatos.length; i++) {
-      var inp = document.getElementById("linp-" + i);
-      var v   = inp ? parseInt(inp.value || "0") : 0;
+    for (var cod in cantidadesLote) {
+      var g = cantidadesLote[cod];
+      var v = parseInt(g.cant || "0");
       if (v > 0) {
-        var fec = "";
-        if (esBodega) {
-          var fechaInp = document.getElementById("lfec-" + i);
-          fec = fechaInp ? fechaInp.value : "";
-        }
-        pendientes.push({ it: loteDatos[i], cant: v, fechaVenc: fec });
+        var itFull = null;
+        for (var k = 0; k < stockData.length; k++) { if (stockData[k].codigo === cod) { itFull = stockData[k]; break; } }
+        if (!itFull) continue;
+        pendientes.push({ it: itFull, cant: v, fechaVenc: g.venc || "" });
       }
     }
     if (!pendientes.length) { toast("Sin cantidades para guardar.", "warn"); return; }
@@ -437,16 +456,8 @@
         } else {
           toast("✓ " + enviados + " egresos guardados correctamente.", "ok");
         }
-        // Limpiar inputs
-        for (var j = 0; j < loteDatos.length; j++) {
-          var i2 = document.getElementById("linp-" + j);
-          if (i2) { i2.value = ""; i2.classList.remove("tiene-valor"); }
-          if (esBodega) {
-            var f2 = document.getElementById("lfec-" + j);
-            if (f2) f2.value = "";
-          }
-        }
-        actualizarBarraLote();
+        cantidadesLote = {};
+        renderLote();
         cargarStock();
         return;
       }
