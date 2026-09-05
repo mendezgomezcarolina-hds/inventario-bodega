@@ -1740,7 +1740,7 @@ function obtenerAccesos(e) {
       for (var i = 1; i < accDatos.length; i++) {
         var id  = String(accDatos[i][1] || "").trim();
         var acc = [];
-        for (var j = 2; j < 10; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
+        for (var j = 2; j < 11; j++) acc.push(String(accDatos[i][j] || "").trim().toLowerCase() === "si" ? 1 : 0);
         mapaAccesos[id] = acc;
       }
     }
@@ -1751,7 +1751,7 @@ function obtenerAccesos(e) {
       colaboradores.push({
         nombre:  String(colDatos[i][0]).trim(),
         id:      id,
-        accesos: mapaAccesos[id] || [1,1,1,1,1,1,1,1]
+        accesos: mapaAccesos[id] || [1,1,1,1,1,1,1,1,1]
       });
     }
     return { status: "ok", colaboradores: colaboradores };
@@ -1770,9 +1770,9 @@ function guardarAccesos(e) {
     var datos = JSON.parse(decodeURIComponent(p.datos || "[]"));
     // Limpiar y reescribir desde fila 2
     var lastRow = sheet.getLastRow();
-    if (lastRow >= 2) sheet.getRange(2, 1, lastRow - 1, 9).clearContent();
+    if (lastRow >= 2) sheet.getRange(2, 1, lastRow - 1, 11).clearContent();
     // Encabezados si faltan
-    if (lastRow < 1) sheet.getRange(1,1,1,8).setValues([["Responsable","ID","Recep. por Lugar","Stock por Lugar","Captura Inventario","Solicitud Insumos","Recep. Bodega","Aprobación Solic.","Ajuste Stock","Reportes Gestión"]]);
+    if (lastRow < 1) sheet.getRange(1,1,1,11).setValues([["Responsable","ID","Recep. por Lugar","Stock por Lugar","Captura Inventario","Solicitud Insumos","Recep. Bodega","Aprobación Solic.","Ajuste Stock","Reportes Gestión","Préstamos"]]);
     // También cargar nombres desde COLABORADORES para la columna A
     var colabs  = ss.getSheetByName("COLABORADORES");
     var mapaNom = {};
@@ -1783,16 +1783,17 @@ function guardarAccesos(e) {
     var filas = [];
     for (var i = 0; i < datos.length; i++) {
       var d   = datos[i];
-      var acc = d.accesos || [0,0,0,0,0,0,0,0];
+      var acc = d.accesos || [0,0,0,0,0,0,0,0,0];
       filas.push([
         mapaNom[d.id] || d.id, d.id,
         acc[0] ? "si" : "no", acc[1] ? "si" : "no",
         acc[2] ? "si" : "no", acc[3] ? "si" : "no",
         acc[4] ? "si" : "no", acc[5] ? "si" : "no",
-        acc[6] ? "si" : "no", acc[7] ? "si" : "no"
+        acc[6] ? "si" : "no", acc[7] ? "si" : "no",
+        acc[8] ? "si" : "no"
       ]);
     }
-    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 10).setValues(filas);
+    if (filas.length > 0) sheet.getRange(2, 1, filas.length, 11).setValues(filas);
     return { status: "ok" };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
