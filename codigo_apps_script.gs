@@ -522,21 +522,22 @@ function actualizarEstado(e) {
         var eQty    = (ef[11] !== "" && ef[11] != null && !isNaN(eQtyAprobada))
           ? Math.abs(eQtyAprobada)
           : Math.abs(parseFloat(ef[4]) || 0); // fallback: cantidad solicitada
-        var eBodega = String(ef[10] || "").trim(); // col K = Bodega Origen
-        // Fallback: buscar bodega en hoja INSUMOS col F
-        if (!eBodega) {
-          var shIns = ss.getSheetByName("INSUMOS");
-          if (shIns) {
-            var insData = shIns.getDataRange().getValues();
-            for (var bi = 1; bi < insData.length; bi++) {
-              if (String(insData[bi][0]||"").trim() === eCod) {
-                var tipoBodega = String(insData[bi][5]||"").trim().toUpperCase();
-                eBodega = tipoBodega === "CLINICOS" ? "BODEGA INSUMOS CLINICOS" : "BODEGA INSUMOS NO CLINICOS";
-                break;
-              }
+        // La clasificación real en INSUMOS siempre manda — el "Bodega Origen"
+        // guardado al crear la solicitud solo se usa si el código no está
+        // clasificado ahí.
+        var eBodega = "";
+        var shIns = ss.getSheetByName("INSUMOS");
+        if (shIns) {
+          var insData = shIns.getDataRange().getValues();
+          for (var bi = 1; bi < insData.length; bi++) {
+            if (String(insData[bi][0]||"").trim() === eCod) {
+              var tipoBodega = String(insData[bi][5]||"").trim().toUpperCase();
+              eBodega = tipoBodega === "CLINICOS" ? "BODEGA INSUMOS CLINICOS" : "BODEGA INSUMOS NO CLINICOS";
+              break;
             }
           }
         }
+        if (!eBodega) eBodega = String(ef[10] || "").trim(); // col K = Bodega Origen (respaldo)
         if (eBodega && eCod && eQty > 0) {
           // Parsear vencimientos:
           // "YYYY-MM-DD"          → fecha simple, usar eQty completo
@@ -656,8 +657,12 @@ function actualizarEstadoLote(e) {
           const eQty = (cantAprobada !== "" && !isNaN(eQtyAprobada))
             ? Math.abs(eQtyAprobada)
             : Math.abs(parseFloat(f[4]) || 0);
-          let eBodega = String(f[10] || "").trim();
-          if (!eBodega) eBodega = buscarBodegaPorCodigo(eCod);
+          // La clasificación real en INSUMOS siempre manda — el "Bodega Origen"
+          // guardado al crear la solicitud solo se usa si el código no está
+          // clasificado ahí (evita que un error humano al pedir quede
+          // arrastrado como EGRESO en la bodega equivocada).
+          let eBodega = buscarBodegaPorCodigo(eCod);
+          if (!eBodega) eBodega = String(f[10] || "").trim();
 
           if (eBodega && eCod && eQty > 0) {
             bodegasARecalcular[eBodega] = true;
