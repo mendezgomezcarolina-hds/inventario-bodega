@@ -176,8 +176,16 @@
         '<div><div class="sol-id">' + g.id + '</div>' +
         '<div class="sol-meta">' + lugar + ' · ' + (g.fecha||'') + ' · ' + g.items.length + ' ítem' + (g.items.length > 1 ? 's' : '') + ' · ' + (g.responsable||'') + '</div></div>' +
         '<span class="sol-badge ' + (tabActual === "PENDIENTE" ? "sb-pend" : "sb-rec") + '">' + (tabActual === "PENDIENTE" ? "PENDIENTE" : "RECEPCIONADO") + '</span>' +
-      '</div>' +
-      '<div class="items-wrap">';
+      '</div>';
+
+    if (tabActual === "PENDIENTE") {
+      html += '<div style="padding:10px 14px 0;">' +
+        '<button class="btn-guardar" style="width:100%;background:var(--accent);" onclick="recepcionarTodo(\'' + g.id + '\')" id="todo-' + g.id + '">' +
+          '&#10003; Recepcionar todo lo entregado (' + g.items.length + ' ítem' + (g.items.length > 1 ? 's' : '') + ')' +
+        '</button></div>';
+    }
+
+    html += '<div class="items-wrap">';
 
     for (var i = 0; i < g.items.length; i++) {
       var it = g.items[i];
@@ -238,6 +246,22 @@
     return solicitudes.filter(function(s) { return s.id === gId; });
   }
 
+  // Un solo clic: marca todos los ítems de la solicitud como recepcionados
+  // (con la cantidad ya precargada, tal como fue aprobada) y guarda de inmediato.
+  function recepcionarTodo(gId) {
+    var items = getSolicitudesPorGrupo(gId);
+    items.forEach(function(it) {
+      var filaNum = parseInt(it.fila);
+      decisiones[filaNum] = { est: "APROBADO" };
+      var ap = document.getElementById("ap-" + filaNum);
+      var re = document.getElementById("re-" + filaNum);
+      if (ap) ap.className = "bap on";
+      if (re) re.className = "bre";
+    });
+    actualizarProg(gId);
+    guardarGrupo(gId);
+  }
+
   // Override togDecRL to update prog
   function togDecRL(fila, est) {
     var filaNum = parseInt(fila);
@@ -279,6 +303,8 @@
     if (!lote.length) { toast("Sin decisiones para guardar.", "warn"); return; }
     document.getElementById("btn-" + gId).disabled = true;
     document.getElementById("btn-" + gId).textContent = "Guardando…";
+    var btnTodo = document.getElementById("todo-" + gId);
+    if (btnTodo) { btnTodo.disabled = true; btnTodo.innerHTML = "Guardando…"; }
 
     var url = SCRIPT_URL + "?accion=recepcionarSolicitudLote" +
       "&items=" + encodeURIComponent(JSON.stringify(lote));
@@ -288,6 +314,7 @@
         toast("Error al guardar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
         document.getElementById("btn-" + gId).disabled = false;
         document.getElementById("btn-" + gId).textContent = "Guardar";
+        if (btnTodo) { btnTodo.disabled = false; btnTodo.innerHTML = "&#10003; Recepcionar todo lo entregado"; }
       } else {
         toast("✓ Recepciones guardadas correctamente.", "ok");
       }
