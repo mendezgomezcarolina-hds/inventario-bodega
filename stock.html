@@ -99,7 +99,7 @@
     .lote-nom{font-size:.8rem;font-weight:500;color:var(--text);line-height:1.3;}
     .lote-info{display:flex;align-items:center;gap:6px;margin-top:3px;}
     .lote-stock{font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:99px;}
-    .ls-ok{background:#dcfce7;color:#15803d;} .ls-wa{background:#fef3c7;color:#92400e;} .ls-er{background:#fee2e2;color:#dc2626;}
+    .ls-ok{background:#dcfce7;color:#15803d;} .ls-wa{background:#fef3c7;color:#92400e;} .ls-er{background:#fee2e2;color:#dc2626;} .ls-sob{background:#f3e8ff;color:#9333ea;}
     .lote-input-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;}
     .lote-input-wrap label{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);}
     .lote-input{width:72px;padding:6px 4px;border:1.5px solid var(--border);border-radius:7px;font-family:'DM Mono',monospace;font-size:.95rem;font-weight:700;text-align:center;color:var(--text);outline:none;background:#f8fafc;}
@@ -368,8 +368,8 @@
       var it = filtrado[i];
       var nivel = getNivel(it);
       var cls   = nivel === "critical" ? "critical" : nivel === "warn" ? "warn" : "";
-      var dotColor = nivel === "ok" || nivel === "sd" || nivel === "sobre" ? "#16a34a" : nivel === "warn" ? "#d97706" : "#dc2626";
-      var stCls = nivel === "critical" ? "ls-er" : nivel === "warn" ? "ls-wa" : "ls-ok";
+      var dotColor = nivel === "sobre" ? "#9333ea" : (nivel === "ok" || nivel === "sd") ? "#16a34a" : nivel === "warn" ? "#d97706" : "#dc2626";
+      var stCls = nivel === "critical" ? "ls-er" : nivel === "warn" ? "ls-wa" : nivel === "sobre" ? "ls-sob" : "ls-ok";
       var guardado = cantidadesLote[it.codigo] || {};
       var valCant  = guardado.cant != null ? guardado.cant : "";
       html +=
