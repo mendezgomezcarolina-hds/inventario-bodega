@@ -991,16 +991,25 @@ function actualizarRecepcionLote(e) {
       const descr  = String(filaDatos[4] || "");
       const estadoPrevio = String(filaDatos[7] || "").trim().toUpperCase();
 
-      sheet.getRange(fila, 7).setValue(cant);
-      sheet.getRange(fila, 8).setValue(est);
-      sheet.getRange(fila, 9).setValue(ahora);
-      const fechaVenc = it.fechaVencimiento || "";
-      sheet.getRange(fila, 10).setValue(fechaVenc);
-      procesados++;
+      if (est === "APROBADO") {
+        sheet.getRange(fila, 7).setValue(cant);
+        sheet.getRange(fila, 8).setValue(est);
+        sheet.getRange(fila, 9).setValue(ahora);
+        const fechaVenc = it.fechaVencimiento || "";
+        sheet.getRange(fila, 10).setValue(fechaVenc);
+        procesados++;
 
-      if (est === "APROBADO" && estadoPrevio !== "APROBADO") {
-        ingresos.push([ahora, "INGRESO", nSol, mes, lugar, codigo, descr, cant, fechaVenc]);
-        if (lugar) lugaresARecalcular[lugar] = true;
+        if (estadoPrevio !== "APROBADO") {
+          ingresos.push([ahora, "INGRESO", nSol, mes, lugar, codigo, descr, cant, fechaVenc]);
+          if (lugar) lugaresARecalcular[lugar] = true;
+        }
+      } else {
+        // "Aún no llega" — se deja en PENDIENTE (no rechazado definitivo) para
+        // poder recepcionarlo más adelante cuando llegue de bodega central.
+        // Solo se registra que se revisó, sin tocar cantidad ni vencimiento.
+        sheet.getRange(fila, 8).setValue("PENDIENTE");
+        sheet.getRange(fila, 9).setValue(ahora); // última revisión
+        procesados++;
       }
     }
 

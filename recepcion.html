@@ -309,17 +309,19 @@
     var html = "";
     for (var i = 0; i < solicitudActual.length; i++) {
       var p = solicitudActual[i];
+      var yaRevisado = p.fecha ? '<div class="item-sub" style="color:#d97706;">\u23f1 \u00daltima revisi\u00f3n: ' + p.fecha + '</div>' : '';
       html +=
         '<div class="item-fila">' +
           '<div class="item-nom">' + (p.item||"—") + '</div>' +
           '<div class="item-sub">C\u00f3d: ' + (p.codigo||"—") + '</div>' +
+          yaRevisado +
           '<div class="item-bot">' +
             '<div class="cant-grupo"><span class="cant-lbl">Solicitado</span><span class="cant-num">' + (p.cantSolicitada||"—") + '</span></div>' +
             '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida || String(p.cantSolicitada||"").replace(/[^0-9]/g,"")) + '" id="cr-' + p.fila + '" /></div>' +
             '<div class="cant-grupo"><span class="cant-lbl">Vencimiento</span><input class="date-input" type="date" id="venc-' + p.fila + '" /></div>' +
             '<div class="item-acciones">' +
-              '<button class="btn-ap" id="ap-' + p.fila + '" onclick="togDec(' + p.fila + ',\'APROBADO\')">&#10003;</button>' +
-              '<button class="btn-re" id="re-' + p.fila + '" onclick="togDec(' + p.fila + ',\'RECHAZADO\')">&#10007;</button>' +
+              '<button class="btn-ap" id="ap-' + p.fila + '" title="Recepcionar" onclick="togDec(' + p.fila + ',\'APROBADO\')">&#10003;</button>' +
+              '<button class="btn-re" id="re-' + p.fila + '" title="A\u00fan no llega (queda pendiente para revisar despu\u00e9s)" onclick="togDec(' + p.fila + ',\'PENDIENTE\')">&#8635;</button>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -336,7 +338,7 @@
     if (!decisiones[filaNum]) decisiones[filaNum] = { est: null };
     decisiones[filaNum].est = decisiones[filaNum].est === est ? null : est;
     ap.classList.toggle("on", decisiones[filaNum].est === "APROBADO");
-    re.classList.toggle("on", decisiones[filaNum].est === "RECHAZADO");
+    re.classList.toggle("on", decisiones[filaNum].est === "PENDIENTE");
     actualizarProg();
   }
 
