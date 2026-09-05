@@ -151,6 +151,7 @@ function doGet(e) {
   if (accion === "lugaresConInventario") return responder(lugaresConInventario(),                  callback);
   if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
   if (accion === "registrarEgreso")          return responder(registrarEgreso(e),                      callback);
+  if (accion === "registrarEgresoLote")      return responder(registrarEgresoLote(e),                  callback);
   if (accion === "registrarCorreccion")        return responder(registrarCorreccion(e),                callback);
   if (accion === "notificarResumenSolicitud") return responder(notificarResumenSolicitud(e), callback);
   if (accion === "listarSolicitudesPorLugar") return responder(listarSolicitudesPorLugar(e),             callback);
@@ -1109,6 +1110,50 @@ function registrarEgreso(e) {
     ]);
     try { actualizarStockLugar(lugar); } catch(e2) { Logger.log("Stock no actualizado: " + e2); }
     return { status: "ok" };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Registrar VARIOS egresos (descuento diario) en una sola llamada ──
+// Recibe items = JSON string: [{codigo,descripcion,cantidad,fechaVenc,nSol}, ...]
+// Escribe todas las filas de una vez y recalcula el stock del lugar UNA sola vez
+// (antes: una llamada + un recálculo completo de stock por cada insumo).
+function registrarEgresoLote(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p  = e.parameter || {};
+    const lugar   = String(p.lugar     || "").trim();
+    const usuario = String(p.usuario   || "").trim();
+    const usuId   = String(p.usuarioId || "").trim();
+    if (!lugar) throw new Error("Falta lugar.");
+    let items;
+    try { items = JSON.parse(p.items || "[]"); } catch(pe) { throw new Error("items inválido: " + pe); }
+    if (!items.length) throw new Error("Sin items para procesar.");
+
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+
+    const ahora = new Date().toLocaleString("es-CL");
+    const filas = [];
+    for (let i = 0; i < items.length; i++) {
+      const it  = items[i];
+      const cod = String(it.codigo || "").trim();
+      const qty = parseFloat(it.cantidad || 0);
+      if (!cod || !qty) continue;
+      filas.push([
+        ahora, "EGRESO", String(it.nSol || ""), "", lugar, cod,
+        String(it.descripcion || ""), -Math.abs(qty), String(it.fechaVenc || ""), usuario, usuId
+      ]);
+    }
+    if (!filas.length) throw new Error("Ningún ítem tenía datos válidos.");
+
+    movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+    try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+
+    return { status: "ok", registrados: filas.length };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
