@@ -410,13 +410,27 @@ function leerItemsPorLugar(e) {
     var items = [];
     var encIni = String(datos[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
 
+    // Si se está pidiendo desde una bodega central (parámetro bodega =
+    // CLINICOS/NO CLINICOS), incluir el stock actual de esa bodega en cada
+    // ítem, para poder bloquear el pedido si está en 0.
+    var stockBodegaMapa = null;
+    if (bodega === "CLINICOS" || bodega === "NO CLINICOS") {
+      var nombreBodega = bodega === "NO CLINICOS" ? "BODEGA INSUMOS NO CLINICOS" : "BODEGA INSUMOS CLINICOS";
+      stockBodegaMapa = obtenerStockMapa(ss, nombreBodega);
+    }
+
     for (var j = encIni; j < datos.length; j++) {
       var cod  = String(datos[j][0]||"").trim();
       var desc = String(datos[j][1]||"").trim();
       var col6 = String(datos[j][5]||"").trim().toUpperCase();
       if (!cod) continue;
       if (bodega && col6 !== bodega) continue;
-      items.push({ codigo: cod, descripcion: desc });
+      var itemObj = { codigo: cod, descripcion: desc };
+      if (stockBodegaMapa) {
+        var st = stockBodegaMapa[cod];
+        itemObj.stock = (st == null || st < 0) ? 0 : st;
+      }
+      items.push(itemObj);
     }
 
     return { status: "ok", items: items, fuente: sheet.getName(), total: items.length };

@@ -438,9 +438,16 @@
     for (var i=0; i<fuente.length; i++) {
       var it = fuente[i];
       var div = document.createElement("div");
-      div.className = "ri";
-      div.innerHTML = '<span class="ri-cod">'+it.codigo+'</span><span class="ri-nom">'+it.descripcion+'</span>';
-      (function(item){ div.onclick = function(){ seleccionarItem(item); }; })(it);
+      var sinStock = it.stock !== undefined && it.stock <= 0;
+      div.className = "ri" + (sinStock ? " ri-sin-stock" : "");
+      div.innerHTML = '<span class="ri-cod">'+it.codigo+'</span><span class="ri-nom">'+it.descripcion+(sinStock ? ' <b style="color:#dc2626;">— SIN STOCK</b>' : '')+'</span>';
+      if (sinStock) {
+        div.style.opacity = "0.55";
+        div.style.cursor = "not-allowed";
+        div.onclick = function(){ mostrarToast("Sin stock disponible en la bodega para este insumo.", "warn"); };
+      } else {
+        (function(item){ div.onclick = function(){ seleccionarItem(item); }; })(it);
+      }
       lista.appendChild(div);
     }
   }
@@ -476,7 +483,9 @@
       var it = itemsData[i];
       var o  = document.createElement("option");
       o.value = it.codigo;
-      o.textContent = it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo;
+      var sinStock = it.stock !== undefined && it.stock <= 0;
+      o.textContent = (it.descripcion ? it.codigo + " — " + it.descripcion : it.codigo) + (sinStock ? " (SIN STOCK)" : "");
+      if (sinStock) { o.disabled = true; o.style.color = "#dc2626"; }
       sel.appendChild(o);
     }
   }
@@ -600,6 +609,12 @@
     }
     if (!cantidad || Number(cantidad) < 1) {
       mostrarToast("Ingresa una cantidad mayor a 0.", "warn"); return;
+    }
+    var itFull = null;
+    for (var i = 0; i < itemsData.length; i++) { if (itemsData[i].codigo === itemSelCodigo) { itFull = itemsData[i]; break; } }
+    if (itFull && itFull.stock !== undefined && itFull.stock <= 0) {
+      mostrarToast("No se puede pedir \"" + (itFull.descripcion || itemSelCodigo) + "\": sin stock disponible en la bodega.", "fail");
+      return;
     }
     listaItems.push({ lugar: lugarSesion, item: itemSelDesc, codigo: itemSelCodigo, cantidad: cantidad });
     renderLista();
