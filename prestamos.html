@@ -139,11 +139,6 @@
       <div id="serviciosChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
       <input type="text" id="servicio" placeholder="Escribe el servicio, o elige arriba…" oninput="marcarChipActivo(this.value)"/>
     </div>
-    <div class="field" id="wrapReceta" style="display:none;">
-      <label>N° receta / observación (opcional)</label>
-      <input type="text" id="receta" placeholder="Ej: receta N°1234"/>
-    </div>
-
     <div class="field">
       <label>Lugar que recibe (dermatología)</label>
       <select id="lugar"><option value="" disabled selected>Cargando lugares…</option></select>
@@ -231,7 +226,6 @@
     document.getElementById("origBtnFarmacia").classList.toggle("on", tipo === "farmacia");
     var esFarmacia = tipo === "farmacia";
     document.getElementById("wrapServicio").style.display    = esFarmacia ? "none" : "block";
-    document.getElementById("wrapReceta").style.display      = esFarmacia ? "block" : "none";
     document.getElementById("wrapChipsInsumo").style.display = esFarmacia ? "block" : "none";
     document.getElementById("tituloPanel").textContent    = esFarmacia ? "Ingreso Farmacia Central" : "Préstamos entre servicios";
     document.getElementById("subtituloPanel").textContent = esFarmacia ? "Reposición de stock con receta · Dermatología HDS" : "Insumos recibidos de otros servicios · Dermatología HDS";
@@ -370,7 +364,7 @@
     listaAbierta = false;
     var badge = document.getElementById("itemBadge");
     badge.style.display = "flex";
-    document.getElementById("itemBadgeNom").textContent = itemSelDesc;
+    document.getElementById("itemBadgeNom").textContent = itemSelCodigo + " — " + itemSelDesc;
   }
 
   function limpiarItem() {
@@ -384,7 +378,6 @@
     var lugar    = document.getElementById("lugar").value;
     var cantidad = document.getElementById("cantidad").value;
     var fecha    = document.getElementById("fecha").value;
-    var receta   = document.getElementById("receta").value.trim();
 
     if (!esFarmacia && !servicio) { mostrarToast("Indica de qué servicio viene el préstamo.", "warn"); return; }
     if (!lugar)          { mostrarToast("Selecciona el lugar que recibe el insumo.", "warn"); return; }
@@ -403,7 +396,6 @@
         "&descripcion=" + encodeURIComponent(itemSelDesc) +
         "&cantidad="    + encodeURIComponent(cantidad) +
         "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
-        "&receta="      + encodeURIComponent(receta) +
         "&usuario="     + encodeURIComponent(responsableSesion);
     } else {
       url = SCRIPT_URL + "?accion=registrarPrestamo" +
@@ -426,7 +418,6 @@
       }
       mostrarToast(esFarmacia ? "✓ Ingreso de Farmacia Central registrado — se sumó al stock de " + lugar + "." : "✓ Préstamo registrado — se sumó al stock de " + lugar + ".", "ok");
       document.getElementById("servicio").value = "";
-      document.getElementById("receta").value = "";
       marcarChipActivo("");
       document.getElementById("cantidad").value = "";
       document.getElementById("vencimiento").value = "";
