@@ -582,7 +582,7 @@ function listarSolicitudes(e) {
         fila: i + 1, id: String(f[0]||""), lugar: String(f[1]||""),
         codigo: String(f[2]||""), item: String(f[3]||""), cantidad: String(f[4]||""),
         responsable: String(f[5]||""), idResp: String(f[6]||""),
-        fecha: fechaH, estado: String(f[8]||""), fechaResol: fechaR, supervisor: String(f[10]||"")
+        fecha: fechaH, estado: String(f[8]||""), fechaResol: fechaR, supervisor: String(f[12]||"")
       });
     }
     return { status: "ok", solicitudes };
@@ -625,7 +625,7 @@ function actualizarEstado(e) {
         }
         sheet.getRange(i+1, 9).setValue(nuevoEstado);
         sheet.getRange(i+1, 10).setValue(new Date().toLocaleString("es-CL"));
-        sheet.getRange(i+1, 11).setValue(supervisor);
+        sheet.getRange(i+1, 13).setValue(supervisor); // col M = Supervisor que aprueba (K = Bodega Origen, no se toca)
         actualizados++;
       }
     }
@@ -791,7 +791,7 @@ function actualizarEstadoLote(e) {
         }
         sheet.getRange(i+1, 9).setValue(nuevoEstado);
         sheet.getRange(i+1, 10).setValue(ahora);
-        sheet.getRange(i+1, 11).setValue(supervisor);
+        sheet.getRange(i+1, 13).setValue(supervisor); // col M = Supervisor que aprueba (K = Bodega Origen, no se toca)
         procesados++;
 
         if (esNuevoAprobado) {
