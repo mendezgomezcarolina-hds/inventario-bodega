@@ -214,7 +214,15 @@
   };
 
   var SERVICIOS_FRECUENTES = ["Cirugía","Otorrino","Infectología","Oftalmología","Cuidados Paliativos","Medicina"];
-  var INSUMOS_FARMACIA_FRECUENTES = ["ANESTESIA","S.FISIOLOGICO 0,9% 20","S.FISIOLOGICO 0,9% 100","S.FISIOLOGICO 0,9% 250","S.FISIOLOGICO 0,9% 500","LIDOCAINA"];
+  var INSUMOS_FARMACIA_FRECUENTES = [
+    { codigo: "3002188426", descripcion: "S.FISIOLÓGICO 0,9% 500 ML" },
+    { codigo: "3002185425", descripcion: "S.FISIOLÓGICO 0,9% 250 ML" },
+    { codigo: "3002180050", descripcion: "S.FISIOLÓGICO 0,9% 100 ML" },
+    { codigo: "3002165600", descripcion: "S.FISIOLÓGICO 0,9% 20 ML" },
+    { codigo: "3002163230", descripcion: "LIDOCAÍNA 2% AMPOLLA 5 ML" },
+    { codigo: "3002160101", descripcion: "ANESTESIA DENTAL CON VASOCONTRICTOR CAJAX100" },
+    { codigo: "3002160100", descripcion: "ANESTESIA DENTAL SIN VASOCONTRICTOR CAJAX100" }
+  ];
   var origenActual = "prestamo";
 
   function setOrigen(tipo) {
@@ -235,15 +243,14 @@
   function renderChipsInsumoFarmacia() {
     var cont = document.getElementById("insumosChips");
     cont.innerHTML = "";
-    INSUMOS_FARMACIA_FRECUENTES.forEach(function(s) {
+    INSUMOS_FARMACIA_FRECUENTES.forEach(function(it) {
       var b = document.createElement("button");
       b.type = "button";
       b.className = "serv-chip";
-      b.textContent = s.length > 18 ? s.replace("S.FISIOLOGICO 0,9% ", "S.F. ") : s;
+      b.title = it.codigo + " — " + it.descripcion;
+      b.textContent = it.descripcion.replace("S.FISIOLÓGICO 0,9%", "S.F. 0,9%").replace(" CAJAX100", "");
       b.onclick = function() {
-        document.getElementById("itemQ").value = s;
-        filtrarItems();
-        abrirLista();
+        seleccionarItem(it);
       };
       cont.appendChild(b);
     });
