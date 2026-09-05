@@ -88,6 +88,57 @@ function diagnosticoBodegas(e) {
   }
 }
 
+// ── Corregir clasificación de bodega en MOVIMIENTOS ──────────
+// Re-ejecuta el mismo diagnóstico y corrige la columna "Lugar" (E) de cada
+// fila afectada, dejándola con la bodega correcta según INSUMOS col F.
+// No modifica cantidades, solo la bodega a la que quedó atribuido el movimiento.
+function corregirClasificacionBodegas(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const shIns = ss.getSheetByName("INSUMOS");
+    if (!shIns) return { status: "error", mensaje: "Sin hoja INSUMOS" };
+    const insData = shIns.getDataRange().getValues();
+    const clasifPorCodigo = {};
+    for (let i = 1; i < insData.length; i++) {
+      const cod = String(insData[i][0] || "").trim();
+      if (!cod) continue;
+      const tipo = String(insData[i][5] || "").trim().toUpperCase();
+      clasifPorCodigo[cod] = tipo === "CLINICOS" ? "BODEGA INSUMOS CLINICOS" : "BODEGA INSUMOS NO CLINICOS";
+    }
+
+    const movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) return { status: "error", mensaje: "Sin hoja MOVIMIENTOS" };
+    const movDatos = movSheet.getDataRange().getValues();
+    const BODEGAS = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+
+    let corregidas = 0;
+    const bodegasAfectadas = {};
+    for (let j = 1; j < movDatos.length; j++) {
+      const m = movDatos[j];
+      const lugar = String(m[4] || "").trim();
+      if (BODEGAS.indexOf(lugar) === -1) continue;
+      const cod = String(m[5] || "").trim();
+      if (!cod) continue;
+      const clasifCorrecta = clasifPorCodigo[cod];
+      if (!clasifCorrecta || clasifCorrecta === lugar) continue;
+
+      movSheet.getRange(j + 1, 5).setValue(clasifCorrecta);
+      corregidas++;
+      bodegasAfectadas[lugar] = true;
+      bodegasAfectadas[clasifCorrecta] = true;
+    }
+
+    const bodegas = Object.keys(bodegasAfectadas);
+    for (let bj = 0; bj < bodegas.length; bj++) {
+      try { actualizarStockLugar(bodegas[bj]); } catch(ex) { Logger.log("Stock no actualizado (" + bodegas[bj] + "): " + ex); }
+    }
+
+    return { status: "ok", filasCorregidas: corregidas, bodegasRecalculadas: bodegas };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
   const callback = e.parameter.callback || "";
@@ -119,6 +170,7 @@ function doGet(e) {
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
+  if (accion === "corregirClasificacionBodegas") return responder(corregirClasificacionBodegas(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
   if (accion === "enviarReporte")      return responder(enviarReporte(e),                          callback);
   if (accion === "stockHistorico")     return responder(stockHistorico(e),                         callback);
