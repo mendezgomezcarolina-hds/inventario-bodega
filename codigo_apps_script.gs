@@ -70,6 +70,49 @@ function obtenerStockMapa(ss, lugar) {
   return mapa;
 }
 
+// ── Lotes de vencimiento con stock disponible por código, para un lugar ──
+// Devuelve { codigo: [{fecha, cantidad}, ...] } ordenado de la fecha que
+// vence antes a la que vence después, solo lotes con cantidad > 0.
+function obtenerVencimientosLugar(ss, lugar) {
+  var mapa = {}; // cod → { fecha → cantidad }
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  if (!movSheet || movSheet.getLastRow() <= 1) return {};
+  var datos = movSheet.getDataRange().getValues();
+  var ini = String(datos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+  for (var i = ini; i < datos.length; i++) {
+    var m = datos[i];
+    if (String(m[4]||"").trim() !== lugar) continue;
+    var cod = String(m[5]||"").trim();
+    var fechaVenc = String(m[8]||"").trim();
+    if (!cod || !fechaVenc) continue;
+    var qty = parseFloat(m[7]||0) || 0;
+    if (!mapa[cod]) mapa[cod] = {};
+    mapa[cod][fechaVenc] = (mapa[cod][fechaVenc]||0) + qty;
+  }
+  var resultado = {};
+  for (var cod in mapa) {
+    var lotes = [];
+    for (var f in mapa[cod]) {
+      if (mapa[cod][f] > 0) lotes.push({ fecha: f, cantidad: mapa[cod][f] });
+    }
+    if (!lotes.length) continue;
+    lotes.sort(function(a,b){ return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
+    resultado[cod] = lotes;
+  }
+  return resultado;
+}
+
+function vencimientosPorLugar(e) {
+  try {
+    var ss    = SpreadsheetApp.getActiveSpreadsheet();
+    var lugar = (e.parameter.lugar || "").trim();
+    if (!lugar) return { status: "error", mensaje: "Falta lugar." };
+    return { status: "ok", mapa: obtenerVencimientosLugar(ss, lugar) };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 // ── Diagnóstico: stocks negativos en TODOS los lugares ───────
 function diagnosticoStockNegativo(e) {
   try {
@@ -287,6 +330,7 @@ function doGet(e) {
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
+  if (accion === "vencimientosPorLugar") return responder(vencimientosPorLugar(e), callback);
   if (accion === "diagnosticoStockNegativo") return responder(diagnosticoStockNegativo(e), callback);
   if (accion === "corregirStockNegativo") return responder(corregirStockNegativo(e), callback);
   if (accion === "corregirClasificacionBodegas") return responder(corregirClasificacionBodegas(e), callback);

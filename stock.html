@@ -223,6 +223,7 @@
   var busquedaActual = "";
   var filtroActual = "todos";
   var cantidadesLote = {}; // codigo → {cant, venc} — persiste entre redibujados/búsquedas
+  var vencimientosMapa = {}; // codigo → [{fecha, cantidad}] — lotes disponibles en la bodega actual
 
   function jsonp(url, cb) {
     var name  = "_s_" + Date.now() + "_" + (++_n);
@@ -306,7 +307,16 @@
       stockData = data.items || [];
       var ley = document.getElementById("leyendaDias");
       if (ley) ley.style.display = lugar === "BODEGA INSUMOS CLINICOS" ? "block" : "none";
-      renderLote();
+
+      if (lugar === "BODEGA INSUMOS CLINICOS") {
+        jsonp(SCRIPT_URL + "?accion=vencimientosPorLugar&lugar=" + encodeURIComponent(lugar), function(vdata, verr) {
+          vencimientosMapa = (!verr && vdata && vdata.status === "ok") ? (vdata.mapa || {}) : {};
+          renderLote();
+        });
+      } else {
+        vencimientosMapa = {};
+        renderLote();
+      }
     });
   }
 
@@ -387,14 +397,47 @@
           '</div>';
       
       if (esBodega) {
-        var valVenc = guardado.venc || "";
-        html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" value="' + valVenc + '" style="width:140px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onInputLote(' + i + ')" /></div>';
+        var lotes    = vencimientosMapa[it.codigo] || [];
+        var valVenc  = guardado.venc || "";
+        var esOtro   = !!valVenc && lotes.every(function(l){ return l.fecha !== valVenc; });
+        if (lotes.length) {
+          var opts = '<option value="" disabled' + (!valVenc ? ' selected' : '') + '>Elegir…</option>';
+          for (var li = 0; li < lotes.length; li++) {
+            var l = lotes[li];
+            opts += '<option value="' + l.fecha + '"' + (valVenc === l.fecha ? ' selected' : '') + '>' + fmtFechaCorta(l.fecha) + ' (' + l.cantidad + ')</option>';
+          }
+          opts += '<option value="__otro__"' + (esOtro ? ' selected' : '') + '>Otro…</option>';
+          html += '<div class="lote-input-wrap"><label>Vencimiento</label>' +
+            '<select id="lsel-' + i + '" style="width:150px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onSelVenc(' + i + ')">' + opts + '</select>' +
+            '<input type="date" id="lfec-' + i + '" value="' + (esOtro ? valVenc : '') + '" style="width:140px;margin-top:5px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;outline:none;background:#f8fafc;border-color:#d97706;display:' + (esOtro ? 'block' : 'none') + ';" onchange="onInputLote(' + i + ')" />' +
+            '</div>';
+        } else {
+          html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" value="' + valVenc + '" style="width:140px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onInputLote(' + i + ')" /></div>';
+        }
       }
       
       html += '</div>';
     }
     lista.innerHTML = html;
     actualizarBarraLote();
+  }
+
+  function fmtFechaCorta(iso) {
+    var p = String(iso||"").split("-");
+    return p.length === 3 ? (p[2] + "-" + p[1] + "-" + p[0]) : iso;
+  }
+
+  function onSelVenc(i) {
+    var sel = document.getElementById("lsel-" + i);
+    var fechaInp = document.getElementById("lfec-" + i);
+    if (!sel || !fechaInp) return;
+    if (sel.value === "__otro__") {
+      fechaInp.style.display = "block";
+    } else {
+      fechaInp.style.display = "none";
+      fechaInp.value = "";
+    }
+    onInputLote(i);
   }
 
   // Se llama al escribir en cualquier campo — persiste el valor por código,
@@ -404,8 +447,14 @@
     if (!it) return;
     var inp = document.getElementById("linp-" + i);
     var v   = inp ? inp.value : "";
+    var sel = document.getElementById("lsel-" + i);
     var fechaInp = document.getElementById("lfec-" + i);
-    var venc = fechaInp ? fechaInp.value : "";
+    var venc = "";
+    if (sel) {
+      venc = sel.value === "__otro__" ? (fechaInp ? fechaInp.value : "") : sel.value;
+    } else if (fechaInp) {
+      venc = fechaInp.value;
+    }
     if ((v && parseInt(v) > 0) || venc) {
       cantidadesLote[it.codigo] = { cant: v, venc: venc };
     } else {
