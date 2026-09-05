@@ -90,7 +90,7 @@
     .sem-badges{display:flex;gap:4px;}
     .badge{display:inline-block;font-size:.61rem;font-weight:700;padding:2px 7px;border-radius:99px;}
     .b-er{background:#fee2e2;color:#dc2626;} .b-wa{background:#fef3c7;color:#92400e;}
-    .b-ok{background:#dcfce7;color:#15803d;} .b-so{background:#dbeafe;color:#1e40af;} .b-gr{background:#f1f5f9;color:#475569;}
+    .b-ok{background:#dcfce7;color:#15803d;} .b-so{background:#f3e8ff;color:#9333ea;} .b-gr{background:#f1f5f9;color:#475569;}
     .sem-items{padding:8px 12px;}
     .sem-item{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid #f8f9fa;}
     .sem-item:last-child{border-bottom:none;}
@@ -185,7 +185,7 @@
         <option value="">Todos los estados</option>
         <option value="CRITICO">🔴 Solo Críticos</option>
         <option value="BAJO">🟡 Solo Bajos</option>
-        <option value="SOBRESTOCK">🔵 Solo Sobrestock</option>
+        <option value="SOBRESTOCK">🟣 Solo Sobrestock</option>
       </select>
       <button class="btn btn-primary" onclick="cargarSemaforo()"><i class="ti ti-refresh"></i> Cargar</button>
     </div>
@@ -565,14 +565,14 @@ function renderSem(res,fil){
     html+='<div class="sem-card"><div class="sem-hdr"><span class="sem-nom">📍 '+lu+'</span><div class="sem-badges">';
     if(crit)html+='<span class="badge b-er">🔴 '+crit+'</span>';
     if(bajo)html+='<span class="badge b-wa">🟡 '+bajo+'</span>';
-    if(sob)html+='<span class="badge b-so">🔵 '+sob+'</span>';
+    if(sob)html+='<span class="badge b-so">🟣 '+sob+'</span>';
     html+='<span class="badge b-gr">'+items.length+' ítems</span></div></div>';
     if(filt.length){html+='<div class="sem-items">';
       filt.forEach(function(it){
         var e=(it.estado||"").toUpperCase();
         var bc=e==="CRITICO"?"b-er":e==="BAJO"||e==="REPONER"?"b-wa":e==="SOBRESTOCK"||e==="SOBRE"?"b-so":"b-ok";
-        var bl=e==="CRITICO"?"🔴 CRÍTICO":e==="BAJO"||e==="REPONER"?"🟡 BAJO":e==="SOBRESTOCK"||e==="SOBRE"?"🔵 SOBRE":"🟢 OK";
-        filas.push([lu,it.codigo,it.descripcion||it.codigo,it.stock,bl.replace(/[🔴🟡🟢🔵]/g,"").trim()]);
+        var bl=e==="CRITICO"?"🔴 CRÍTICO":e==="BAJO"||e==="REPONER"?"🟡 BAJO":e==="SOBRESTOCK"||e==="SOBRE"?"🟣 SOBRE":"🟢 OK";
+        filas.push([lu,it.codigo,it.descripcion||it.codigo,it.stock,bl.replace(/[🔴🟡🟢🟣]/g,"").trim()]);
         html+='<div class="sem-item"><div><div class="sem-item-nom">'+(it.descripcion||it.codigo)+'</div><div class="sem-item-cod">'+it.codigo+'</div></div>';
         html+='<div class="sem-right"><span class="sem-qty">'+it.stock+'</span><span class="badge '+bc+'">'+bl+'</span></div></div>';
       }); html+='</div>';
