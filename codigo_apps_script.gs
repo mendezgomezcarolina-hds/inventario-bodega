@@ -56,6 +56,7 @@ function registrarPrestamo(e) {
     const descr    = String(p.descripcion || "").trim();
     const cantidad = parseFloat(p.cantidad || 0) || 0;
     const fecha    = String(p.fecha || "").trim();
+    const vencimiento = String(p.vencimiento || "").trim();
     const usuario  = String(p.usuario || "").trim();
     if (!servicio || !lugar || !codigo || cantidad <= 0) throw new Error("Faltan datos del préstamo.");
 
@@ -65,14 +66,14 @@ function registrarPrestamo(e) {
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
     if (movSheet.getLastRow() === 0)
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
-    movSheet.appendRow([ahora, "PRESTAMO", "", "", lugar, codigo, descr, cantidad, "", usuario, ""]);
+    movSheet.appendRow([ahora, "PRESTAMO", "", "", lugar, codigo, descr, cantidad, vencimiento, usuario, ""]);
 
     let prSheet = ss.getSheetByName(SHEET_PRESTAMOS);
     if (!prSheet) {
       prSheet = ss.insertSheet(SHEET_PRESTAMOS);
-      prSheet.appendRow(["Fecha","Servicio","Lugar","Código","Descripción","Cantidad","Cantidad Pendiente","Estado","Fecha Devolución","Registrado por"]);
+      prSheet.appendRow(["Fecha","Servicio","Lugar","Código","Descripción","Cantidad","Cantidad Pendiente","Estado","Fecha Devolución","Registrado por","Vencimiento"]);
     }
-    prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario]);
+    prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento]);
 
     try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
 
@@ -95,10 +96,12 @@ function listarPrestamosPendientes(e) {
       const estado = String(f[7] || "").trim().toUpperCase();
       if (estado !== "PENDIENTE") continue;
       const fecha = f[0] instanceof Date ? normalizarFechaVenc_(f[0]) : String(f[0] || "");
+      const venc  = f[10] instanceof Date ? normalizarFechaVenc_(f[10]) : String(f[10] || "");
       prestamos.push({
         fila: i + 1, fecha: fecha, servicio: String(f[1]||""), lugar: String(f[2]||""),
         codigo: String(f[3]||""), descripcion: String(f[4]||""),
-        cantidad: parseFloat(f[5]||0) || 0, cantidadPendiente: parseFloat(f[6]||0) || 0
+        cantidad: parseFloat(f[5]||0) || 0, cantidadPendiente: parseFloat(f[6]||0) || 0,
+        vencimiento: venc
       });
     }
     return { status: "ok", prestamos };

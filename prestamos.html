@@ -145,9 +145,13 @@
         <input type="number" min="1" id="cantidad"/>
       </div>
       <div class="field" style="flex:1;">
-        <label>Fecha</label>
+        <label>Fecha del préstamo</label>
         <input type="date" id="fecha"/>
       </div>
+    </div>
+    <div class="field">
+      <label>Vencimiento (si aplica)</label>
+      <input type="date" id="vencimiento"/>
     </div>
 
     <button class="btn-submit" id="btnRegistrar" onclick="registrarPrestamo()">
@@ -304,6 +308,7 @@
       "&descripcion=" + encodeURIComponent(itemSelDesc) +
       "&cantidad="    + encodeURIComponent(cantidad) +
       "&fecha="       + encodeURIComponent(fecha) +
+      "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
       "&usuario="     + encodeURIComponent(responsableSesion);
 
     jsonp(url, function(data, err) {
@@ -316,6 +321,7 @@
       mostrarToast("✓ Préstamo registrado — se sumó al stock de " + lugar + ".", "ok");
       document.getElementById("servicio").value = "";
       document.getElementById("cantidad").value = "";
+      document.getElementById("vencimiento").value = "";
       limpiarItem();
       cargarPendientes();
     });
@@ -352,7 +358,7 @@
           '</div>' +
           '<span class="prestamo-badge">' + p.servicio + '</span>' +
         '</div>' +
-        '<div class="prestamo-meta">' + (p.lugar||"—") + ' · Prestado: ' + p.fecha + ' · Pendiente: ' + p.cantidadPendiente + ' de ' + p.cantidad + '</div>' +
+        '<div class="prestamo-meta">' + (p.lugar||"—") + ' · Prestado: ' + p.fecha + (p.vencimiento ? ' · Vence: ' + p.vencimiento : '') + ' · Pendiente: ' + p.cantidadPendiente + ' de ' + p.cantidad + '</div>' +
         '<div class="prestamo-foot">' +
           '<input type="number" min="1" max="' + p.cantidadPendiente + '" value="' + p.cantidadPendiente + '" id="dev-' + p.fila + '"/>' +
           '<button class="btn-devolver" onclick="devolver(' + p.fila + ')">Marcar devuelto</button>' +
