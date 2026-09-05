@@ -248,6 +248,60 @@ function vencimientosPorLugar(e) {
 // ── Diagnóstico: ítems del inventario inicial ya vencidos que ────
 // nunca tuvieron ningún movimiento posterior (probablemente ya se
 // usaron/descartaron sin registrar la salida — quedaron "fantasma").
+// ── Ver TODO lo relacionado a un código+lugar (diagnóstico puntual) ──
+function verItemCompleto(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p = e.parameter || {};
+    const lugarBuscado  = String(p.lugar  || "").trim();
+    const codigoBuscado = String(p.codigo || "").trim();
+    if (!codigoBuscado) throw new Error("Falta código.");
+
+    const resultado = { inventario: [], movimientos: [] };
+
+    const invSheet = ss.getSheetByName(SHEET_DATOS);
+    if (invSheet && invSheet.getLastRow() > 1) {
+      const invDatos = invSheet.getDataRange().getValues();
+      const ini = String(invDatos[0][0]||"").toUpperCase() === "LUGAR" ? 1 : 0;
+      for (let i = ini; i < invDatos.length; i++) {
+        const f = invDatos[i];
+        const lu = String(f[0]||"").trim();
+        const cod = String(f[1]||"").trim();
+        if (cod !== codigoBuscado) continue;
+        if (lugarBuscado && lu !== lugarBuscado) continue;
+        resultado.inventario.push({
+          fila: i + 1, lugar: lu, descripcion: String(f[2]||""), cantidad: parseFloat(f[3]||0)||0,
+          vencimiento: f[4] instanceof Date ? fmtDateSH_(f[4]) : String(f[4]||""),
+          fechaCaptura: f[5] instanceof Date ? normalizarFechaVenc_(f[5]) : String(f[5]||"")
+        });
+      }
+    }
+
+    const movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (movSheet && movSheet.getLastRow() > 1) {
+      const movDatos = movSheet.getDataRange().getValues();
+      const mIni = String(movDatos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      for (let j = mIni; j < movDatos.length; j++) {
+        const m = movDatos[j];
+        const lu = String(m[4]||"").trim();
+        const cod = String(m[5]||"").trim();
+        if (cod !== codigoBuscado) continue;
+        if (lugarBuscado && lu !== lugarBuscado) continue;
+        resultado.movimientos.push({
+          fila: j + 1, fecha: m[0] instanceof Date ? normalizarFechaVenc_(m[0]) : String(m[0]||""),
+          tipo: String(m[1]||""), nSol: String(m[2]||""), lugar: lu,
+          cantidad: parseFloat(m[7]||0)||0,
+          vencimiento: m[8] instanceof Date ? normalizarFechaVenc_(m[8]) : String(m[8]||"")
+        });
+      }
+    }
+
+    return { status: "ok", codigo: codigoBuscado, lugar: lugarBuscado || "(todos)", resultado: resultado };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function diagnosticoInventarioFantasma(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -549,6 +603,7 @@ function doGet(e) {
   if (accion === "vencimientosPorLugar") return responder(vencimientosPorLugar(e), callback);
   if (accion === "diagnosticoStockNegativo") return responder(diagnosticoStockNegativo(e), callback);
   if (accion === "diagnosticoInventarioFantasma") return responder(diagnosticoInventarioFantasma(e), callback);
+  if (accion === "verItemCompleto") return responder(verItemCompleto(e), callback);
   if (accion === "corregirInventarioFantasma") return responder(corregirInventarioFantasma(e), callback);
   if (accion === "corregirStockNegativo") return responder(corregirStockNegativo(e), callback);
   if (accion === "corregirClasificacionBodegas") return responder(corregirClasificacionBodegas(e), callback);
