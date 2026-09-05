@@ -697,10 +697,13 @@ function actualizarEstadoLote(e) {
       movSheet.getRange(movSheet.getLastRow()+1, 1, egresos.length, egresos[0].length).setValues(egresos);
     }
 
+    // Nota: ya no se recalcula STOCK_<bodega> aquí — esa hoja es solo un
+    // respaldo visual que ningún panel de la app lee (el stock en vivo se
+    // calcula directo desde INVENTARIO+MOVIMIENTOS). Recalcularla en cada
+    // guardado duplicaba el trabajo pesado y hacía todo más lento sin
+    // ninguna ganancia real. Se actualiza manualmente desde el menú
+    // "Actualizar todo el stock" cuando se necesite revisarla.
     const bodegas = Object.keys(bodegasARecalcular);
-    for (let bj = 0; bj < bodegas.length; bj++) {
-      try { actualizarStockLugar(bodegas[bj]); } catch(ex) { Logger.log("Stock no actualizado (" + bodegas[bj] + "): " + ex); }
-    }
 
     return { status: "ok", procesados, bodegasRecalculadas: bodegas };
   } catch(err) {
@@ -852,10 +855,9 @@ function actualizarRecepcionLote(e) {
       movSheet.getRange(movSheet.getLastRow()+1, 1, ingresos.length, ingresos[0].length).setValues(ingresos);
     }
 
+    // Nota: STOCK_<lugar> ya no se recalcula en cada guardado (ver nota en
+    // actualizarEstadoLote) — se actualiza manualmente desde el menú del Sheet.
     const lugares = Object.keys(lugaresARecalcular);
-    for (let lj = 0; lj < lugares.length; lj++) {
-      try { actualizarStockLugar(lugares[lj]); } catch(ex) { Logger.log("Stock lugar no actualizado (" + lugares[lj] + "): " + ex); }
-    }
 
     return { status: "ok", procesados, lugaresRecalculados: lugares };
   } catch(err) {
@@ -1151,7 +1153,7 @@ function registrarEgresoLote(e) {
     if (!filas.length) throw new Error("Ningún ítem tenía datos válidos.");
 
     movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
-    try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+    // Nota: STOCK_<lugar> ya no se recalcula aquí (ver nota en actualizarEstadoLote).
 
     return { status: "ok", registrados: filas.length };
   } catch(err) {
@@ -1305,10 +1307,9 @@ function recepcionarSolicitudLote(e) {
       movSheet.getRange(movSheet.getLastRow()+1, 1, ingresos.length, ingresos[0].length).setValues(ingresos);
     }
 
+    // Nota: STOCK_<lugar> ya no se recalcula en cada guardado (ver nota en
+    // actualizarEstadoLote) — se actualiza manualmente desde el menú del Sheet.
     const lugares = Object.keys(lugaresARecalcular);
-    for (let lj = 0; lj < lugares.length; lj++) {
-      try { actualizarStockLugar(lugares[lj]); } catch(ex) { Logger.log("Stock no actualizado (" + lugares[lj] + "): " + ex); }
-    }
 
     return { status: "ok", procesados, lugaresRecalculados: lugares };
   } catch(err) {
@@ -1891,14 +1892,19 @@ function actualizarStockLugar(nombreLugar) {
   });
 
   // 6 — Escribir y formatear
+  var esNueva = shStock.getLastRow() === 0;
   shStock.clearContents();
   shStock.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
-  var color = COLOR_LUGAR[lugarUP] || "#185FA5";
-  shStock.getRange(1, 1, 1, encabezado.length)
-    .setBackground(color).setFontColor("#ffffff").setFontWeight("bold");
-  if (filas.length > 1) {
-    shStock.getRange(2, 3, filas.length - 1, 4).setNumberFormat("0");
-    shStock.autoResizeColumns(1, encabezado.length);
+  if (esNueva) {
+    // Formato de encabezado solo la primera vez que se crea la hoja —
+    // autoResizeColumns es lento y no aporta nada en cada guardado.
+    var color = COLOR_LUGAR[lugarUP] || "#185FA5";
+    shStock.getRange(1, 1, 1, encabezado.length)
+      .setBackground(color).setFontColor("#ffffff").setFontWeight("bold");
+    if (filas.length > 1) {
+      shStock.getRange(2, 3, filas.length - 1, 4).setNumberFormat("0");
+      shStock.autoResizeColumns(1, encabezado.length);
+    }
   }
   Logger.log("✓ " + stockNom + " actualizado: " + (filas.length - 1) + " ítems");
   return filas.length - 1;
