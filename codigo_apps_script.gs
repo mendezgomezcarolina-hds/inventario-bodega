@@ -2972,6 +2972,44 @@ function stockHistorico(e) {
     var msPorDia = 86400000;
     var items = [];
 
+    // Reconciliar por (lugar, código): los EGRESO/AJUSTE- que no indicaron
+    // de qué lote salieron (sin vencimiento) quedaron en un grupo aparte
+    // ("" ) que puede quedar negativo, mientras el lote real con fecha
+    // sigue mostrando su cantidad completa sin descontar. Se descuenta ese
+    // faltante de los lotes con fecha más antigua primero (FEFO).
+    var porLugarCod = {}; // "lugar|codigo" → [key, key, ...]
+    for (var k0 in grupos) {
+      var g0 = grupos[k0];
+      var lc = g0.lugar + "|" + g0.codigo;
+      if (!porLugarCod[lc]) porLugarCod[lc] = [];
+      porLugarCod[lc].push(k0);
+    }
+    for (var lc in porLugarCod) {
+      var keys = porLugarCod[lc];
+      var keySinFecha = null, lotesConFecha = [];
+      for (var ki = 0; ki < keys.length; ki++) {
+        if (grupos[keys[ki]].vencimiento === "") keySinFecha = keys[ki];
+        else lotesConFecha.push(keys[ki]);
+      }
+      if (keySinFecha && grupos[keySinFecha].cantidad < 0) {
+        var faltante = -grupos[keySinFecha].cantidad;
+        lotesConFecha.sort(function(a, b) {
+          var da = grupos[a].vencDate ? grupos[a].vencDate.getTime() : Infinity;
+          var db = grupos[b].vencDate ? grupos[b].vencDate.getTime() : Infinity;
+          return da - db;
+        });
+        for (var li = 0; li < lotesConFecha.length && faltante > 0.0001; li++) {
+          var lote = grupos[lotesConFecha[li]];
+          if (lote.cantidad <= 0) continue;
+          var descuento = Math.min(lote.cantidad, faltante);
+          lote.cantidad -= descuento;
+          faltante -= descuento;
+        }
+        // El grupo sin fecha queda saldado (no se muestra como fila propia)
+        grupos[keySinFecha].cantidad = 0;
+      }
+    }
+
     for (var k in grupos) {
       var g = grupos[k];
 
