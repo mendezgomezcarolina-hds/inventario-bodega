@@ -73,6 +73,19 @@ function obtenerStockMapa(ss, lugar) {
 // ── Lotes de vencimiento con stock disponible por código, para un lugar ──
 // Devuelve { codigo: [{fecha, cantidad}, ...] } ordenado de la fecha que
 // vence antes a la que vence después, solo lotes con cantidad > 0.
+// Normaliza una celda de fecha de vencimiento a texto "yyyy-MM-dd", ya que
+// Google Sheets a veces convierte el texto guardado en un objeto Date real,
+// que al leerse con String() sale en formato inglés con zona horaria.
+function normalizarFechaVenc_(v) {
+  if (v instanceof Date && !isNaN(v.getTime())) {
+    var y = v.getFullYear();
+    var m = String(v.getMonth() + 1).padStart(2, "0");
+    var d = String(v.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + d;
+  }
+  return String(v || "").trim();
+}
+
 function obtenerVencimientosLugar(ss, lugar) {
   var mapa = {}; // cod → { fecha → cantidad }
   var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
@@ -83,7 +96,7 @@ function obtenerVencimientosLugar(ss, lugar) {
     var m = datos[i];
     if (String(m[4]||"").trim() !== lugar) continue;
     var cod = String(m[5]||"").trim();
-    var fechaVenc = String(m[8]||"").trim();
+    var fechaVenc = normalizarFechaVenc_(m[8]);
     if (!cod || !fechaVenc) continue;
     var qty = parseFloat(m[7]||0) || 0;
     if (!mapa[cod]) mapa[cod] = {};
