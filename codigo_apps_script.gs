@@ -35,6 +35,59 @@ function diagnosticoEstados(e) {
   }
 }
 
+// ── Diagnóstico: movimientos de bodega con lugar distinto a su ──
+// clasificación real en INSUMOS (col F). Detecta ítems clínicos
+// registrados bajo "no clínicos" y viceversa.
+function diagnosticoBodegas(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const shIns = ss.getSheetByName("INSUMOS");
+    if (!shIns) return { status: "error", mensaje: "Sin hoja INSUMOS" };
+    const insData = shIns.getDataRange().getValues();
+    const clasifPorCodigo = {}; // cod → "BODEGA INSUMOS CLINICOS" | "BODEGA INSUMOS NO CLINICOS"
+    for (let i = 1; i < insData.length; i++) {
+      const cod = String(insData[i][0] || "").trim();
+      if (!cod) continue;
+      const tipo = String(insData[i][5] || "").trim().toUpperCase();
+      clasifPorCodigo[cod] = tipo === "CLINICOS" ? "BODEGA INSUMOS CLINICOS" : "BODEGA INSUMOS NO CLINICOS";
+    }
+
+    const movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) return { status: "error", mensaje: "Sin hoja MOVIMIENTOS" };
+    const movDatos = movSheet.getDataRange().getValues();
+    const BODEGAS = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+
+    const resumen = {}; // cod → { descripcion, lugarRegistrado, clasifCorrecta, filas:[], totalCantidad }
+    for (let j = 1; j < movDatos.length; j++) {
+      const m = movDatos[j];
+      const lugar = String(m[4] || "").trim();
+      if (BODEGAS.indexOf(lugar) === -1) continue;
+      const cod = String(m[5] || "").trim();
+      if (!cod) continue;
+      const clasifCorrecta = clasifPorCodigo[cod];
+      if (!clasifCorrecta) continue; // código no está en INSUMOS, no se puede validar
+      if (clasifCorrecta === lugar) continue; // está bien clasificado
+
+      if (!resumen[cod]) {
+        resumen[cod] = {
+          codigo: cod,
+          descripcion: String(m[6] || ""),
+          lugarRegistrado: lugar,
+          clasifCorrecta: clasifCorrecta,
+          filas: [],
+          totalCantidad: 0
+        };
+      }
+      resumen[cod].filas.push(j + 1); // fila real en la hoja (1-indexed + encabezado)
+      resumen[cod].totalCantidad += parseFloat(m[7] || 0) || 0;
+    }
+
+    return { status: "ok", items: Object.values(resumen), totalItemsAfectados: Object.keys(resumen).length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function doGet(e) {
   const accion   = e.parameter.accion   || "";
   const callback = e.parameter.callback || "";
@@ -65,6 +118,7 @@ function doGet(e) {
   if (accion === "actualizarRecepcionLote") return responder(actualizarRecepcionLote(e),            callback);
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
+  if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
   if (accion === "enviarReporte")      return responder(enviarReporte(e),                          callback);
   if (accion === "stockHistorico")     return responder(stockHistorico(e),                         callback);
