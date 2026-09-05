@@ -87,6 +87,8 @@
     .prestamo-foot input{width:80px;padding:6px 8px;font-size:.85rem;}
     .btn-devolver{flex:1;padding:8px;background:var(--dk);color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;}
     .empty-msg{text-align:center;color:var(--muted);font-size:.85rem;padding:24px 0;}
+    .serv-chip{font-size:.8rem;padding:6px 13px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .serv-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
   </style>
 </head>
 <body>
@@ -124,7 +126,8 @@
   <div id="vistaReg">
     <div class="field">
       <label>Servicio prestador</label>
-      <input type="text" id="servicio" placeholder="Ej: Cirugía, Otorrino, Pabellón…"/>
+      <div id="serviciosChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
+      <input type="text" id="servicio" placeholder="Escribe el servicio, o elige arriba…" oninput="marcarChipActivo(this.value)"/>
     </div>
     <div class="field">
       <label>Lugar que recibe (dermatología)</label>
@@ -186,9 +189,33 @@
     document.getElementById("nombreBadge").textContent = responsableSesion;
     document.getElementById("idBadge").textContent     = responsableIdSesion;
     document.getElementById("fecha").value = new Date().toISOString().slice(0,10);
+    renderChipsServicio();
     cargarLugares();
     cargarPendientes();
   };
+
+  var SERVICIOS_FRECUENTES = ["Cirugía","Otorrino","Infectología","Oftalmología","Cuidados Paliativos","Medicina"];
+
+  function renderChipsServicio() {
+    var cont = document.getElementById("serviciosChips");
+    cont.innerHTML = "";
+    SERVICIOS_FRECUENTES.forEach(function(s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "serv-chip";
+      b.textContent = s;
+      b.onclick = function() {
+        document.getElementById("servicio").value = s;
+        marcarChipActivo(s);
+      };
+      cont.appendChild(b);
+    });
+  }
+
+  function marcarChipActivo(valorActual) {
+    var chips = document.querySelectorAll("#serviciosChips .serv-chip");
+    chips.forEach(function(c) { c.classList.toggle("on", c.textContent === valorActual); });
+  }
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
@@ -320,6 +347,7 @@
       }
       mostrarToast("✓ Préstamo registrado — se sumó al stock de " + lugar + ".", "ok");
       document.getElementById("servicio").value = "";
+      marcarChipActivo("");
       document.getElementById("cantidad").value = "";
       document.getElementById("vencimiento").value = "";
       limpiarItem();
