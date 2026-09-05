@@ -66,7 +66,7 @@ function registrarPrestamo(e) {
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
     if (movSheet.getLastRow() === 0)
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
-    movSheet.appendRow([ahora, "PRESTAMO", "", "", lugar, codigo, descr, cantidad, vencimiento, usuario, ""]);
+    movSheet.appendRow([ahora, "PRESTAMO", "Préstamo de " + servicio, "", lugar, codigo, descr, cantidad, vencimiento, usuario, servicio]);
 
     let prSheet = ss.getSheetByName(SHEET_PRESTAMOS);
     if (!prSheet) {
@@ -75,7 +75,10 @@ function registrarPrestamo(e) {
     }
     prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento]);
 
-    try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+    // Nota: STOCK_<lugar> ya no se recalcula aquí — esa hoja es solo un
+    // respaldo visual que ningún panel de la app lee; el stock en vivo se
+    // calcula aparte. Recalcularla aquí era la causa de la lentitud y los
+    // timeouts que producían registros duplicados.
 
     return { status: "ok" };
   } catch(err) {
@@ -122,6 +125,7 @@ function devolverPrestamo(e) {
     if (!fila || cantDevuelta <= 0) throw new Error("Faltan datos de la devolución.");
 
     const filaDatos = sheet.getRange(fila, 1, 1, 10).getValues()[0];
+    const servicio = String(filaDatos[1] || "");
     const lugar  = String(filaDatos[2] || "");
     const codigo = String(filaDatos[3] || "");
     const descr  = String(filaDatos[4] || "");
@@ -138,7 +142,7 @@ function devolverPrestamo(e) {
     const ahora = new Date().toLocaleString("es-CL");
     let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
-    movSheet.appendRow([ahora, "EGRESO", "", "", lugar, codigo, descr, -aDevolver, "", usuario, ""]);
+    movSheet.appendRow([ahora, "EGRESO", "Devolución a " + servicio, "", lugar, codigo, descr, -aDevolver, "", usuario, servicio]);
 
     const nuevoPendiente = pendienteActual - aDevolver;
     sheet.getRange(fila, 7).setValue(nuevoPendiente);
@@ -147,7 +151,7 @@ function devolverPrestamo(e) {
       sheet.getRange(fila, 9).setValue(ahora);
     }
 
-    try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+    // Nota: STOCK_<lugar> ya no se recalcula aquí (ver nota en registrarPrestamo).
 
     return { status: "ok", devuelto: aDevolver, pendienteRestante: Math.max(nuevoPendiente, 0) };
   } catch(err) {
