@@ -412,6 +412,14 @@
     document.getElementById("itemLista").style.display = "none";
   }
 
+  // Cerrar la lista al hacer clic fuera del buscador (antes se quedaba
+  // pegada en pantalla y no había forma de sacarla salvo elegir un ítem).
+  document.addEventListener("click", function(ev) {
+    if (!listaAbierta) return;
+    var wrap = document.getElementById("inputItemWrap");
+    if (wrap && !wrap.contains(ev.target)) cerrarLista();
+  });
+
   function norm(str) {
     return String(str||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   }
