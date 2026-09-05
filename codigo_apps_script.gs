@@ -440,6 +440,10 @@ function doGet(e) {
   if (accion === "accesos")             return responder(leerAccesos(),                            callback);
   if (accion === "lugaresConInventario") return responder(lugaresConInventario(),                  callback);
   if (accion === "stockLugar")          return responder(stockLugar(e),                           callback);
+  if (accion === "semaforoTodos")       return responder(semaforoTodos(e),                         callback);
+  if (accion === "consumoPorPeriodo")   return responder(consumoPorPeriodo(e),                     callback);
+  if (accion === "rankingTop")          return responder(rankingTop(e),                             callback);
+  if (accion === "resumenEjecutivo")    return responder(resumenEjecutivo(e),                       callback);
   if (accion === "registrarEgreso")          return responder(registrarEgreso(e),                      callback);
   if (accion === "registrarEgresoLote")      return responder(registrarEgresoLote(e),                  callback);
   if (accion === "registrarCorreccion")        return responder(registrarCorreccion(e),                callback);
@@ -1403,7 +1407,7 @@ function stockLugar(e) {
         var mQty = parseFloat(m[7]||0) || 0;
         if (mLug !== lugar || !mCod) continue;
         if (!mapaInv[mCod]) mapaInv[mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0 };
-        if (mTip === "INGRESO")       mapaInv[mCod].ingresos += mQty;
+        if (mTip === "INGRESO" || mTip === "PRESTAMO") mapaInv[mCod].ingresos += mQty;
         else if (mTip === "EGRESO")   mapaInv[mCod].egresos  += mQty;
         else if (mTip === "AJUSTE+" || mTip === "AJUSTE-") mapaInv[mCod].cantidad += mQty; // ajustes se suman directo
 
@@ -1442,6 +1446,276 @@ function stockLugar(e) {
 
     items.sort(function(a,b){ return a.descripcion.localeCompare(b.descripcion); });
     return { status: "ok", lugar: lugar, items: items, esBodega: esBodega };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Semáforo de TODOS los lugares en una sola llamada ────────
+// Antes el reporte hacía una llamada a stockLugar por cada lugar (N llamadas
+// completas, cada una releyendo INVENTARIO+MOVIMIENTOS). Ahora se lee todo
+// una sola vez y se reparte por lugar en memoria.
+function _calcularSemaforoTodos(ss) {
+  var LUGARES_BODEGA = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+
+  var invSheet = ss.getSheetByName(SHEET_DATOS);
+  var invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
+  var ini = String(invDatos[0] && invDatos[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
+
+  var porLugar = {}, lugaresSet = {};
+  for (var i = ini; i < invDatos.length; i++) {
+    var f = invDatos[i];
+    var lu = String(f[0]||"").trim();
+    if (!lu) continue;
+    lugaresSet[lu] = true;
+    var cod = String(f[1]||"").trim();
+    if (!cod) continue;
+    var desc = String(f[2]||"").trim();
+    var qty  = parseFloat(f[3]||0) || 0;
+    if (!porLugar[lu]) porLugar[lu] = {};
+    if (porLugar[lu][cod]) porLugar[lu][cod].cantidad += qty;
+    else porLugar[lu][cod] = { descripcion: desc, cantidad: qty, ingresos: 0, egresos: 0 };
+  }
+
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  if (movSheet && movSheet.getLastRow() > 1) {
+    var movDatos = movSheet.getDataRange().getValues();
+    var mIni = String(movDatos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    for (var j = mIni; j < movDatos.length; j++) {
+      var m = movDatos[j];
+      var mLug = String(m[4]||"").trim();
+      if (!mLug) continue;
+      lugaresSet[mLug] = true;
+      var mCod = String(m[5]||"").trim();
+      if (!mCod) continue;
+      var mTip = String(m[1]||"").trim().toUpperCase();
+      var mQty = parseFloat(m[7]||0) || 0;
+      if (!porLugar[mLug]) porLugar[mLug] = {};
+      if (!porLugar[mLug][mCod]) porLugar[mLug][mCod] = { descripcion: String(m[6]||mCod), cantidad: 0, ingresos: 0, egresos: 0 };
+      if (mTip === "INGRESO" || mTip === "PRESTAMO") porLugar[mLug][mCod].ingresos += mQty;
+      else if (mTip === "EGRESO") porLugar[mLug][mCod].egresos += mQty;
+      else if (mTip === "AJUSTE+" || mTip === "AJUSTE-") porLugar[mLug][mCod].cantidad += mQty;
+    }
+  }
+
+  var insSheet = ss.getSheetByName("INSUMOS");
+  var insData  = insSheet ? insSheet.getDataRange().getValues() : [];
+  var insIni   = String(insData[0] && insData[0][0] || "").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+  var umbralesBodega = {};
+  for (var r = insIni; r < insData.length; r++) {
+    var uc = String(insData[r][0]||"").trim();
+    if (!uc) continue;
+    umbralesBodega[uc] = { critico: parseFloat(insData[r][2]||0)||0, minimo: parseFloat(insData[r][3]||0)||0, maximo: parseFloat(insData[r][4]||0)||0 };
+  }
+
+  var resultado = {};
+  var umbralesCache = {};
+  var lugares = Object.keys(lugaresSet);
+  for (var li = 0; li < lugares.length; li++) {
+    var lugar = lugares[li];
+    var esBodega = LUGARES_BODEGA.indexOf(lugar) > -1;
+    var mapaUmbrales;
+    if (esBodega) {
+      mapaUmbrales = umbralesBodega;
+    } else {
+      if (!umbralesCache[lugar]) {
+        var m2 = {};
+        var shU = ss.getSheetByName(lugar);
+        if (shU && shU.getLastRow() > 1) {
+          var uD = shU.getDataRange().getValues();
+          var uI = String(uD[0][0]||"").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+          for (var r2 = uI; r2 < uD.length; r2++) {
+            var uc2 = String(uD[r2][0]||"").trim();
+            if (!uc2) continue;
+            m2[uc2] = { critico: parseFloat(uD[r2][2]||0)||0, minimo: parseFloat(uD[r2][3]||0)||0, maximo: parseFloat(uD[r2][4]||0)||0 };
+          }
+        }
+        umbralesCache[lugar] = m2;
+      }
+      mapaUmbrales = umbralesCache[lugar];
+    }
+
+    var items = [];
+    var mapaInv = porLugar[lugar] || {};
+    for (var cod in mapaInv) {
+      var it = mapaInv[cod];
+      var stock = it.cantidad + it.ingresos + it.egresos;
+      var u = mapaUmbrales[cod] || { critico:0, minimo:0, maximo:0 };
+      var estado;
+      if (u.critico > 0 || u.minimo > 0) {
+        estado = stock <= u.critico ? "CRITICO" : stock <= u.minimo ? "BAJO" : (u.maximo > 0 && stock > u.maximo ? "SOBRESTOCK" : "OK");
+      } else {
+        estado = stock <= 0 ? "CRITICO" : "OK";
+      }
+      items.push({ codigo: cod, descripcion: it.descripcion, stock: stock, estado: estado });
+    }
+    items.sort(function(a,b){ return a.descripcion.localeCompare(b.descripcion); });
+    resultado[lugar] = items;
+  }
+  return resultado;
+}
+
+function semaforoTodos(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    return { status: "ok", porLugar: _calcularSemaforoTodos(ss) };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Consumo agregado por período, calculado en el servidor ──
+// Antes el reporte traía TODO el historial de MOVIMIENTOS al navegador y
+// agrupaba ahí. Con miles de filas eso se pone lento; ahora se agrega en
+// el servidor y solo se manda el resumen.
+function consumoPorPeriodo(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var p  = e.parameter || {};
+    var anio = String(p.anio || "").trim();
+    var mes  = String(p.mes  || "").trim().toUpperCase();
+    var lugarFiltro = String(p.lugar || "").trim();
+
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet || movSheet.getLastRow() <= 1) return { status: "ok", porLugar: {}, totalUnidades: 0, totalLugares: 0, totalTipos: 0 };
+    var datos = movSheet.getDataRange().getValues();
+    var ini = String(datos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+
+    var porLugar = {}, totalU = 0, setItems = {}, setLugares = {};
+    for (var i = ini; i < datos.length; i++) {
+      var m = datos[i];
+      if (String(m[1]||"").trim().toUpperCase() !== "EGRESO") continue;
+      var lugar = String(m[4]||"").trim();
+      if (lugarFiltro && lugar !== lugarFiltro) continue;
+
+      if (anio || mes) {
+        var fechaDate = parseFechaSH_(m[0], false);
+        if (anio && (!fechaDate || fechaDate.getFullYear() !== parseInt(anio))) continue;
+        if (mes) {
+          var mesCol = String(m[3]||"").trim().toUpperCase();
+          var mesEfectivo = mesCol || (fechaDate ? MESES_SH_[fechaDate.getMonth()] : "");
+          if (mesEfectivo !== mes) continue;
+        }
+      }
+
+      var cod  = String(m[5]||"").trim();
+      if (!cod) continue;
+      var desc = String(m[6]||"").trim() || cod;
+      var qty  = Math.abs(parseFloat(m[7]||0) || 0);
+
+      if (!porLugar[lugar]) porLugar[lugar] = {};
+      if (!porLugar[lugar][cod]) porLugar[lugar][cod] = { desc: desc, total: 0, movs: 0 };
+      porLugar[lugar][cod].total += qty;
+      porLugar[lugar][cod].movs++;
+      totalU += qty;
+      setItems[cod] = true;
+      setLugares[lugar] = true;
+    }
+
+    return { status: "ok", porLugar: porLugar, totalUnidades: totalU, totalLugares: Object.keys(setLugares).length, totalTipos: Object.keys(setItems).length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+var MESES_SH_ = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+
+// ── Ranking de insumos más consumidos, calculado en el servidor ──
+function rankingTop(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var p  = e.parameter || {};
+    var lugarFiltro = String(p.lugar || "").trim();
+    var top = parseInt(p.top || "20") || 20;
+
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet || movSheet.getLastRow() <= 1) return { status: "ok", items: [], top: top };
+    var datos = movSheet.getDataRange().getValues();
+    var ini = String(datos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+
+    var acum = {};
+    for (var i = ini; i < datos.length; i++) {
+      var m = datos[i];
+      if (String(m[1]||"").trim().toUpperCase() !== "EGRESO") continue;
+      var lugar = String(m[4]||"").trim();
+      if (lugarFiltro && lugar !== lugarFiltro) continue;
+      var cod  = String(m[5]||"").trim();
+      var desc = String(m[6]||"").trim() || cod;
+      var key  = cod || desc;
+      if (!key) continue;
+      var qty  = Math.abs(parseFloat(m[7]||0) || 0);
+      if (!acum[key]) acum[key] = { codigo: cod, desc: desc, total: 0 };
+      acum[key].total += qty;
+    }
+    var sorted = Object.keys(acum).map(function(k){ return acum[k]; })
+      .sort(function(a,b){ return b.total - a.total; }).slice(0, top);
+
+    return { status: "ok", items: sorted, top: top };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Resumen ejecutivo: lo más importante de todos los reportes ──
+// en una sola llamada, para la vista al entrar al panel.
+function resumenEjecutivo(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    var semaforo = _calcularSemaforoTodos(ss);
+    var criticos = 0, bajos = 0, sobrestock = 0, totalItems = 0;
+    for (var lu in semaforo) {
+      semaforo[lu].forEach(function(it) {
+        totalItems++;
+        if (it.estado === "CRITICO") criticos++;
+        else if (it.estado === "BAJO") bajos++;
+        else if (it.estado === "SOBRESTOCK") sobrestock++;
+      });
+    }
+
+    var solSheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    var pendientes = 0;
+    if (solSheet && solSheet.getLastRow() > 1) {
+      var solDatos = solSheet.getDataRange().getValues();
+      for (var i = 1; i < solDatos.length; i++) {
+        if (String(solDatos[i][8]||"").trim().toUpperCase() === "PENDIENTE") pendientes++;
+      }
+    }
+
+    var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    var top5 = [];
+    var unidadesMesActual = 0;
+    if (movSheet && movSheet.getLastRow() > 1) {
+      var movDatos = movSheet.getDataRange().getValues();
+      var mIni = String(movDatos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+      var acum = {};
+      var ahora = new Date();
+      for (var j = mIni; j < movDatos.length; j++) {
+        var m = movDatos[j];
+        if (String(m[1]||"").trim().toUpperCase() !== "EGRESO") continue;
+        var cod = String(m[5]||"").trim();
+        if (!cod) continue;
+        var desc = String(m[6]||"").trim() || cod;
+        var qty = Math.abs(parseFloat(m[7]||0) || 0);
+        if (!acum[cod]) acum[cod] = { codigo: cod, desc: desc, total: 0 };
+        acum[cod].total += qty;
+
+        var fechaMov = parseFechaSH_(m[0], false);
+        if (fechaMov && fechaMov.getFullYear() === ahora.getFullYear() && fechaMov.getMonth() === ahora.getMonth()) {
+          unidadesMesActual += qty;
+        }
+      }
+      top5 = Object.keys(acum).map(function(k){ return acum[k]; })
+        .sort(function(a,b){ return b.total - a.total; }).slice(0, 5);
+    }
+
+    return {
+      status: "ok",
+      criticos: criticos, bajos: bajos, sobrestock: sobrestock, totalItems: totalItems,
+      pendientesSolicitudes: pendientes,
+      unidadesMesActual: unidadesMesActual,
+      top5: top5
+    };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }

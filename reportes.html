@@ -138,16 +138,25 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab on" onclick="cambiarTab('consumo',this)"><i class="ti ti-chart-bar"></i> Consumo</button>
-    <button class="tab"    onclick="cambiarTab('semaforo',this)"><i class="ti ti-traffic-cone"></i> Semáforo</button>
-    <button class="tab"    onclick="cambiarTab('solicitudes',this)"><i class="ti ti-clipboard-list"></i> Solicitudes</button>
-    <button class="tab"    onclick="cambiarTab('ranking',this)"><i class="ti ti-medal"></i> Ranking</button>
-    <button class="tab"    onclick="cambiarTab('stock',this)"><i class="ti ti-package"></i> Stock</button>
+  <div class="fil-row" style="margin-bottom:14px;">
+    <select id="tab-select" onchange="cambiarTabSelect(this.value)" style="flex:1;font-size:.85rem;font-weight:600;padding:9px 10px;">
+      <option value="resumen">📌 Resumen Ejecutivo</option>
+      <option value="consumo">📊 Consumo</option>
+      <option value="semaforo">🚦 Semáforo</option>
+      <option value="solicitudes">📋 Solicitudes</option>
+      <option value="ranking">🏆 Ranking</option>
+      <option value="stock">📦 Stock</option>
+    </select>
+  </div>
+
+  <!-- RESUMEN EJECUTIVO -->
+  <div class="panel on" id="panel-resumen">
+    <div class="aviso"><i class="ti ti-info-circle"></i>Lo más importante de un vistazo. Para revisión rápida sin entrar a cada reporte.</div>
+    <div id="r-resumen"><div class="empty">Cargando resumen…</div></div>
   </div>
 
   <!-- CONSUMO -->
-  <div class="panel on" id="panel-consumo">
+  <div class="panel" id="panel-consumo">
     <div class="aviso"><i class="ti ti-info-circle"></i>Egresos por lugar y mes. Para justificar pedidos y reportes COMGES.</div>
     <div class="card">
       <div class="card-title"><i class="ti ti-filter"></i> Filtros</div>
@@ -342,11 +351,11 @@ function getLugares(cb){if(_lugares){cb(_lugares);return;}jsonp(SCRIPT_URL+"?acc
 function poblarSelect(id){getLugares(function(lug){var sel=document.getElementById(id);var cur=sel.value;while(sel.options.length>1)sel.remove(1);lug.forEach(function(l){var o=document.createElement("option");o.value=l;o.textContent=l;sel.appendChild(o);});if(cur)sel.value=cur;});}
 
 // ── Tabs ─────────────────────────────────────────────────────────
-function cambiarTab(id,btn){
+function cambiarTabSelect(id){
   document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));
-  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("on"));
-  document.getElementById("panel-"+id).classList.add("on"); btn.classList.add("on");
+  document.getElementById("panel-"+id).classList.add("on");
   ocultarAcciones();
+  if(id==="resumen") cargarResumen();
 }
 
 // ── Barra de acciones ────────────────────────────────────────────
@@ -440,6 +449,47 @@ function filasAHTMLTabla(filas,colores){
 }
 
 // ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+// PANEL 0 — RESUMEN EJECUTIVO
+// ════════════════════════════════════════════════════════════════
+function cargarResumen(){
+  spin("r-resumen");
+  jsonp(SCRIPT_URL+"?accion=resumenEjecutivo",function(d){
+    if(!d||d.status!=="ok"){empty("r-resumen","Error al cargar el resumen.");return;}
+    var html = '<div class="stats-4">'
+      +'<div class="stat st-er"><div class="stat-n">'+d.criticos+'</div><div class="stat-l">Críticos</div></div>'
+      +'<div class="stat st-wa"><div class="stat-n">'+d.bajos+'</div><div class="stat-l">Bajo mínimo</div></div>'
+      +'<div class="stat st-in"><div class="stat-n">'+d.sobrestock+'</div><div class="stat-l">Sobrestock</div></div>'
+      +'<div class="stat st-ok"><div class="stat-n">'+d.pendientesSolicitudes+'</div><div class="stat-l">Solicitudes pend.</div></div>'
+      +'</div>';
+
+    html += '<div class="card"><div class="card-title"><i class="ti ti-calendar"></i> Este mes</div>';
+    html += '<div style="font-size:1.6rem;font-weight:700;color:var(--accent);">'+fmt(d.unidadesMesActual)+'</div>';
+    html += '<div style="font-size:.72rem;color:var(--muted);">unidades egresadas en '+cap(meses()[new Date().getMonth()])+'</div></div>';
+
+    if(d.top5 && d.top5.length){
+      html += '<div class="card"><div class="card-title"><i class="ti ti-medal"></i> Top 5 insumos más consumidos (histórico)</div>';
+      var maxV = d.top5[0].total;
+      d.top5.forEach(function(it,idx){
+        var pct = (it.total/maxV*100);
+        html += '<div class="rank-row"><span class="rank-num">'+(idx+1)+'</span>';
+        html += '<div class="rank-info"><div class="rank-nom">'+(it.desc||it.codigo)+'</div>';
+        html += '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:var(--accent);"></div></div></div>';
+        html += '<span class="rank-qty">'+fmt(it.total)+'</span></div>';
+      });
+      html += '</div>';
+    }
+
+    if(d.criticos > 0 || d.bajos > 0){
+      html += '<div class="aviso" style="background:#fee2e2;border-color:#fecaca;color:#991b1b;">'
+        +'<i class="ti ti-alert-triangle"></i>Hay '+(d.criticos+d.bajos)+' ítem(s) bajo el mínimo entre críticos y bajos. Revisa la pestaña Semáforo para el detalle por lugar.</div>';
+    }
+
+    document.getElementById("r-resumen").innerHTML = html;
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
 // PANEL 1 — CONSUMO
 // ════════════════════════════════════════════════════════════════
 function cargarConsumo(){
@@ -448,33 +498,19 @@ function cargarConsumo(){
   var lugar=document.getElementById("c-lugar").value;
   spin("r-consumo"); document.getElementById("c-stats").style.display="none"; ocultarAcciones();
 
-  getMovs(function(movs){
-    var fil=movs.filter(function(m){
-      if((m.tipo||"").toUpperCase()!=="EGRESO")return false;
-      if(lugar&&m.lugar!==lugar)return false;
-      if(anio&&m.fecha&&m.fecha.indexOf(anio)===-1)return false;
-      if(mes){var mm=m.mes?m.mes.toUpperCase():normMes(m.fecha);if(mm!==mes)return false;}
-      return true;
-    });
-    if(!fil.length){empty("r-consumo","Sin egresos para el período seleccionado.");return;}
+  var url = SCRIPT_URL + "?accion=consumoPorPeriodo"
+    + "&anio="  + encodeURIComponent(anio)
+    + "&mes="   + encodeURIComponent(mes)
+    + "&lugar=" + encodeURIComponent(lugar);
 
-    // Agrupar por lugar → código → acumular cantidad y contar movimientos
-    var porLugar={},totalU=0,setItems={};
-    fil.forEach(function(m){
-      var lu=m.lugar||"Sin lugar";
-      var cod=m.codigo||"—";
-      var desc=m.descripcion||cod;
-      var qty=Math.abs(parseFloat(m.cantidad)||0);
-      if(!porLugar[lu])porLugar[lu]={};
-      if(!porLugar[lu][cod])porLugar[lu][cod]={desc:desc,total:0,movs:0};
-      porLugar[lu][cod].total+=qty;
-      porLugar[lu][cod].movs++;
-      totalU+=qty; setItems[cod]=1;
-    });
+  jsonp(url, function(d){
+    if(!d || d.status!=="ok"){ empty("r-consumo","Error al cargar consumo."); return; }
+    var porLugar = d.porLugar || {};
+    if(!Object.keys(porLugar).length){empty("r-consumo","Sin egresos para el período seleccionado.");return;}
 
-    document.getElementById("c-s1").textContent=fmt(totalU);
-    document.getElementById("c-s2").textContent=Object.keys(porLugar).length;
-    document.getElementById("c-s3").textContent=Object.keys(setItems).length;
+    document.getElementById("c-s1").textContent=fmt(d.totalUnidades);
+    document.getElementById("c-s2").textContent=d.totalLugares;
+    document.getElementById("c-s3").textContent=d.totalTipos;
     document.getElementById("c-stats").style.display="grid";
 
     var filas=[["Lugar","Código","Descripción","Unidades Egresadas","N° Movimientos"]];
@@ -483,7 +519,7 @@ function cargarConsumo(){
 
     Object.keys(porLugar).sort().forEach(function(lu){
       var items=porLugar[lu];
-      var totLugar=Object.values(items).reduce(function(a,b){return a+b.total;},0);
+      var totLugar=Object.keys(items).reduce(function(a,k){return a+items[k].total;},0);
       var col=colors[ci%colors.length]; ci++;
 
       html+='<div class="lugar-hdr" style="background:'+col+'11;border-color:'+col+'44;">';
@@ -529,15 +565,9 @@ function cargarConsumo(){
 function cargarSemaforo(){
   spin("r-semaforo"); document.getElementById("s-stats").style.display="none"; ocultarAcciones();
   var fil=document.getElementById("s-filtro").value;
-  getLugares(function(lugares){
-    if(!lugares.length){empty("r-semaforo","No se encontraron lugares.");return;}
-    var res={},pend=lugares.length;
-    lugares.forEach(function(lu){
-      jsonp(SCRIPT_URL+"?accion=stockLugar&lugar="+encodeURIComponent(lu),function(d){
-        res[lu]=(d&&d.status==="ok")?(d.items||[]):[];
-        pend--; if(pend===0)renderSem(res,fil);
-      });
-    });
+  jsonp(SCRIPT_URL+"?accion=semaforoTodos",function(d){
+    if(!d||d.status!=="ok"){empty("r-semaforo","Error al cargar el semáforo.");return;}
+    renderSem(d.porLugar||{},fil);
   });
 }
 function renderSem(res,fil){
@@ -640,19 +670,10 @@ function cargarRanking(){
   var lugar=document.getElementById("rk-lugar").value;
   var top=parseInt(document.getElementById("rk-top").value)||20;
   var colors=["#185FA5","#0F6E56","#7c3aed","#d97706","#be185d"];
-  getMovs(function(movs){
-    var fil=movs.filter(function(m){
-      if((m.tipo||"").toUpperCase()!=="EGRESO")return false;
-      if(lugar&&m.lugar!==lugar)return false;
-      return true;
-    });
-    var acum={};
-    fil.forEach(function(m){
-      var k=m.codigo||m.descripcion;
-      if(!acum[k])acum[k]={codigo:m.codigo,desc:m.descripcion,total:0};
-      acum[k].total+=Math.abs(parseFloat(m.cantidad)||0);
-    });
-    var sorted=Object.values(acum).sort(function(a,b){return b.total-a.total;}).slice(0,top);
+  var url = SCRIPT_URL + "?accion=rankingTop&lugar=" + encodeURIComponent(lugar) + "&top=" + top;
+  jsonp(url, function(d){
+    if(!d||d.status!=="ok"){empty("r-ranking","Error al cargar el ranking.");return;}
+    var sorted=d.items||[];
     if(!sorted.length){empty("r-ranking","Sin egresos para el lugar seleccionado.");return;}
     var maxV=sorted[0].total;
     var filas=[["#","Código","Descripción","Unidades Egresadas","%"]];
@@ -735,56 +756,77 @@ function renderStock(d, lugarFiltro, fecha, venc, busq, cero){
     return;
   }
 
-  // Agrupar por lugar
+  // Agrupar por lugar, y dentro de cada lugar por insumo (código) —
+  // así los distintos vencimientos del MISMO insumo quedan juntos, en vez
+  // de mezclados con otros ítems según su cercanía a vencer.
   var porLugar = {};
   items.forEach(function(it){
-    if(!porLugar[it.lugar]) porLugar[it.lugar] = [];
-    porLugar[it.lugar].push(it);
+    if(!porLugar[it.lugar]) porLugar[it.lugar] = {};
+    if(!porLugar[it.lugar][it.codigo]) porLugar[it.lugar][it.codigo] = { descripcion: it.descripcion, lotes: [] };
+    porLugar[it.lugar][it.codigo].lotes.push(it);
   });
 
   var filas = [["Lugar","Código","Descripción","Cantidad","Vencimiento","Días al venc","Estado"]];
   var html = "";
 
+  function estadoInfo(estadoVenc){
+    if(estadoVenc==="vencido")   return { cls:"b-er", emoji:"🔴", label:"Vencido" };
+    if(estadoVenc==="porvencer") return { cls:"b-wa", emoji:"🟡", label:"Por vencer" };
+    if(estadoVenc==="vigente")   return { cls:"b-ok", emoji:"🟢", label:"Vigente" };
+    return { cls:"b-gr", emoji:"—", label:"Sin venc" };
+  }
+
   Object.keys(porLugar).sort().forEach(function(lu){
-    var its = porLugar[lu];
-    var total = its.reduce(function(a,it){return a + (it.cantidad>0?it.cantidad:0);},0);
+    var insumos = porLugar[lu];
+    var codigos = Object.keys(insumos);
+    var total = 0;
+    codigos.forEach(function(c){ insumos[c].lotes.forEach(function(l){ if(l.cantidad>0) total += l.cantidad; }); });
     var col = "#185FA5";
 
     html += '<div class="lugar-hdr" style="background:'+col+'11;border-color:'+col+'44;">';
     html += '<span class="lugar-nom" style="color:'+col+'">📍 '+lu+'</span>';
     html += '<span class="lugar-tot" style="color:'+col+'">'+fmt(total)+' uds.</span></div>';
 
-    html += '<div class="lugar-body" style="overflow-x:auto;">';
-    html += '<table style="width:100%;border-collapse:collapse;font-size:.7rem;">';
-    html += '<thead><tr style="background:#f8fafc;">';
-    html += '<th style="padding:5px 8px;text-align:left;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Cód</th>';
-    html += '<th style="padding:5px 8px;text-align:left;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Descripción</th>';
-    html += '<th style="padding:5px 8px;text-align:right;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Ctd</th>';
-    html += '<th style="padding:5px 8px;text-align:center;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Venc</th>';
-    html += '<th style="padding:5px 8px;text-align:center;font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;">Est</th>';
-    html += '</tr></thead><tbody>';
-
-    its.forEach(function(it, idx){
-      var bg = idx%2===0 ? "#fff" : "#f8fafc";
-      var rowOpacity = it.cantidad<=0 ? 'opacity:0.45;' : '';
-      var estClass, estEmoji, estLabel;
-      if(it.estadoVenc==="vencido"){       estClass="b-er"; estEmoji="🔴"; estLabel="Vencido"; }
-      else if(it.estadoVenc==="porvencer"){estClass="b-wa"; estEmoji="🟡"; estLabel="Por vencer"; }
-      else if(it.estadoVenc==="vigente"){  estClass="b-ok"; estEmoji="🟢"; estLabel="Vigente"; }
-      else {                                estClass="b-gr"; estEmoji="—";  estLabel="Sin venc"; }
-
-      var diasTxt = (it.dias!==null && it.dias!==undefined) ? (it.dias+"d") : "";
-      filas.push([lu, it.codigo, it.descripcion, it.cantidad, it.vencimiento||"", diasTxt, estLabel]);
-
-      html += '<tr style="background:'+bg+';'+rowOpacity+'">';
-      html += '<td style="padding:5px 8px;font-family:\'DM Mono\',monospace;font-size:.62rem;color:var(--muted);border-bottom:1px solid #f0f4f8;">'+it.codigo+'</td>';
-      html += '<td style="padding:5px 8px;border-bottom:1px solid #f0f4f8;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+it.descripcion+'</td>';
-      html += '<td style="padding:5px 8px;text-align:right;font-family:\'DM Mono\',monospace;font-weight:700;border-bottom:1px solid #f0f4f8;">'+fmt(it.cantidad)+'</td>';
-      html += '<td style="padding:5px 8px;text-align:center;font-family:\'DM Mono\',monospace;font-size:.6rem;color:var(--muted);border-bottom:1px solid #f0f4f8;">'+(it.vencimiento||"—")+(diasTxt?'<br><span style="font-size:.54rem;color:var(--muted);">'+diasTxt+'</span>':'')+'</td>';
-      html += '<td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f0f4f8;"><span class="badge '+estClass+'" title="'+estLabel+'">'+estEmoji+'</span></td>';
-      html += '</tr>';
+    // Ordenar los insumos del lugar por su lote más próximo a vencer
+    codigos.sort(function(a,b){
+      var da = Math.min.apply(null, insumos[a].lotes.map(function(l){ return l.dias===null||l.dias===undefined?Infinity:l.dias; }));
+      var db = Math.min.apply(null, insumos[b].lotes.map(function(l){ return l.dias===null||l.dias===undefined?Infinity:l.dias; }));
+      return da - db;
     });
-    html += '</tbody></table></div>';
+
+    html += '<div class="lugar-body">';
+    codigos.forEach(function(cod, idx){
+      var insumo = insumos[cod];
+      var lotes = insumo.lotes.slice().sort(function(a,b){
+        var da = a.dias===null||a.dias===undefined?Infinity:a.dias;
+        var db = b.dias===null||b.dias===undefined?Infinity:b.dias;
+        return da-db;
+      });
+      var totalInsumo = lotes.reduce(function(a,l){return a+(l.cantidad>0?l.cantidad:0);},0);
+      var bg = idx%2===0 ? "#fff" : "#f8fafc";
+
+      html += '<div style="background:'+bg+';padding:7px 10px;'+(idx<codigos.length-1?'border-bottom:1px solid #f0f4f8;':'')+'">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">';
+      html += '<div style="min-width:0;"><div style="font-size:.72rem;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+insumo.descripcion+'</div>';
+      html += '<div style="font-family:\'DM Mono\',monospace;font-size:.58rem;color:var(--muted);">'+cod+'</div></div>';
+      html += '<div style="font-family:\'DM Mono\',monospace;font-size:.75rem;font-weight:700;color:'+col+';white-space:nowrap;">'+fmt(totalInsumo)+'</div>';
+      html += '</div>';
+
+      // Lotes (uno por vencimiento) anidados bajo el insumo
+      html += '<div style="margin-top:4px;display:flex;flex-direction:column;gap:2px;">';
+      lotes.forEach(function(l){
+        var ei = estadoInfo(l.estadoVenc);
+        var diasTxt = (l.dias!==null && l.dias!==undefined) ? (l.dias+"d") : "";
+        filas.push([lu, cod, insumo.descripcion, l.cantidad, l.vencimiento||"", diasTxt, ei.label]);
+        html += '<div style="display:flex;align-items:center;gap:6px;font-size:.65rem;color:var(--muted);opacity:'+(l.cantidad<=0?'0.45':'1')+';padding-left:2px;">';
+        html += '<span class="badge '+ei.cls+'" style="font-size:.56rem;padding:1px 6px;">'+ei.emoji+'</span>';
+        html += '<span style="flex:1;">'+(l.vencimiento||"Sin fecha")+(diasTxt?' · '+diasTxt:'')+'</span>';
+        html += '<span style="font-family:\'DM Mono\',monospace;font-weight:600;">'+fmt(l.cantidad)+'</span>';
+        html += '</div>';
+      });
+      html += '</div></div>';
+    });
+    html += '</div>';
   });
 
   document.getElementById("r-stock").innerHTML = html;
@@ -810,6 +852,7 @@ window.onload=function(){
   var iso = hoy.getFullYear() + "-" + String(hoy.getMonth()+1).padStart(2,"0") + "-" + String(hoy.getDate()).padStart(2,"0");
   document.getElementById("st-fecha").value = iso;
   document.getElementById("st-fecha").max = iso;
+  cargarResumen();
 };
 </script>
 </body>
