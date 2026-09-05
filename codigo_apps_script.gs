@@ -245,6 +245,84 @@ function vencimientosPorLugar(e) {
 }
 
 // ── Diagnóstico: stocks negativos en TODOS los lugares ───────
+// ── Diagnóstico: ítems del inventario inicial ya vencidos que ────
+// nunca tuvieron ningún movimiento posterior (probablemente ya se
+// usaron/descartaron sin registrar la salida — quedaron "fantasma").
+function diagnosticoInventarioFantasma(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const invSheet = ss.getSheetByName(SHEET_DATOS);
+    if (!invSheet || invSheet.getLastRow() <= 1) return { status: "ok", items: [] };
+    const invDatos = invSheet.getDataRange().getValues();
+    const ini = String(invDatos[0][0]||"").toUpperCase() === "LUGAR" ? 1 : 0;
+
+    const movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    const movDatos = movSheet ? movSheet.getDataRange().getValues() : [];
+    const movIni = movDatos.length ? (String(movDatos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0) : 0;
+    const tieneMovimiento = {}; // "lugar|codigo" → true
+    for (let j = movIni; j < movDatos.length; j++) {
+      const m = movDatos[j];
+      const lu = String(m[4]||"").trim();
+      const cod = String(m[5]||"").trim();
+      if (lu && cod) tieneMovimiento[lu + "|" + cod] = true;
+    }
+
+    const hoy = new Date();
+    const items = [];
+    for (let i = ini; i < invDatos.length; i++) {
+      const f = invDatos[i];
+      const lugar = String(f[0]||"").trim();
+      const cod   = String(f[1]||"").trim();
+      const desc  = String(f[2]||"").trim();
+      const cant  = parseFloat(f[3]||0) || 0;
+      if (!lugar || !cod || cant <= 0) continue;
+      if (tieneMovimiento[lugar + "|" + cod]) continue; // sí tuvo movimiento, no es "fantasma"
+
+      const vencDate = f[4] instanceof Date ? f[4] : parseFechaSH_(f[4], false);
+      if (!vencDate || vencDate.getTime() >= hoy.getTime()) continue; // no vencido, no aplica
+
+      const fechaCaptura = f[5] instanceof Date ? normalizarFechaVenc_(f[5]) : String(f[5]||"");
+      items.push({
+        lugar: lugar, codigo: cod, descripcion: desc, cantidad: cant,
+        vencimiento: fmtDateSH_(vencDate), fechaCaptura: fechaCaptura
+      });
+    }
+    return { status: "ok", items: items, total: items.length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Corregir: descontar a 0 los ítems fantasma confirmados ──────
+// Recibe items=JSON [{lugar,codigo,descripcion,cantidad}, ...] — la MISMA
+// lista (o un subconjunto) que devolvió diagnosticoInventarioFantasma,
+// ya revisada y confirmada por la persona.
+function corregirInventarioFantasma(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p = e.parameter || {};
+    let items;
+    try { items = JSON.parse(p.items || "[]"); } catch(pe) { throw new Error("items inválido: " + pe); }
+    if (!items.length) throw new Error("Sin items para corregir.");
+
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+
+    const ahora = new Date().toLocaleString("es-CL");
+    const usuario = String(p.usuario || "");
+    const filas = items.map(function(it) {
+      return [ahora, "AJUSTE-", "", "", it.lugar, it.codigo, it.descripcion || "", -Math.abs(parseFloat(it.cantidad)||0), "", usuario || "Limpieza inventario fantasma", ""];
+    });
+    movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+
+    return { status: "ok", corregidos: filas.length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function diagnosticoStockNegativo(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -470,6 +548,8 @@ function doGet(e) {
   if (accion === "devolverPrestamo") return responder(devolverPrestamo(e), callback);
   if (accion === "vencimientosPorLugar") return responder(vencimientosPorLugar(e), callback);
   if (accion === "diagnosticoStockNegativo") return responder(diagnosticoStockNegativo(e), callback);
+  if (accion === "diagnosticoInventarioFantasma") return responder(diagnosticoInventarioFantasma(e), callback);
+  if (accion === "corregirInventarioFantasma") return responder(corregirInventarioFantasma(e), callback);
   if (accion === "corregirStockNegativo") return responder(corregirStockNegativo(e), callback);
   if (accion === "corregirClasificacionBodegas") return responder(corregirClasificacionBodegas(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
