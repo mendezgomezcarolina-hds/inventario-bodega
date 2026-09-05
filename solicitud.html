@@ -429,10 +429,10 @@
     var lista = document.getElementById("itemLista");
     lista.innerHTML = "";
     
-    // Si no hay búsqueda, mostrar placeholder
+    // Si no hay búsqueda, no mostrar nada (antes tapaba la pantalla con
+    // "Escribe para buscar...")
     if (!q) {
-      lista.innerHTML = '<div class="ri-empty">Escribe para buscar...</div>';
-      lista.style.display = "block";
+      lista.style.display = "none";
       return;
     }
     
