@@ -214,7 +214,43 @@
     supervisorNombre = sess.nombre || "";
     supervisorId     = sess.id     || "";
     cargarSolicitudes();
+    cargarVencimientos();
   };
+
+  var vencimientosMapa = {}; // codigo → [{fecha, cantidad}] — de ambas bodegas combinadas
+
+  function cargarVencimientos() {
+    var bodegas = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+    var pendientes = bodegas.length;
+    bodegas.forEach(function(b) {
+      jsonp(SCRIPT_URL + "?accion=vencimientosPorLugar&lugar=" + encodeURIComponent(b), function(data, err) {
+        if (!err && data && data.status === "ok" && data.mapa) {
+          for (var cod in data.mapa) vencimientosMapa[cod] = data.mapa[cod];
+        }
+        pendientes--;
+        if (pendientes === 0 && document.getElementById("detItems") && document.getElementById("detItems").innerHTML) {
+          renderDetalle(); // refrescar si ya se había pintado el detalle antes de que llegaran los vencimientos
+        }
+      });
+    });
+  }
+
+  function fmtFechaCorta(iso) {
+    var p = String(iso||"").split("-");
+    return p.length === 3 ? (p[2] + "-" + p[1] + "-" + p[0]) : iso;
+  }
+
+  // Genera las <option> de un selector de vencimiento para un código dado
+  function opcionesVenc(codigo, valorActual) {
+    var lotes = vencimientosMapa[codigo] || [];
+    var esOtro = !!valorActual && lotes.every(function(l){ return l.fecha !== valorActual; });
+    var h = '<option value="" disabled' + (!valorActual ? ' selected' : '') + '>Elegir…</option>';
+    lotes.forEach(function(l) {
+      h += '<option value="' + l.fecha + '"' + (valorActual === l.fecha ? ' selected' : '') + '>' + fmtFechaCorta(l.fecha) + ' (' + l.cantidad + ')</option>';
+    });
+    h += '<option value="__otro__"' + (esOtro ? ' selected' : '') + '>Otro…</option>';
+    return { html: h, esOtro: esOtro, tieneLotes: lotes.length > 0 };
+  }
 
   function cargarSolicitudes() {
     document.getElementById("vistaLista").innerHTML = '<div class="loading"><div class="sp-lg"></div></div>';
@@ -356,9 +392,9 @@
             '</div>' +
           '</div>' +
           '<div id="venc-body-' + i + '" style="padding:6px 0 4px 0;' + showBody + '">' +
-            '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">' +
+            '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">' +
               '<input type="number" min="0" id="cant-input-' + i + '" value="' + cantVal + '" oninput="cantidades[' + i + ']=+this.value;validarVenc(' + i + ')" style="width:62px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
-              '<input type="date" id="venc-main-' + i + '" value="' + (vencMain[i]||"") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />' +
+              renderVencMainInput(i, f.codigo) +
               '<button onclick="addVencExtra(' + i + ')" style="font-size:.72rem;padding:4px 8px;border:1.5px solid var(--accent);border-radius:6px;color:var(--accent);background:transparent;cursor:pointer;white-space:nowrap;">+ fecha</button>' +
             '</div>' +
             '<div id="venc-extras-' + i + '"></div>' +
@@ -397,6 +433,28 @@
 
   // Envío secuencial sin async/await
 
+  function renderVencMainInput(i, codigo) {
+    var op = opcionesVenc(codigo, vencMain[i] || "");
+    if (!op.tieneLotes) {
+      return '<input type="date" id="venc-main-' + i + '" value="' + (vencMain[i]||"") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+    }
+    return '<select id="venc-main-sel-' + i + '" onchange="onVencMainSel(' + i + ')" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);">' + op.html + '</select>' +
+      '<input type="date" id="venc-main-' + i + '" value="' + (op.esOtro ? (vencMain[i]||"") : "") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);display:' + (op.esOtro ? 'block' : 'none') + ';" />';
+  }
+
+  function onVencMainSel(i) {
+    var sel = document.getElementById("venc-main-sel-" + i);
+    var fec = document.getElementById("venc-main-" + i);
+    if (!sel || !fec) return;
+    if (sel.value === "__otro__") {
+      fec.style.display = "block";
+    } else {
+      fec.style.display = "none";
+      fec.value = sel.value;
+      vencMain[i] = sel.value;
+    }
+  }
+
   function addVencExtra(i) {
     if (!vencExtras[i]) vencExtras[i] = [];
     vencExtras[i].push({qty:'',fecha:''});
@@ -410,15 +468,32 @@
   function renderVencExtras(i) {
     var el = document.getElementById('venc-extras-'+i);
     if (!el) return;
+    var codigo = (solicitudActual[i]||{}).codigo;
     var h = '';
     (vencExtras[i]||[]).forEach(function(v,j){
-      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">';
+      var op = opcionesVenc(codigo, v.fecha || "");
+      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;flex-wrap:wrap;">';
       h += '<input type="number" placeholder="Cant." min="1" value="'+(v.qty||'')+'" oninput="vencExtras['+i+']['+j+'].qty=+this.value;validarVenc('+i+')" style="width:58px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
-      h += '<input type="date" value="'+(v.fecha||'')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+      if (op.tieneLotes) {
+        h += '<select onchange="onVencExtraSel('+i+','+j+',this)" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);">' + op.html + '</select>';
+        h += '<input type="date" value="'+(op.esOtro ? (v.fecha||'') : '')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);display:'+(op.esOtro?'block':'none')+';" />';
+      } else {
+        h += '<input type="date" value="'+(v.fecha||'')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+      }
       h += '<button onclick="delVencExtra('+i+','+j+')" style="font-size:.72rem;padding:3px 6px;border:1.5px solid var(--er);border-radius:6px;color:var(--er);background:transparent;cursor:pointer;">✕</button>';
       h += '</div>';
     });
     el.innerHTML = h;
+  }
+  function onVencExtraSel(i, j, sel) {
+    var fec = sel.nextElementSibling;
+    if (sel.value === "__otro__") {
+      fec.style.display = "block";
+    } else {
+      fec.style.display = "none";
+      fec.value = sel.value;
+      vencExtras[i][j].fecha = sel.value;
+    }
   }
   function validarVenc(i) {
     var tot = +(cantidades[i]||0);
