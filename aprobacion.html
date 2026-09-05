@@ -436,10 +436,10 @@
   function renderVencMainInput(i, codigo) {
     var op = opcionesVenc(codigo, vencMain[i] || "");
     if (!op.tieneLotes) {
-      return '<input type="date" id="venc-main-' + i + '" value="' + (vencMain[i]||"") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+      return '<input type="date" min="2023-01-01" max="2040-12-31" id="venc-main-' + i + '" value="' + (vencMain[i]||"") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
     }
     return '<select id="venc-main-sel-' + i + '" onchange="onVencMainSel(' + i + ')" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);">' + op.html + '</select>' +
-      '<input type="date" id="venc-main-' + i + '" value="' + (op.esOtro ? (vencMain[i]||"") : "") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);display:' + (op.esOtro ? 'block' : 'none') + ';" />';
+      '<input type="date" min="2023-01-01" max="2040-12-31" id="venc-main-' + i + '" value="' + (op.esOtro ? (vencMain[i]||"") : "") + '" onchange="vencMain[' + i + ']=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);display:' + (op.esOtro ? 'block' : 'none') + ';" />';
   }
 
   function onVencMainSel(i) {
@@ -476,9 +476,9 @@
       h += '<input type="number" placeholder="Cant." min="1" value="'+(v.qty||'')+'" oninput="vencExtras['+i+']['+j+'].qty=+this.value;validarVenc('+i+')" style="width:58px;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
       if (op.tieneLotes) {
         h += '<select onchange="onVencExtraSel('+i+','+j+',this)" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);">' + op.html + '</select>';
-        h += '<input type="date" value="'+(op.esOtro ? (v.fecha||'') : '')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);display:'+(op.esOtro?'block':'none')+';" />';
+        h += '<input type="date" min="2023-01-01" max="2040-12-31" value="'+(op.esOtro ? (v.fecha||'') : '')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);display:'+(op.esOtro?'block':'none')+';" />';
       } else {
-        h += '<input type="date" value="'+(v.fecha||'')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
+        h += '<input type="date" min="2023-01-01" max="2040-12-31" value="'+(v.fecha||'')+'" oninput="vencExtras['+i+']['+j+'].fecha=this.value" style="flex:1;font-size:.78rem;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--text);" />';
       }
       h += '<button onclick="delVencExtra('+i+','+j+')" style="font-size:.72rem;padding:3px 6px;border:1.5px solid var(--er);border-radius:6px;color:var(--er);background:transparent;cursor:pointer;">✕</button>';
       h += '</div>';

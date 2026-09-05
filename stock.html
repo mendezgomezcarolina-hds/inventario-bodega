@@ -409,10 +409,10 @@
           opts += '<option value="__otro__"' + (esOtro ? ' selected' : '') + '>Otro…</option>';
           html += '<div class="lote-input-wrap"><label>Vencimiento</label>' +
             '<select id="lsel-' + i + '" style="width:150px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onSelVenc(' + i + ')">' + opts + '</select>' +
-            '<input type="date" id="lfec-' + i + '" value="' + (esOtro ? valVenc : '') + '" style="width:140px;margin-top:5px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;outline:none;background:#f8fafc;border-color:#d97706;display:' + (esOtro ? 'block' : 'none') + ';" onchange="onInputLote(' + i + ')" />' +
+            '<input type="date" min="2023-01-01" max="2040-12-31" id="lfec-' + i + '" value="' + (esOtro ? valVenc : '') + '" style="width:140px;margin-top:5px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.85rem;outline:none;background:#f8fafc;border-color:#d97706;display:' + (esOtro ? 'block' : 'none') + ';" onchange="onInputLote(' + i + ')" />' +
             '</div>';
         } else {
-          html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" id="lfec-' + i + '" value="' + valVenc + '" style="width:140px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onInputLote(' + i + ')" /></div>';
+          html += '<div class="lote-input-wrap"><label>Vencimiento</label><input type="date" min="2023-01-01" max="2040-12-31" id="lfec-' + i + '" value="' + valVenc + '" style="width:140px;padding:8px 6px;border:1.5px solid var(--border);border-radius:6px;font-size:.9rem;outline:none;background:#f8fafc;border-color:#d97706;" onchange="onInputLote(' + i + ')" /></div>';
         }
       }
       
