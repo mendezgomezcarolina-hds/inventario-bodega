@@ -86,6 +86,38 @@ function registrarPrestamo(e) {
   }
 }
 
+// ── Ingreso desde Farmacia Central (reposición con receta) ───────
+// A diferencia de un préstamo, este insumo entra al stock de forma
+// permanente — no se espera devolución, así que no se registra en la
+// hoja de seguimiento de préstamos.
+function registrarIngresoFarmacia(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p  = e.parameter || {};
+    const lugar    = String(p.lugar    || "").trim();
+    const codigo   = String(p.codigo   || "").trim();
+    const descr    = String(p.descripcion || "").trim();
+    const cantidad = parseFloat(p.cantidad || 0) || 0;
+    const vencimiento = String(p.vencimiento || "").trim();
+    const receta   = String(p.receta || "").trim();
+    const usuario  = String(p.usuario || "").trim();
+    if (!lugar || !codigo || cantidad <= 0) throw new Error("Faltan datos del ingreso.");
+
+    const ahora = new Date().toLocaleString("es-CL");
+    const nSolTxt = "Farmacia Central" + (receta ? " (receta " + receta + ")" : "");
+
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+    movSheet.appendRow([ahora, "INGRESO", nSolTxt, "", lugar, codigo, descr, cantidad, vencimiento, usuario, "Farmacia Central"]);
+
+    return { status: "ok" };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 // ── Listar préstamos pendientes de devolver ──────────────────
 function listarPrestamosPendientes(e) {
   try {
@@ -598,6 +630,7 @@ function doGet(e) {
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
   if (accion === "registrarPrestamo") return responder(registrarPrestamo(e), callback);
+  if (accion === "registrarIngresoFarmacia") return responder(registrarIngresoFarmacia(e), callback);
   if (accion === "listarPrestamosPendientes") return responder(listarPrestamosPendientes(e), callback);
   if (accion === "devolverPrestamo") return responder(devolverPrestamo(e), callback);
   if (accion === "vencimientosPorLugar") return responder(vencimientosPorLugar(e), callback);

@@ -89,6 +89,8 @@
     .empty-msg{text-align:center;color:var(--muted);font-size:.85rem;padding:24px 0;}
     .serv-chip{font-size:.8rem;padding:6px 13px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;}
     .serv-chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+    .origen-btn{font-size:.85rem;font-weight:600;padding:11px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;}
+    .origen-btn.on{background:var(--dk);border-color:var(--dk);color:#fff;}
   </style>
 </head>
 <body>
@@ -103,8 +105,8 @@
       <svg viewBox="0 0 24 24"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
     </div>
     <div>
-      <h1>Préstamos entre servicios</h1>
-      <p>Insumos recibidos de otros servicios · Dermatología HDS</p>
+      <h1 id="tituloPanel">Ingresos externos</h1>
+      <p id="subtituloPanel">Préstamos y reposición de Farmacia Central · Dermatología HDS</p>
     </div>
   </div>
 
@@ -125,13 +127,30 @@
   <!-- TAB: Registrar -->
   <div id="vistaReg">
     <div class="field">
+      <label>Origen del insumo</label>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="origen-btn on" id="origBtnPrestamo" onclick="setOrigen('prestamo')" style="flex:1;">🔄 Préstamo de servicio</button>
+        <button type="button" class="origen-btn" id="origBtnFarmacia" onclick="setOrigen('farmacia')" style="flex:1;">💊 Farmacia Central</button>
+      </div>
+    </div>
+
+    <div class="field" id="wrapServicio">
       <label>Servicio prestador</label>
       <div id="serviciosChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
       <input type="text" id="servicio" placeholder="Escribe el servicio, o elige arriba…" oninput="marcarChipActivo(this.value)"/>
     </div>
+    <div class="field" id="wrapReceta" style="display:none;">
+      <label>N° receta / observación (opcional)</label>
+      <input type="text" id="receta" placeholder="Ej: receta N°1234"/>
+    </div>
+
     <div class="field">
       <label>Lugar que recibe (dermatología)</label>
       <select id="lugar"><option value="" disabled selected>Cargando lugares…</option></select>
+    </div>
+    <div class="field" id="wrapChipsInsumo" style="display:none;">
+      <label>Insumos frecuentes de Farmacia Central</label>
+      <div id="insumosChips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
     </div>
     <div class="field">
       <label>Insumo</label>
@@ -147,7 +166,7 @@
         <label>Cantidad</label>
         <input type="number" min="1" id="cantidad"/>
       </div>
-      <div class="field" style="flex:1;">
+      <div class="field" style="flex:1;" id="wrapFecha">
         <label>Fecha del préstamo</label>
         <input type="date" id="fecha"/>
       </div>
@@ -159,7 +178,7 @@
 
     <button class="btn-submit" id="btnRegistrar" onclick="registrarPrestamo()">
       <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;"><path d="M12 5v14M5 12h14"/></svg>
-      Registrar préstamo
+      <span id="btnRegistrarTxt">Registrar préstamo</span>
     </button>
   </div>
 
@@ -195,6 +214,40 @@
   };
 
   var SERVICIOS_FRECUENTES = ["Cirugía","Otorrino","Infectología","Oftalmología","Cuidados Paliativos","Medicina"];
+  var INSUMOS_FARMACIA_FRECUENTES = ["ANESTESIA","S.FISIOLOGICO 0,9% 20","S.FISIOLOGICO 0,9% 100","S.FISIOLOGICO 0,9% 250","S.FISIOLOGICO 0,9% 500","LIDOCAINA"];
+  var origenActual = "prestamo";
+
+  function setOrigen(tipo) {
+    origenActual = tipo;
+    document.getElementById("origBtnPrestamo").classList.toggle("on", tipo === "prestamo");
+    document.getElementById("origBtnFarmacia").classList.toggle("on", tipo === "farmacia");
+    var esFarmacia = tipo === "farmacia";
+    document.getElementById("wrapServicio").style.display    = esFarmacia ? "none" : "block";
+    document.getElementById("wrapReceta").style.display      = esFarmacia ? "block" : "none";
+    document.getElementById("wrapChipsInsumo").style.display = esFarmacia ? "block" : "none";
+    document.getElementById("tituloPanel").textContent    = esFarmacia ? "Ingreso Farmacia Central" : "Préstamos entre servicios";
+    document.getElementById("subtituloPanel").textContent = esFarmacia ? "Reposición de stock con receta · Dermatología HDS" : "Insumos recibidos de otros servicios · Dermatología HDS";
+    document.querySelector("#wrapFecha label").textContent = esFarmacia ? "Fecha de recepción" : "Fecha del préstamo";
+    document.getElementById("btnRegistrarTxt").textContent = esFarmacia ? "Registrar ingreso" : "Registrar préstamo";
+    if (esFarmacia && !document.getElementById("insumosChips").children.length) renderChipsInsumoFarmacia();
+  }
+
+  function renderChipsInsumoFarmacia() {
+    var cont = document.getElementById("insumosChips");
+    cont.innerHTML = "";
+    INSUMOS_FARMACIA_FRECUENTES.forEach(function(s) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "serv-chip";
+      b.textContent = s.length > 18 ? s.replace("S.FISIOLOGICO 0,9% ", "S.F. ") : s;
+      b.onclick = function() {
+        document.getElementById("itemQ").value = s;
+        filtrarItems();
+        abrirLista();
+      };
+      cont.appendChild(b);
+    });
+  }
 
   function renderChipsServicio() {
     var cont = document.getElementById("serviciosChips");
@@ -319,12 +372,14 @@
   }
 
   function registrarPrestamo() {
+    var esFarmacia = origenActual === "farmacia";
     var servicio = document.getElementById("servicio").value.trim();
     var lugar    = document.getElementById("lugar").value;
     var cantidad = document.getElementById("cantidad").value;
     var fecha    = document.getElementById("fecha").value;
+    var receta   = document.getElementById("receta").value.trim();
 
-    if (!servicio)      { mostrarToast("Indica de qué servicio viene el préstamo.", "warn"); return; }
+    if (!esFarmacia && !servicio) { mostrarToast("Indica de qué servicio viene el préstamo.", "warn"); return; }
     if (!lugar)          { mostrarToast("Selecciona el lugar que recibe el insumo.", "warn"); return; }
     if (!itemSelCodigo)  { mostrarToast("Selecciona un insumo.", "warn"); return; }
     if (!cantidad || Number(cantidad) < 1) { mostrarToast("Ingresa una cantidad mayor a 0.", "warn"); return; }
@@ -333,25 +388,38 @@
     btn.disabled = true;
     btn.innerHTML = '<div class="spinner"></div> Registrando…';
 
-    var url = SCRIPT_URL + "?accion=registrarPrestamo" +
-      "&servicio="    + encodeURIComponent(servicio) +
-      "&lugar="       + encodeURIComponent(lugar) +
-      "&codigo="      + encodeURIComponent(itemSelCodigo) +
-      "&descripcion=" + encodeURIComponent(itemSelDesc) +
-      "&cantidad="    + encodeURIComponent(cantidad) +
-      "&fecha="       + encodeURIComponent(fecha) +
-      "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
-      "&usuario="     + encodeURIComponent(responsableSesion);
+    var url;
+    if (esFarmacia) {
+      url = SCRIPT_URL + "?accion=registrarIngresoFarmacia" +
+        "&lugar="       + encodeURIComponent(lugar) +
+        "&codigo="      + encodeURIComponent(itemSelCodigo) +
+        "&descripcion=" + encodeURIComponent(itemSelDesc) +
+        "&cantidad="    + encodeURIComponent(cantidad) +
+        "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
+        "&receta="      + encodeURIComponent(receta) +
+        "&usuario="     + encodeURIComponent(responsableSesion);
+    } else {
+      url = SCRIPT_URL + "?accion=registrarPrestamo" +
+        "&servicio="    + encodeURIComponent(servicio) +
+        "&lugar="       + encodeURIComponent(lugar) +
+        "&codigo="      + encodeURIComponent(itemSelCodigo) +
+        "&descripcion=" + encodeURIComponent(itemSelDesc) +
+        "&cantidad="    + encodeURIComponent(cantidad) +
+        "&fecha="       + encodeURIComponent(fecha) +
+        "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
+        "&usuario="     + encodeURIComponent(responsableSesion);
+    }
 
     jsonp(url, function(data, err) {
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;"><path d="M12 5v14M5 12h14"/></svg> Registrar préstamo';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;"><path d="M12 5v14M5 12h14"/></svg> <span id="btnRegistrarTxt">' + (esFarmacia ? "Registrar ingreso" : "Registrar préstamo") + '</span>';
       if (!data || err || data.status !== "ok") {
         mostrarToast("Error al registrar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
         return;
       }
-      mostrarToast("✓ Préstamo registrado — se sumó al stock de " + lugar + ".", "ok");
+      mostrarToast(esFarmacia ? "✓ Ingreso de Farmacia Central registrado — se sumó al stock de " + lugar + "." : "✓ Préstamo registrado — se sumó al stock de " + lugar + ".", "ok");
       document.getElementById("servicio").value = "";
+      document.getElementById("receta").value = "";
       marcarChipActivo("");
       document.getElementById("cantidad").value = "";
       document.getElementById("vencimiento").value = "";
