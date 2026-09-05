@@ -54,6 +54,7 @@ function doGet(e) {
   if (accion === "obtenerAccesos")            return responder(obtenerAccesos(e),                      callback);
   if (accion === "guardarAccesos")            return responder(guardarAccesos(e),                      callback);
   if (accion === "recepcionarSolicitud")      return responder(recepcionarSolicitud(e),                  callback);
+  if (accion === "recepcionarSolicitudLote")  return responder(recepcionarSolicitudLote(e),              callback);
   if (accion === "solicitud")           return responder(escribirSolicitud(e),                      callback);
   if (accion === "solicitudLote")       return responder(escribirSolicitudLote(e),                  callback);
   if (accion === "listarSolicitudes")   return responder(listarSolicitudes(e),                      callback);
@@ -1083,8 +1084,77 @@ function recepcionarSolicitud(e) {
     // Actualizar estado en SOLICITUDES (aquí, después de escribir movimientos)
     sheet.getRange(fila, 9).setValue(est === "APROBADO" ? "RECEPCIONADO" : "RECHAZADO");
     sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
-    try { actualizarStockCuraciones(); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+    if (est === "APROBADO") {
+      try { actualizarStockLugar(String(p.lugar || "").trim()); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+    }
     return { status: "ok", fila: fila };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Recepcionar VARIAS filas por lugar en una sola llamada ────
+// Recibe items = JSON string: [{fila,idSolicitud,lugar,codigo,descripcion,estado,cantRecibida,fechaVenc}, ...]
+// Escribe todo de una vez y recalcula el stock UNA sola vez por cada lugar
+// distinto involucrado (antes recalculaba, además, siempre "CURACIONES" sin
+// importar el lugar real, y una vez por cada ítem).
+function recepcionarSolicitudLote(e) {
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_SOLICITUDES);
+    if (!sheet) throw new Error("Hoja SOLICITUDES no existe.");
+    const p = e.parameter || {};
+    let items;
+    try { items = JSON.parse(p.items || "[]"); } catch(pe) { throw new Error("items inválido: " + pe); }
+    if (!items.length) throw new Error("Sin items para procesar.");
+
+    const ahora = new Date().toLocaleString("es-CL");
+    const ingresos = [];
+    const lugaresARecalcular = {};
+    let procesados = 0;
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+
+    for (let k = 0; k < items.length; k++) {
+      const it   = items[k];
+      const fila = parseInt(it.fila || "0");
+      const est  = (it.estado || "").toUpperCase();
+      if (!fila || !est) continue;
+
+      if (est !== "APROBADO") {
+        sheet.getRange(fila, 9).setValue("RECHAZADO");
+        sheet.getRange(fila, 10).setValue(ahora);
+        procesados++;
+        continue;
+      }
+
+      const lugar = String(it.lugar || "").trim();
+      const cod   = String(it.codigo || "").trim();
+      const desc  = String(it.descripcion || "").trim();
+      const qty   = parseFloat(it.cantRecibida) || 0;
+      const nSol  = String(it.idSolicitud || "").trim();
+      const venc  = it.fechaVenc || "";
+
+      ingresos.push([ahora, "INGRESO", nSol, "", lugar, cod, desc, Math.abs(qty), venc, "", ""]);
+      if (lugar) lugaresARecalcular[lugar] = true;
+
+      sheet.getRange(fila, 9).setValue("RECEPCIONADO");
+      sheet.getRange(fila, 10).setValue(ahora);
+      procesados++;
+    }
+
+    if (ingresos.length) {
+      movSheet.getRange(movSheet.getLastRow()+1, 1, ingresos.length, ingresos[0].length).setValues(ingresos);
+    }
+
+    const lugares = Object.keys(lugaresARecalcular);
+    for (let lj = 0; lj < lugares.length; lj++) {
+      try { actualizarStockLugar(lugares[lj]); } catch(ex) { Logger.log("Stock no actualizado (" + lugares[lj] + "): " + ex); }
+    }
+
+    return { status: "ok", procesados, lugaresRecalculados: lugares };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }

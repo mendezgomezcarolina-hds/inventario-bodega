@@ -95,7 +95,7 @@
 
   function jsonp(url, cb) {
     var name  = "_rl_" + Date.now() + "_" + (++_n);
-    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 12000);
+    var timer = setTimeout(function() { delete window[name]; cb(null, "Timeout"); }, 30000);
     window[name] = function(d) { clearTimeout(timer); delete window[name]; cb(d, null); };
     var s = document.createElement("script");
     s.src = url + (url.indexOf("?") > -1 ? "&" : "?") + "callback=" + name;
@@ -257,55 +257,41 @@
     }
   }
 
-  // Guardar grupo
-  var _gItems = []; var _gIdx = 0; var _gErr = 0;
-
+  // Guardar grupo (un solo lote para todo el grupo)
   function guardarGrupo(gId) {
     var items = getSolicitudesPorGrupo(gId);
-    _gItems = [];
+    var lote = [];
     for (var i = 0; i < items.length; i++) {
       var dec = decisiones[parseInt(items[i].fila)];
       if (dec && dec.est) {
         var recInput  = document.getElementById("rec-" + items[i].fila);
-        _gItems.push({
+        lote.push({
           fila:  items[i].fila,
-          id:    items[i].id,
+          idSolicitud: items[i].id,
           lugar: document.getElementById("selLugar").value,
           codigo: items[i].codigo,
-          item:   items[i].item,
-          est:    dec.est,
-          cant:   recInput  ? recInput.value  : items[i].cantidad,
+          descripcion: items[i].item,
+          estado: dec.est,
+          cantRecibida: recInput ? recInput.value : items[i].cantidad
         });
       }
     }
-    if (!_gItems.length) { toast("Sin decisiones para guardar.", "warn"); return; }
+    if (!lote.length) { toast("Sin decisiones para guardar.", "warn"); return; }
     document.getElementById("btn-" + gId).disabled = true;
     document.getElementById("btn-" + gId).textContent = "Guardando…";
-    _gIdx = 0; _gErr = 0;
-    enviarItemRL();
-  }
 
-  function enviarItemRL() {
-    if (_gIdx >= _gItems.length) {
-      if (_gErr > 0) toast("Guardado con " + _gErr + " error(es).", "warn");
-      else toast("✓ Recepciones guardadas correctamente.", "ok");
-      cargarSolicitudes();
-      return;
-    }
-    var it  = _gItems[_gIdx];
-    var url = SCRIPT_URL + "?accion=recepcionarSolicitud" +
-      "&fila="         + encodeURIComponent(it.fila) +
-      "&idSolicitud="  + encodeURIComponent(it.id) +
-      "&lugar="        + encodeURIComponent(it.lugar) +
-      "&codigo="       + encodeURIComponent(it.codigo) +
-      "&descripcion="  + encodeURIComponent(it.item) +
-      "&estado="       + encodeURIComponent(it.est) +
-      "&cantRecibida=" + encodeURIComponent(it.cant) +
-      "";
+    var url = SCRIPT_URL + "?accion=recepcionarSolicitudLote" +
+      "&items=" + encodeURIComponent(JSON.stringify(lote));
+
     jsonp(url, function(data, err) {
-      if (!data || err || data.status !== "ok") _gErr++;
-      _gIdx++;
-      setTimeout(enviarItemRL, 350);
+      if (!data || err || data.status !== "ok") {
+        toast("Error al guardar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
+        document.getElementById("btn-" + gId).disabled = false;
+        document.getElementById("btn-" + gId).textContent = "Guardar";
+      } else {
+        toast("✓ Recepciones guardadas correctamente.", "ok");
+      }
+      cargarSolicitudes();
     });
   }
 </script>
