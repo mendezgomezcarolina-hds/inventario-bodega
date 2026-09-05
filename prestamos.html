@@ -241,8 +241,13 @@
       if (err || !data || data.status !== "ok" || !data.lugares.length) {
         sel.innerHTML = '<option disabled>Error al cargar</option>'; return;
       }
+      // Bodegas centrales primero, en este orden, y el resto de lugares después.
+      var prioridad = ["BODEGA INSUMOS CLINICOS", "BODEGA INSUMOS NO CLINICOS"];
+      var lugares = data.lugares.slice();
+      var ordenados = prioridad.filter(function(p){ return lugares.indexOf(p) > -1; })
+        .concat(lugares.filter(function(l){ return prioridad.indexOf(l) === -1; }));
       sel.innerHTML = '<option value="" disabled selected>Selecciona un lugar…</option>';
-      data.lugares.forEach(function(l) {
+      ordenados.forEach(function(l) {
         var o = document.createElement("option");
         o.value = o.textContent = l;
         sel.appendChild(o);
