@@ -10,6 +10,7 @@ const SHEET_COLABORADORES = "COLABORADORES";
 const SHEET_SOLICITUDES   = "SOLICITUDES";
 const SHEET_RECEPCION     = "RECEPCION_BODEGA";
 const SHEET_MOVIMIENTOS   = "MOVIMIENTOS";
+const SHEET_PRESTAMOS     = "PRESTAMOS_SERVICIOS";
 
 
 // ── Diagnóstico estados SOLICITUDES ─────────────────────────
@@ -41,6 +42,116 @@ function diagnosticoEstados(e) {
 // ── Calcular stock actual de un lugar (mapa código → cantidad) ──
 // Reutilizada por el diagnóstico/corrección de negativos y por el tope al
 // descontar. Misma lógica de cálculo que stockLugar(), sin lo de umbrales.
+// ── Préstamos entre servicios ────────────────────────────────
+// Registrar un insumo prestado de otro servicio (ej. Cirugía, Otorrino):
+// entra al stock del lugar que recibe (INGRESO tipo PRESTAMO) y queda
+// registrado como pendiente de devolver.
+function registrarPrestamo(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p  = e.parameter || {};
+    const servicio = String(p.servicio || "").trim();
+    const lugar    = String(p.lugar    || "").trim();
+    const codigo   = String(p.codigo   || "").trim();
+    const descr    = String(p.descripcion || "").trim();
+    const cantidad = parseFloat(p.cantidad || 0) || 0;
+    const fecha    = String(p.fecha || "").trim();
+    const usuario  = String(p.usuario || "").trim();
+    if (!servicio || !lugar || !codigo || cantidad <= 0) throw new Error("Faltan datos del préstamo.");
+
+    const ahora = new Date().toLocaleString("es-CL");
+
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+    movSheet.appendRow([ahora, "PRESTAMO", "", "", lugar, codigo, descr, cantidad, "", usuario, ""]);
+
+    let prSheet = ss.getSheetByName(SHEET_PRESTAMOS);
+    if (!prSheet) {
+      prSheet = ss.insertSheet(SHEET_PRESTAMOS);
+      prSheet.appendRow(["Fecha","Servicio","Lugar","Código","Descripción","Cantidad","Cantidad Pendiente","Estado","Fecha Devolución","Registrado por"]);
+    }
+    prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario]);
+
+    try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+
+    return { status: "ok" };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Listar préstamos pendientes de devolver ──────────────────
+function listarPrestamosPendientes(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_PRESTAMOS);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", prestamos: [] };
+    const datos = sheet.getDataRange().getValues();
+    const prestamos = [];
+    for (let i = 1; i < datos.length; i++) {
+      const f = datos[i];
+      const estado = String(f[7] || "").trim().toUpperCase();
+      if (estado !== "PENDIENTE") continue;
+      const fecha = f[0] instanceof Date ? normalizarFechaVenc_(f[0]) : String(f[0] || "");
+      prestamos.push({
+        fila: i + 1, fecha: fecha, servicio: String(f[1]||""), lugar: String(f[2]||""),
+        codigo: String(f[3]||""), descripcion: String(f[4]||""),
+        cantidad: parseFloat(f[5]||0) || 0, cantidadPendiente: parseFloat(f[6]||0) || 0
+      });
+    }
+    return { status: "ok", prestamos };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Marcar (total o parcialmente) devuelto un préstamo ───────
+function devolverPrestamo(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_PRESTAMOS);
+    if (!sheet) throw new Error("Hoja de préstamos no existe.");
+    const p = e.parameter || {};
+    const fila = parseInt(p.fila || "0");
+    const cantDevuelta = parseFloat(p.cantidad || 0) || 0;
+    if (!fila || cantDevuelta <= 0) throw new Error("Faltan datos de la devolución.");
+
+    const filaDatos = sheet.getRange(fila, 1, 1, 10).getValues()[0];
+    const lugar  = String(filaDatos[2] || "");
+    const codigo = String(filaDatos[3] || "");
+    const descr  = String(filaDatos[4] || "");
+    const pendienteActual = parseFloat(filaDatos[6] || 0) || 0;
+    const usuario = String(p.usuario || "");
+
+    // Tope: nunca devolver más de lo que quedaba pendiente ni de lo
+    // disponible en stock del lugar.
+    const stockMapa = obtenerStockMapa(ss, lugar);
+    const disponible = (stockMapa[codigo] == null || stockMapa[codigo] < 0) ? 0 : stockMapa[codigo];
+    const aDevolver = Math.min(cantDevuelta, pendienteActual, disponible);
+    if (aDevolver <= 0) throw new Error("No hay stock disponible en el lugar para devolver esta cantidad.");
+
+    const ahora = new Date().toLocaleString("es-CL");
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    movSheet.appendRow([ahora, "EGRESO", "", "", lugar, codigo, descr, -aDevolver, "", usuario, ""]);
+
+    const nuevoPendiente = pendienteActual - aDevolver;
+    sheet.getRange(fila, 7).setValue(nuevoPendiente);
+    if (nuevoPendiente <= 0) {
+      sheet.getRange(fila, 8).setValue("DEVUELTO");
+      sheet.getRange(fila, 9).setValue(ahora);
+    }
+
+    try { actualizarStockLugar(lugar); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
+
+    return { status: "ok", devuelto: aDevolver, pendienteRestante: Math.max(nuevoPendiente, 0) };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function obtenerStockMapa(ss, lugar) {
   var mapa = {}; // cod → cantidad
   var invSheet = ss.getSheetByName(SHEET_DATOS);
@@ -343,6 +454,9 @@ function doGet(e) {
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
+  if (accion === "registrarPrestamo") return responder(registrarPrestamo(e), callback);
+  if (accion === "listarPrestamosPendientes") return responder(listarPrestamosPendientes(e), callback);
+  if (accion === "devolverPrestamo") return responder(devolverPrestamo(e), callback);
   if (accion === "vencimientosPorLugar") return responder(vencimientosPorLugar(e), callback);
   if (accion === "diagnosticoStockNegativo") return responder(diagnosticoStockNegativo(e), callback);
   if (accion === "corregirStockNegativo") return responder(corregirStockNegativo(e), callback);
