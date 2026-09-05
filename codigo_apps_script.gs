@@ -38,6 +38,122 @@ function diagnosticoEstados(e) {
 // ── Diagnóstico: movimientos de bodega con lugar distinto a su ──
 // clasificación real en INSUMOS (col F). Detecta ítems clínicos
 // registrados bajo "no clínicos" y viceversa.
+// ── Calcular stock actual de un lugar (mapa código → cantidad) ──
+// Reutilizada por el diagnóstico/corrección de negativos y por el tope al
+// descontar. Misma lógica de cálculo que stockLugar(), sin lo de umbrales.
+function obtenerStockMapa(ss, lugar) {
+  var mapa = {}; // cod → cantidad
+  var invSheet = ss.getSheetByName(SHEET_DATOS);
+  var invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
+  var ini = String(invDatos[0] && invDatos[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
+  for (var i = ini; i < invDatos.length; i++) {
+    var f = invDatos[i];
+    if (String(f[0]||"").trim() !== lugar) continue;
+    var cod = String(f[1]||"").trim();
+    if (!cod) continue;
+    var qty = parseFloat(f[3]||0) || 0;
+    mapa[cod] = (mapa[cod]||0) + qty;
+  }
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  if (movSheet && movSheet.getLastRow() > 1) {
+    var movDatos = movSheet.getDataRange().getValues();
+    var mIni = String(movDatos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    for (var j = mIni; j < movDatos.length; j++) {
+      var m = movDatos[j];
+      if (String(m[4]||"").trim() !== lugar) continue;
+      var cod = String(m[5]||"").trim();
+      if (!cod) continue;
+      var qty = parseFloat(m[7]||0) || 0;
+      mapa[cod] = (mapa[cod]||0) + qty;
+    }
+  }
+  return mapa;
+}
+
+// ── Diagnóstico: stocks negativos en TODOS los lugares ───────
+function diagnosticoStockNegativo(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const shLug = ss.getSheetByName(SHEET_LUGARES);
+    const lugares = [];
+    if (shLug) {
+      const lugData = shLug.getDataRange().getValues();
+      for (let i = 0; i < lugData.length; i++) {
+        const l = String(lugData[i][0]||"").trim();
+        if (l && l.toUpperCase() !== "LUGAR") lugares.push(l);
+      }
+    }
+    // También incluir cualquier lugar que aparezca en MOVIMIENTOS/INVENTARIO
+    // aunque ya no esté en la hoja LUGAR (por si se eliminó el lugar pero
+    // quedaron movimientos históricos).
+    const extra = {};
+    const invSheet = ss.getSheetByName(SHEET_DATOS);
+    const invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
+    for (let i = 1; i < invDatos.length; i++) {
+      const l = String(invDatos[i][0]||"").trim();
+      if (l) extra[l] = true;
+    }
+    const movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    const movDatos = movSheet ? movSheet.getDataRange().getValues() : [];
+    for (let i = 1; i < movDatos.length; i++) {
+      const l = String(movDatos[i][4]||"").trim();
+      if (l) extra[l] = true;
+    }
+    for (const l in extra) if (lugares.indexOf(l) === -1) lugares.push(l);
+
+    const shIns = ss.getSheetByName("INSUMOS");
+    const insDescPorCod = {};
+    if (shIns) {
+      const insData = shIns.getDataRange().getValues();
+      for (let i = 1; i < insData.length; i++) {
+        const c = String(insData[i][0]||"").trim();
+        if (c) insDescPorCod[c] = String(insData[i][1]||"");
+      }
+    }
+
+    const negativos = [];
+    for (let li = 0; li < lugares.length; li++) {
+      const lugar = lugares[li];
+      const mapa = obtenerStockMapa(ss, lugar);
+      for (const cod in mapa) {
+        if (mapa[cod] < 0) {
+          negativos.push({
+            lugar: lugar, codigo: cod,
+            descripcion: insDescPorCod[cod] || "",
+            stockActual: mapa[cod]
+          });
+        }
+      }
+    }
+
+    return { status: "ok", items: negativos, totalNegativos: negativos.length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Corregir stocks negativos: llevar a 0 con un AJUSTE+ ─────
+function corregirStockNegativo(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const diag = diagnosticoStockNegativo(e);
+    if (diag.status !== "ok") return diag;
+    if (!diag.items.length) return { status: "ok", corregidos: 0, mensaje: "No hay stocks negativos." };
+
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    const ahora = new Date().toLocaleString("es-CL");
+    const filas = diag.items.map(function(it) {
+      return [ahora, "AJUSTE+", "", "", it.lugar, it.codigo, it.descripcion, Math.abs(it.stockActual), "", "Corrección stock negativo", ""];
+    });
+    movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+
+    return { status: "ok", corregidos: filas.length };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
 function diagnosticoBodegas(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -171,6 +287,8 @@ function doGet(e) {
   if (accion === "listarMovimientos")   return responder(listarMovimientos(),                        callback);
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
+  if (accion === "diagnosticoStockNegativo") return responder(diagnosticoStockNegativo(e), callback);
+  if (accion === "corregirStockNegativo") return responder(corregirStockNegativo(e), callback);
   if (accion === "corregirClasificacionBodegas") return responder(corregirClasificacionBodegas(e), callback);
   if (accion === "verificarAcceso")    return responder(verificarAcceso(e),                       callback);
   if (accion === "enviarReporte")      return responder(enviarReporte(e),                          callback);
@@ -612,6 +730,17 @@ function actualizarEstadoLote(e) {
     const ahora = new Date().toLocaleString("es-CL");
     const shIns = ss.getSheetByName("INSUMOS");
     const insData = shIns ? shIns.getDataRange().getValues() : [];
+    const stockCache = {}; // lugar → mapa código→stock, para topar en 0 sin recalcular por item
+
+    function getStockDisponible(lugar, cod) {
+      if (!stockCache[lugar]) stockCache[lugar] = obtenerStockMapa(ss, lugar);
+      const v = stockCache[lugar][cod];
+      return (v == null || v < 0) ? 0 : v; // si ya estaba en negativo, no se puede descontar más
+    }
+    function descontar(lugar, cod, cant) {
+      if (!stockCache[lugar]) stockCache[lugar] = obtenerStockMapa(ss, lugar);
+      stockCache[lugar][cod] = (stockCache[lugar][cod] || 0) - cant;
+    }
 
     function buscarBodegaPorCodigo(cod) {
       for (var bi = 1; bi < insData.length; bi++) {
@@ -655,7 +784,7 @@ function actualizarEstadoLote(e) {
           const eCod  = String(f[2] || "").trim();
           const eDesc = String(f[3] || "").trim();
           const eQtyAprobada = parseFloat(cantAprobada);
-          const eQty = (cantAprobada !== "" && !isNaN(eQtyAprobada))
+          let eQty = (cantAprobada !== "" && !isNaN(eQtyAprobada))
             ? Math.abs(eQtyAprobada)
             : Math.abs(parseFloat(f[4]) || 0);
           // La clasificación real en INSUMOS siempre manda — el "Bodega Origen"
@@ -666,22 +795,36 @@ function actualizarEstadoLote(e) {
           if (!eBodega) eBodega = String(f[10] || "").trim();
 
           if (eBodega && eCod && eQty > 0) {
+            // Tope: nunca descontar más de lo disponible, el stock no baja de 0.
+            const disponible = getStockDisponible(eBodega, eCod);
+            eQty = Math.min(eQty, disponible);
+
+            if (eQty > 0) {
             bodegasARecalcular[eBodega] = true;
             if (!fechaVencAp) {
               egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, "", supervisor, ""]);
+              descontar(eBodega, eCod, eQty);
             } else if (fechaVencAp.indexOf("|") > -1 || fechaVencAp.indexOf(":") > -1) {
               const vencParts = fechaVencAp.indexOf("|") > -1 ? fechaVencAp.split("|") : [fechaVencAp];
-              for (let vi = 0; vi < vencParts.length; vi++) {
+              let restante = eQty;
+              for (let vi = 0; vi < vencParts.length && restante > 0; vi++) {
                 const part = vencParts[vi].trim();
                 if (!part) continue;
                 const colon = part.indexOf(":");
                 let vQty, vFecha;
                 if (colon > -1) { vQty = parseFloat(part.substring(0, colon)) || 0; vFecha = part.substring(colon+1).trim(); }
-                else { vQty = eQty; vFecha = part; }
-                if (vQty > 0) egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -vQty, vFecha, supervisor, ""]);
+                else { vQty = restante; vFecha = part; }
+                vQty = Math.min(vQty, restante);
+                if (vQty > 0) {
+                  egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -vQty, vFecha, supervisor, ""]);
+                  descontar(eBodega, eCod, vQty);
+                  restante -= vQty;
+                }
               }
             } else {
               egresos.push([ahora, "EGRESO", idBuscado, "", eBodega, eCod, eDesc, -eQty, fechaVencAp, supervisor, ""]);
+              descontar(eBodega, eCod, eQty);
+            }
             }
           }
         }
@@ -1140,22 +1283,33 @@ function registrarEgresoLote(e) {
 
     const ahora = new Date().toLocaleString("es-CL");
     const filas = [];
+    const limitados = []; // items cuya cantidad se topó por falta de stock
+    const stockMapa = obtenerStockMapa(ss, lugar); // una sola lectura para todo el lote
     for (let i = 0; i < items.length; i++) {
       const it  = items[i];
       const cod = String(it.codigo || "").trim();
-      const qty = parseFloat(it.cantidad || 0);
+      let qty   = parseFloat(it.cantidad || 0);
       if (!cod || !qty) continue;
+
+      const disponible = (stockMapa[cod] == null || stockMapa[cod] < 0) ? 0 : stockMapa[cod];
+      if (qty > disponible) {
+        limitados.push({ codigo: cod, solicitado: qty, aplicado: disponible });
+        qty = disponible;
+      }
+      if (qty <= 0) continue;
+      stockMapa[cod] = disponible - qty;
+
       filas.push([
         ahora, "EGRESO", String(it.nSol || ""), "", lugar, cod,
         String(it.descripcion || ""), -Math.abs(qty), String(it.fechaVenc || ""), usuario, usuId
       ]);
     }
-    if (!filas.length) throw new Error("Ningún ítem tenía datos válidos.");
+    if (!filas.length) throw new Error("Ningún ítem tenía datos válidos o stock disponible.");
 
     movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
     // Nota: STOCK_<lugar> ya no se recalcula aquí (ver nota en actualizarEstadoLote).
 
-    return { status: "ok", registrados: filas.length };
+    return { status: "ok", registrados: filas.length, limitados: limitados };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }

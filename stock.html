@@ -467,7 +467,12 @@
       if (!data || err || data.status !== "ok") {
         toast("Error al guardar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
       } else {
-        toast("✓ " + data.registrados + " egresos guardados correctamente.", "ok");
+        if (data.limitados && data.limitados.length) {
+          var msg = data.limitados.map(function(l){return l.codigo+" (pidió "+l.solicitado+", quedaba "+l.aplicado+")";}).join(", ");
+          toast("✓ Guardado. Algunas cantidades se ajustaron al stock disponible: " + msg, "warn");
+        } else {
+          toast("✓ " + data.registrados + " egresos guardados correctamente.", "ok");
+        }
       }
       cantidadesLote = {};
       renderLote();
