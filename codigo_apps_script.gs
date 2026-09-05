@@ -1057,7 +1057,21 @@ function actualizarRecepcionLote(e) {
         procesados++;
 
         if (estadoPrevio !== "APROBADO") {
-          ingresos.push([ahora, "INGRESO", nSol, mes, lugar, codigo, descr, cant, fechaVenc]);
+          if (fechaVenc.indexOf("|") > -1 || fechaVenc.indexOf(":") > -1) {
+            // Múltiples lotes con distinta fecha de vencimiento para el mismo ítem
+            const partes = fechaVenc.indexOf("|") > -1 ? fechaVenc.split("|") : [fechaVenc];
+            for (let vi = 0; vi < partes.length; vi++) {
+              const parte = partes[vi].trim();
+              if (!parte) continue;
+              const colon = parte.indexOf(":");
+              let vQty, vFecha;
+              if (colon > -1) { vQty = parseFloat(parte.substring(0, colon)) || 0; vFecha = parte.substring(colon+1).trim(); }
+              else { vQty = parseFloat(cant) || 0; vFecha = parte; }
+              if (vQty > 0) ingresos.push([ahora, "INGRESO", nSol, mes, lugar, codigo, descr, vQty, vFecha]);
+            }
+          } else {
+            ingresos.push([ahora, "INGRESO", nSol, mes, lugar, codigo, descr, cant, fechaVenc]);
+          }
           if (lugar) lugaresARecalcular[lugar] = true;
         }
       } else {

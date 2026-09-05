@@ -191,6 +191,57 @@
   var todosPedidos    = [];
   var solicitudActual = [];
   var decisiones      = {}; // { fila: { est, cant } }
+  var vencExtrasRec   = {}; // { fila: [{qty, fecha}] } — lotes adicionales de vencimiento
+
+  function addVencExtraRec(fila) {
+    if (!vencExtrasRec[fila]) vencExtrasRec[fila] = [];
+    vencExtrasRec[fila].push({ qty: '', fecha: '' });
+    renderVencExtrasRec(fila);
+  }
+  function delVencExtraRec(fila, j) {
+    vencExtrasRec[fila].splice(j, 1);
+    renderVencExtrasRec(fila);
+    validarVencRec(fila);
+  }
+  function renderVencExtrasRec(fila) {
+    var el = document.getElementById('venc-extras-' + fila);
+    if (!el) return;
+    var h = '';
+    (vencExtrasRec[fila] || []).forEach(function(v, j) {
+      h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px;">';
+      h += '<input type="number" placeholder="Cant." min="1" value="' + (v.qty||'') + '" oninput="vencExtrasRec[' + fila + '][' + j + '].qty=+this.value;validarVencRec(' + fila + ')" style="width:64px;font-size:.78rem;padding:5px 7px;border:1.5px solid var(--border);border-radius:6px;" />';
+      h += '<input type="date" value="' + (v.fecha||'') + '" oninput="vencExtrasRec[' + fila + '][' + j + '].fecha=this.value" style="flex:1;font-size:.78rem;padding:5px 7px;border:1.5px solid var(--border);border-radius:6px;" />';
+      h += '<button onclick="delVencExtraRec(' + fila + ',' + j + ')" style="font-size:.72rem;padding:4px 7px;border:1.5px solid #dc2626;border-radius:6px;color:#dc2626;background:transparent;cursor:pointer;">\u2715</button>';
+      h += '</div>';
+    });
+    el.innerHTML = h;
+  }
+  function validarVencRec(fila) {
+    var cantInput = document.getElementById('cr-' + fila);
+    var tot = parseFloat(cantInput ? cantInput.value : 0) || 0;
+    var rows = vencExtrasRec[fila] || [];
+    var al = document.getElementById('venc-al-' + fila);
+    if (!al || !rows.length) { if (al) al.style.display = 'none'; return; }
+    var suma = rows.reduce(function(a, r) { return a + (+r.qty || 0); }, 0);
+    var mainVenc = document.getElementById('venc-' + fila);
+    var mainQty = tot - suma; // lo que queda para el lote principal
+    if (mainQty < 0) { al.style.display = 'block'; al.textContent = 'La suma de las fechas extra (' + suma + ') supera lo recibido (' + tot + ')'; }
+    else { al.style.display = 'none'; }
+  }
+  function buildFechaVencRec(fila) {
+    var mainFecha = (document.getElementById('venc-' + fila) || {}).value || '';
+    var cantInput = document.getElementById('cr-' + fila);
+    var tot = parseFloat(cantInput ? cantInput.value : 0) || 0;
+    var extras = vencExtrasRec[fila] || [];
+    if (!extras.length) return mainFecha;
+    var sumaExtras = extras.reduce(function(a, r) { return a + (+r.qty || 0); }, 0);
+    var cantMain = tot - sumaExtras;
+    var partes = [];
+    if (cantMain > 0 && mainFecha) partes.push(cantMain + ':' + mainFecha);
+    extras.forEach(function(v) { if (+v.qty > 0 && v.fecha) partes.push((+v.qty) + ':' + v.fecha); });
+    if (!partes.length) return mainFecha;
+    return partes.join('|');
+  }
 
   function jsonp(url, cb) {
     var name  = "_jcb_" + Date.now() + "_" + (++_cbN);
@@ -317,12 +368,17 @@
           yaRevisado +
           '<div class="item-bot">' +
             '<div class="cant-grupo"><span class="cant-lbl">Solicitado</span><span class="cant-num">' + (p.cantSolicitada||"—") + '</span></div>' +
-            '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida || String(p.cantSolicitada||"").replace(/[^0-9]/g,"")) + '" id="cr-' + p.fila + '" /></div>' +
+            '<div class="cant-grupo"><span class="cant-lbl">Recibido</span><input class="cant-input" type="number" min="0" value="' + (p.cantRecibida || String(p.cantSolicitada||"").replace(/[^0-9]/g,"")) + '" id="cr-' + p.fila + '" oninput="validarVencRec(' + p.fila + ')" /></div>' +
             '<div class="cant-grupo"><span class="cant-lbl">Vencimiento</span><input class="date-input" type="date" id="venc-' + p.fila + '" /></div>' +
             '<div class="item-acciones">' +
               '<button class="btn-ap" id="ap-' + p.fila + '" title="Recepcionar" onclick="togDec(' + p.fila + ',\'APROBADO\')">&#10003;</button>' +
               '<button class="btn-re" id="re-' + p.fila + '" title="A\u00fan no llega (queda pendiente para revisar despu\u00e9s)" onclick="togDec(' + p.fila + ',\'PENDIENTE\')">&#8635;</button>' +
             '</div>' +
+          '</div>' +
+          '<div style="margin-top:6px;">' +
+            '<button onclick="addVencExtraRec(' + p.fila + ')" style="font-size:.72rem;padding:4px 8px;border:1.5px solid #0F6E56;border-radius:6px;color:#0F6E56;background:transparent;cursor:pointer;">+ otra fecha para este mismo insumo</button>' +
+            '<div id="venc-extras-' + p.fila + '" style="margin-top:6px;"></div>' +
+            '<div id="venc-al-' + p.fila + '" style="font-size:.72rem;color:var(--er);display:none;margin-top:4px;"></div>' +
           '</div>' +
         '</div>';
     }
@@ -363,8 +419,7 @@
       if (dec && dec.est) {
         var cantInput = document.getElementById("cr-" + p.fila);
         var cant = cantInput ? cantInput.value : p.cantSolicitada;
-        var vencInput = document.getElementById("venc-" + p.fila);
-        var venc = (vencInput && vencInput.value) ? vencInput.value : "no aplica";
+        var venc = buildFechaVencRec(p.fila) || "no aplica";
         items.push({ fila: p.fila, estado: dec.est, cantRecibida: cant, fechaVencimiento: venc });
       }
     }
