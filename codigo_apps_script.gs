@@ -68,12 +68,8 @@ function registrarPrestamo(e) {
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
     movSheet.appendRow([ahora, "PRESTAMO", "Préstamo de " + servicio, "", lugar, codigo, descr, cantidad, vencimiento, usuario, servicio]);
 
-    let prSheet = ss.getSheetByName(SHEET_PRESTAMOS);
-    if (!prSheet) {
-      prSheet = ss.insertSheet(SHEET_PRESTAMOS);
-      prSheet.appendRow(["Fecha","Servicio","Lugar","Código","Descripción","Cantidad","Cantidad Pendiente","Estado","Fecha Devolución","Registrado por","Vencimiento"]);
-    }
-    prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento]);
+    let prSheet = asegurarHojaPrestamos_(ss);
+    prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento, "RECIBIDO"]);
 
     // Nota: STOCK_<lugar> ya no se recalcula aquí — esa hoja es solo un
     // respaldo visual que ningún panel de la app lee; el stock en vivo se
@@ -81,6 +77,80 @@ function registrarPrestamo(e) {
     // timeouts que producían registros duplicados.
 
     return { status: "ok" };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// Crea (o completa la cabecera de) la hoja PRESTAMOS_SERVICIOS. La columna
+// "Dirección" distingue préstamos RECIBIDO (otro servicio nos prestó, entra
+// a nuestro stock) de OTORGADO (nosotros prestamos, sale de nuestro stock).
+// Filas antiguas sin esta columna se tratan como RECIBIDO (comportamiento
+// previo, ver listarPrestamosPendientes).
+function asegurarHojaPrestamos_(ss) {
+  let prSheet = ss.getSheetByName(SHEET_PRESTAMOS);
+  if (!prSheet) {
+    prSheet = ss.insertSheet(SHEET_PRESTAMOS);
+    prSheet.appendRow(["Fecha","Servicio","Lugar","Código","Descripción","Cantidad","Cantidad Pendiente","Estado","Fecha Devolución","Registrado por","Vencimiento","Dirección"]);
+  } else if (prSheet.getLastColumn() < 12) {
+    prSheet.getRange(1, 12).setValue("Dirección");
+  }
+  return prSheet;
+}
+
+// ── Préstamo OTORGADO a otro servicio ─────────────────────────
+// Nosotros prestamos un insumo a otro servicio (ej. Cirugía, Otorrino):
+// sale de nuestro stock (EGRESO, con el mismo tope de "no bajar de 0" que
+// usa el resto del sistema) y queda pendiente hasta que ese servicio nos
+// lo devuelva.
+function registrarPrestamoOtorgado(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p  = e.parameter || {};
+    const servicio = String(p.servicio || "").trim();
+    const lugar    = String(p.lugar    || "").trim();
+    const codigo   = String(p.codigo   || "").trim();
+    const descr    = String(p.descripcion || "").trim();
+    let   cantidad = parseFloat(p.cantidad || 0) || 0;
+    const fecha    = String(p.fecha || "").trim();
+    const vencimiento = String(p.vencimiento || "").trim();
+    const usuario  = String(p.usuario || "").trim();
+    if (!servicio || !lugar || !codigo || cantidad <= 0) throw new Error("Faltan datos del préstamo.");
+
+    const stockMapa = obtenerStockMapa(ss, lugar);
+    const disponible = (stockMapa[codigo] == null || stockMapa[codigo] < 0) ? 0 : stockMapa[codigo];
+    if (disponible <= 0) throw new Error("No hay stock disponible de este insumo en " + lugar + ".");
+    const limitada = cantidad > disponible;
+    cantidad = Math.min(cantidad, disponible);
+
+    const ahora = new Date().toLocaleString("es-CL");
+
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    if (movSheet.getLastRow() === 0)
+      movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
+    movSheet.appendRow([ahora, "EGRESO", "Préstamo a " + servicio, "", lugar, codigo, descr, -cantidad, vencimiento, usuario, servicio]);
+
+    const prSheet = asegurarHojaPrestamos_(ss);
+    prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento, "OTORGADO"]);
+
+    return { status: "ok", cantidadAplicada: cantidad, limitada: limitada, disponiblePrevio: disponible };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Consultar stock disponible de un ítem en un lugar (para mostrar tope) ──
+function stockItemLugar(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const p  = e.parameter || {};
+    const lugar  = String(p.lugar  || "").trim();
+    const codigo = String(p.codigo || "").trim();
+    if (!lugar || !codigo) throw new Error("Faltan datos.");
+    const stockMapa = obtenerStockMapa(ss, lugar);
+    const disponible = (stockMapa[codigo] == null || stockMapa[codigo] < 0) ? 0 : stockMapa[codigo];
+    return { status: "ok", disponible: disponible };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
@@ -132,11 +202,14 @@ function listarPrestamosPendientes(e) {
       if (estado !== "PENDIENTE") continue;
       const fecha = f[0] instanceof Date ? normalizarFechaVenc_(f[0]) : String(f[0] || "");
       const venc  = f[10] instanceof Date ? normalizarFechaVenc_(f[10]) : String(f[10] || "");
+      // Filas antiguas (creadas antes de la columna Dirección) no tienen
+      // este dato — se tratan como RECIBIDO, que era el único tipo que existía.
+      const direccion = String(f[11] || "").trim().toUpperCase() || "RECIBIDO";
       prestamos.push({
         fila: i + 1, fecha: fecha, servicio: String(f[1]||""), lugar: String(f[2]||""),
         codigo: String(f[3]||""), descripcion: String(f[4]||""),
         cantidad: parseFloat(f[5]||0) || 0, cantidadPendiente: parseFloat(f[6]||0) || 0,
-        vencimiento: venc
+        vencimiento: venc, direccion: direccion
       });
     }
     return { status: "ok", prestamos };
@@ -186,6 +259,50 @@ function devolverPrestamo(e) {
     // Nota: STOCK_<lugar> ya no se recalcula aquí (ver nota en registrarPrestamo).
 
     return { status: "ok", devuelto: aDevolver, pendienteRestante: Math.max(nuevoPendiente, 0) };
+  } catch(err) {
+    return { status: "error", mensaje: err.toString() };
+  }
+}
+
+// ── Marcar como devuelto (por el otro servicio) un préstamo OTORGADO ──
+// A diferencia de devolverPrestamo (que descuenta nuestro stock al devolver
+// algo que nos prestaron), acá el otro servicio nos devuelve el insumo:
+// suma a nuestro stock (INGRESO). No hay tope de stock disponible, solo el
+// tope de la cantidad que quedaba pendiente.
+function devolverPrestamoOtorgado(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_PRESTAMOS);
+    if (!sheet) throw new Error("Hoja de préstamos no existe.");
+    const p = e.parameter || {};
+    const fila = parseInt(p.fila || "0");
+    const cantDevuelta = parseFloat(p.cantidad || 0) || 0;
+    if (!fila || cantDevuelta <= 0) throw new Error("Faltan datos de la devolución.");
+
+    const filaDatos = sheet.getRange(fila, 1, 1, 12).getValues()[0];
+    const servicio = String(filaDatos[1] || "");
+    const lugar  = String(filaDatos[2] || "");
+    const codigo = String(filaDatos[3] || "");
+    const descr  = String(filaDatos[4] || "");
+    const pendienteActual = parseFloat(filaDatos[6] || 0) || 0;
+    const usuario = String(p.usuario || "");
+
+    const aRecibir = Math.min(cantDevuelta, pendienteActual);
+    if (aRecibir <= 0) throw new Error("No queda cantidad pendiente para esta devolución.");
+
+    const ahora = new Date().toLocaleString("es-CL");
+    let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
+    movSheet.appendRow([ahora, "INGRESO", "Devolución de " + servicio, "", lugar, codigo, descr, aRecibir, "", usuario, servicio]);
+
+    const nuevoPendiente = pendienteActual - aRecibir;
+    sheet.getRange(fila, 7).setValue(nuevoPendiente);
+    if (nuevoPendiente <= 0) {
+      sheet.getRange(fila, 8).setValue("DEVUELTO");
+      sheet.getRange(fila, 9).setValue(ahora);
+    }
+
+    return { status: "ok", recibido: aRecibir, pendienteRestante: Math.max(nuevoPendiente, 0) };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
@@ -630,9 +747,12 @@ function doGet(e) {
   if (accion === "diagnosticoEstados") return responder(diagnosticoEstados(e), callback);
   if (accion === "diagnosticoBodegas") return responder(diagnosticoBodegas(e), callback);
   if (accion === "registrarPrestamo") return responder(registrarPrestamo(e), callback);
+  if (accion === "registrarPrestamoOtorgado") return responder(registrarPrestamoOtorgado(e), callback);
   if (accion === "registrarIngresoFarmacia") return responder(registrarIngresoFarmacia(e), callback);
   if (accion === "listarPrestamosPendientes") return responder(listarPrestamosPendientes(e), callback);
   if (accion === "devolverPrestamo") return responder(devolverPrestamo(e), callback);
+  if (accion === "devolverPrestamoOtorgado") return responder(devolverPrestamoOtorgado(e), callback);
+  if (accion === "stockItemLugar") return responder(stockItemLugar(e), callback);
   if (accion === "vencimientosPorLugar") return responder(vencimientosPorLugar(e), callback);
   if (accion === "diagnosticoStockNegativo") return responder(diagnosticoStockNegativo(e), callback);
   if (accion === "diagnosticoInventarioFantasma") return responder(diagnosticoInventarioFantasma(e), callback);
