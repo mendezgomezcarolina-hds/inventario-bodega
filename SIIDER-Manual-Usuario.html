@@ -298,6 +298,7 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
     <li><a href="#recepcion-bodega"><span>10</span> Recepción de bodega</a></li>
     <li><a href="#ajuste"><span>11</span> Ajuste de Stock</a></li>
     <li><a href="#reportes"><span>12</span> Reportes de Gestión</a></li>
+    <li><a href="#prestamos"><span>13</span> Préstamos entre servicios</a></li>
   </ul>
 </div>
 
@@ -1068,6 +1069,68 @@ code{font-family:'DM Mono',monospace;font-size:.82rem;background:#f0f4f8;padding
           <span class="hint">⚠ Requiere que el Apps Script esté implementado con permisos de GmailApp activos.</span>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECCIÓN 13: PRÉSTAMOS ENTRE SERVICIOS ── -->
+<div class="section" id="prestamos">
+  <div class="section-head">
+    <div class="section-icon" style="background:var(--teal)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+    </div>
+    <div>
+      <div class="section-num">Sección 13</div>
+      <div class="section-title">Préstamos entre servicios <span style="font-size:.72rem;background:var(--teal-lt);color:var(--teal);padding:2px 8px;border-radius:99px;margin-left:8px;">Ingresos externos</span></div>
+    </div>
+  </div>
+  <div class="section-body">
+    <p style="font-size:.88rem;color:var(--muted);margin-bottom:16px;">Registra insumos que entran o salen del stock de Dermatología sin pasar por el flujo habitual de solicitud/recepción: préstamos <strong>recibidos</strong> de otros servicios, préstamos <strong>otorgados</strong> a otros servicios, e ingresos de reposición desde <strong>Farmacia Central</strong>. Todo movimiento queda trazado en MOVIMIENTOS y, en el caso de los préstamos, en una hoja de seguimiento con su estado (pendiente / devuelto).</p>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ️</span>
+      <span>El módulo se abre con tres botones de origen en la parte superior. Elige el que corresponda antes de completar el formulario — cada uno cambia qué campos pide y qué hace con el stock.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">1</div>
+        <div class="step-content">
+          <h4>🔄 Préstamo de servicio (recibido)</h4>
+          <p>Usa esta opción cuando <strong>otro servicio</strong> (ej. Cirugía, Otorrino) nos presta un insumo. Indica el servicio prestador, el lugar de dermatología que recibe, el insumo, la cantidad y la fecha. El insumo <strong>suma</strong> al stock del lugar elegido y queda registrado como pendiente de devolver.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">2</div>
+        <div class="step-content">
+          <h4>📤 Prestar a otro servicio (otorgado)</h4>
+          <p>Usa esta opción cuando <strong>nosotros</strong> prestamos un insumo a otro servicio. Indica el servicio que lo recibe y el lugar de dermatología que presta (de dónde sale el insumo). Al elegir el insumo, el sistema consulta y muestra el <strong>stock disponible</strong> en ese lugar.</p>
+          <span class="ok">✓ El insumo se descuenta (EGRESO) del stock del lugar. Si se ingresa una cantidad mayor a la disponible, el sistema la ajusta automáticamente al máximo posible — el stock nunca queda en negativo.</span>
+          <span class="hint" style="background:#fee2e2;color:#dc2626;">🔴 Si no hay stock disponible del insumo en el lugar elegido, el sistema no permite registrar el préstamo.</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">3</div>
+        <div class="step-content">
+          <h4>💊 Farmacia Central</h4>
+          <p>Usa esta opción para reposiciones con receta desde Farmacia Central. A diferencia de los préstamos, este ingreso es <strong>permanente</strong> — no se espera devolución, así que no aparece en la pestaña Pendientes. Incluye chips con los insumos más frecuentes de Farmacia para seleccionar más rápido.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num" style="background:var(--teal);color:#fff;">4</div>
+        <div class="step-content">
+          <h4>Pestaña "Pendientes"</h4>
+          <p>Muestra todos los préstamos aún no devueltos, distinguiendo ambos sentidos con un badge de color:</p>
+          <span class="hint" style="background:#EEEDFE;color:#3C3489;">🔄 De [servicio] — nos lo prestaron; el botón dice <strong>"Marcar devuelto"</strong> (descuenta de nuestro stock al devolverlo).</span><br style="margin:3px 0"/>
+          <span class="hint" style="background:#fef3c7;color:#92400e;">📤 Prestado a [servicio] — lo prestamos nosotros; el botón dice <strong>"Marcar recibido"</strong> (suma a nuestro stock cuando el otro servicio lo devuelve).</span>
+          <p style="margin-top:6px;font-size:.82rem;color:var(--muted);">Las devoluciones pueden registrarse de forma parcial: si solo devuelven o te devuelven parte de la cantidad, el préstamo queda "PENDIENTE" con el saldo restante hasta completarse.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-warn" style="margin-top:16px;">
+      <span class="alert-icon">⚠️</span>
+      <span>Un préstamo pendiente por mucho tiempo puede indicar que el servicio prestador (o al que le prestamos) necesita un recordatorio. Revisa la pestaña Pendientes periódicamente, especialmente antes de un ajuste de stock trimestral.</span>
     </div>
   </div>
 </div>
