@@ -228,6 +228,7 @@
   ];
   var origenActual = "prestamo";
   var lugarDetectadoOtorgado = "";
+  var catalogoInsumosEstado = "cargando"; // cargando | ok | error
 
   function setOrigen(tipo) {
     origenActual = tipo;
@@ -331,14 +332,22 @@
   }
 
   function abrirLista() {
+    if (catalogoInsumosEstado === "error") cargarCatalogoInsumos();
     listaAbierta = true;
     filtrarItems();
     document.getElementById("itemLista").style.display = "block";
   }
 
   function cargarCatalogoInsumos() {
+    catalogoInsumosEstado = "cargando";
     jsonp(SCRIPT_URL + "?accion=items", function(data, err) {
-      if (!err && data && data.status === "ok") itemsData = data.items || [];
+      if (!err && data && data.status === "ok") {
+        itemsData = data.items || [];
+        catalogoInsumosEstado = "ok";
+      } else {
+        catalogoInsumosEstado = "error";
+      }
+      if (listaAbierta) filtrarItems();
     });
   }
 
@@ -356,6 +365,13 @@
     var q = norm(document.getElementById("itemQ").value).trim();
     var lista = document.getElementById("itemLista");
     lista.innerHTML = "";
+    if (catalogoInsumosEstado !== "ok") {
+      lista.style.display = "block";
+      lista.innerHTML = catalogoInsumosEstado === "error"
+        ? '<div class="ri-empty">⚠ No se pudo cargar el catálogo de insumos. Cierra y vuelve a abrir este campo para reintentar.</div>'
+        : '<div class="ri-empty">Cargando catálogo de insumos…</div>';
+      return;
+    }
     if (!q) { lista.style.display = "none"; return; }
     lista.style.display = "block";
     listaAbierta = true;
