@@ -396,39 +396,11 @@
     badge.style.display = "flex";
     document.getElementById("itemBadgeNom").textContent = itemSelCodigo + " — " + itemSelDesc;
     document.getElementById("dispBadge").style.display = "none";
-    if (origenActual === "otorgado") consultarDisponible();
-  }
-
-  function consultarDisponible(esReintento) {
-    if (!itemSelCodigo) return;
-    var disp = document.getElementById("dispBadge");
-    disp.style.display = "block";
-    disp.style.color = "var(--warn)";
-    disp.textContent = "Consultando stock disponible…";
-    jsonp(SCRIPT_URL + "?accion=stockItemLugar&codigo=" + encodeURIComponent(itemSelCodigo), function(data, err) {
-      if (!data || err || data.status !== "ok") {
-        if (!esReintento) {
-          // Reintento automático una vez — este chequeo lee todo el
-          // historial de movimientos y a veces tarda más de lo normal.
-          disp.textContent = "Reintentando consulta de stock…";
-          setTimeout(function(){ consultarDisponible(true); }, 800);
-          return;
-        }
-        disp.style.color = "var(--error)";
-        disp.textContent = "⚠ Error al consultar stock: " + ((data && data.mensaje) || err || "sin respuesta del servidor") + " — toca \"cambiar\" y vuelve a elegir el insumo para reintentar.";
-        return;
-      }
-      lugarDetectadoOtorgado = data.lugar || "";
-      var cant = document.getElementById("cantidad");
-      cant.max = data.disponible;
-      if (data.disponible <= 0) {
-        disp.style.color = "var(--error)";
-        disp.textContent = "⚠ Sin stock disponible de este insumo (" + lugarDetectadoOtorgado + ").";
-      } else {
-        disp.style.color = "var(--warn)";
-        disp.textContent = "Disponible (" + lugarDetectadoOtorgado + "): " + data.disponible + " unidades.";
-      }
-    });
+    // Nota: ya no se consulta el stock disponible aquí antes de registrar —
+    // esa consulta previa resultó demasiado lenta/poco confiable en esta
+    // planilla. El tope real se sigue validando al registrar, en el backend
+    // (registrarPrestamoOtorgado ya limita la cantidad al stock disponible
+    // o rechaza si no hay stock).
   }
 
   function limpiarItem() {
