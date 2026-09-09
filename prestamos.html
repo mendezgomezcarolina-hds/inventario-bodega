@@ -144,7 +144,7 @@
       <div id="serviciosChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
       <input type="text" id="servicio" placeholder="Escribe el servicio, o elige arriba…" oninput="marcarChipActivo(this.value)"/>
     </div>
-    <div class="field">
+    <div class="field" id="wrapLugar">
       <label id="labelLugar">Lugar que recibe (dermatología)</label>
       <select id="lugar" onchange="limpiarItem();"><option value="" disabled selected>Cargando lugares…</option></select>
     </div>
@@ -227,6 +227,7 @@
     { codigo: "3002160100", descripcion: "ANESTESIA DENTAL SIN VASOCONTRICTOR CAJAX100" }
   ];
   var origenActual = "prestamo";
+  var lugarDetectadoOtorgado = "";
 
   function setOrigen(tipo) {
     origenActual = tipo;
@@ -236,6 +237,7 @@
     var esFarmacia  = tipo === "farmacia";
     var esOtorgado  = tipo === "otorgado";
     document.getElementById("wrapPrestadorFijo").style.display = esOtorgado ? "block" : "none";
+    document.getElementById("wrapLugar").style.display       = esOtorgado ? "none" : "block";
     document.getElementById("wrapServicio").style.display    = esFarmacia ? "none" : "block";
     document.getElementById("wrapChipsInsumo").style.display = esFarmacia ? "block" : "none";
     document.getElementById("labelServicio").textContent = esOtorgado ? "Servicio que recibe el préstamo" : "Servicio prestador";
@@ -382,27 +384,27 @@
   }
 
   function consultarDisponible() {
-    var lugar = document.getElementById("lugar").value;
-    if (!lugar || !itemSelCodigo) return;
+    if (!itemSelCodigo) return;
     var disp = document.getElementById("dispBadge");
     disp.style.display = "block";
     disp.textContent = "Consultando stock disponible…";
-    jsonp(SCRIPT_URL + "?accion=stockItemLugar&lugar=" + encodeURIComponent(lugar) + "&codigo=" + encodeURIComponent(itemSelCodigo), function(data, err) {
+    jsonp(SCRIPT_URL + "?accion=stockItemLugar&codigo=" + encodeURIComponent(itemSelCodigo), function(data, err) {
       if (!data || err || data.status !== "ok") { disp.textContent = "No se pudo consultar el stock disponible."; return; }
+      lugarDetectadoOtorgado = data.lugar || "";
       var cant = document.getElementById("cantidad");
       cant.max = data.disponible;
       if (data.disponible <= 0) {
         disp.style.color = "var(--error)";
-        disp.textContent = "⚠ Sin stock disponible de este insumo en " + lugar + ".";
+        disp.textContent = "⚠ Sin stock disponible de este insumo (" + lugarDetectadoOtorgado + ").";
       } else {
         disp.style.color = "var(--warn)";
-        disp.textContent = "Disponible en " + lugar + ": " + data.disponible + " unidades.";
+        disp.textContent = "Disponible (" + lugarDetectadoOtorgado + "): " + data.disponible + " unidades.";
       }
     });
   }
 
   function limpiarItem() {
-    itemSelCodigo = ""; itemSelDesc = "";
+    itemSelCodigo = ""; itemSelDesc = ""; lugarDetectadoOtorgado = "";
     document.getElementById("itemBadge").style.display = "none";
     document.getElementById("dispBadge").style.display = "none";
   }
@@ -416,7 +418,7 @@
     var fecha    = document.getElementById("fecha").value;
 
     if (!esFarmacia && !servicio) { mostrarToast(esOtorgado ? "Indica a qué servicio se presta el insumo." : "Indica de qué servicio viene el préstamo.", "warn"); return; }
-    if (!lugar)          { mostrarToast("Selecciona el lugar.", "warn"); return; }
+    if (!esOtorgado && !lugar)    { mostrarToast("Selecciona el lugar.", "warn"); return; }
     if (!itemSelCodigo)  { mostrarToast("Selecciona un insumo.", "warn"); return; }
     if (!cantidad || Number(cantidad) < 1) { mostrarToast("Ingresa una cantidad mayor a 0.", "warn"); return; }
 
@@ -436,7 +438,6 @@
     } else if (esOtorgado) {
       url = SCRIPT_URL + "?accion=registrarPrestamoOtorgado" +
         "&servicio="    + encodeURIComponent(servicio) +
-        "&lugar="       + encodeURIComponent(lugar) +
         "&codigo="      + encodeURIComponent(itemSelCodigo) +
         "&descripcion=" + encodeURIComponent(itemSelDesc) +
         "&cantidad="    + encodeURIComponent(cantidad) +
@@ -464,7 +465,7 @@
       }
       var msg;
       if (esFarmacia)      msg = "✓ Ingreso de Farmacia Central registrado — se sumó al stock de " + lugar + ".";
-      else if (esOtorgado) msg = "✓ Préstamo registrado — se descontó del stock de " + lugar + (data.limitada ? " (ajustado al máximo disponible: " + data.cantidadAplicada + ")" : "") + ".";
+      else if (esOtorgado) msg = "✓ Préstamo registrado — se descontó del stock de " + (data.lugar || lugarDetectadoOtorgado || "la bodega correspondiente") + (data.limitada ? " (ajustado al máximo disponible: " + data.cantidadAplicada + ")" : "") + ".";
       else                 msg = "✓ Préstamo registrado — se sumó al stock de " + lugar + ".";
       mostrarToast(msg, "ok");
       document.getElementById("servicio").value = "";
