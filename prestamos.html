@@ -399,15 +399,23 @@
     if (origenActual === "otorgado") consultarDisponible();
   }
 
-  function consultarDisponible() {
+  function consultarDisponible(esReintento) {
     if (!itemSelCodigo) return;
     var disp = document.getElementById("dispBadge");
     disp.style.display = "block";
+    disp.style.color = "var(--warn)";
     disp.textContent = "Consultando stock disponible…";
     jsonp(SCRIPT_URL + "?accion=stockItemLugar&codigo=" + encodeURIComponent(itemSelCodigo), function(data, err) {
       if (!data || err || data.status !== "ok") {
+        if (!esReintento) {
+          // Reintento automático una vez — este chequeo lee todo el
+          // historial de movimientos y a veces tarda más de lo normal.
+          disp.textContent = "Reintentando consulta de stock…";
+          setTimeout(function(){ consultarDisponible(true); }, 800);
+          return;
+        }
         disp.style.color = "var(--error)";
-        disp.textContent = "⚠ Error al consultar stock: " + ((data && data.mensaje) || err || "sin respuesta del servidor");
+        disp.textContent = "⚠ Error al consultar stock: " + ((data && data.mensaje) || err || "sin respuesta del servidor") + " — toca \"cambiar\" y vuelve a elegir el insumo para reintentar.";
         return;
       }
       lugarDetectadoOtorgado = data.lugar || "";
