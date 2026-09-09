@@ -135,6 +135,10 @@
       </div>
     </div>
 
+    <div class="field" id="wrapPrestadorFijo" style="display:none;">
+      <label>Servicio prestador</label>
+      <div style="background:#EEEDFE;border:1.5px solid #CECBF6;border-radius:8px;padding:9px 14px;font-size:.9rem;font-weight:600;color:var(--dk);">🏥 Servicio de Dermatología (fijo)</div>
+    </div>
     <div class="field" id="wrapServicio">
       <label id="labelServicio">Servicio prestador</label>
       <div id="serviciosChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
@@ -142,7 +146,7 @@
     </div>
     <div class="field">
       <label id="labelLugar">Lugar que recibe (dermatología)</label>
-      <select id="lugar" onchange="limpiarItem(); itemsData = [];"><option value="" disabled selected>Cargando lugares…</option></select>
+      <select id="lugar" onchange="limpiarItem();"><option value="" disabled selected>Cargando lugares…</option></select>
     </div>
     <div class="field" id="wrapChipsInsumo" style="display:none;">
       <label>Insumos frecuentes de Farmacia Central</label>
@@ -209,6 +213,7 @@
     renderChipsServicio();
     cargarLugares();
     cargarPendientes();
+    cargarCatalogoInsumos();
   };
 
   var SERVICIOS_FRECUENTES = ["Cirugía","Otorrino","Infectología","Oftalmología","Cuidados Paliativos","Medicina"];
@@ -230,6 +235,7 @@
     document.getElementById("origBtnFarmacia").classList.toggle("on", tipo === "farmacia");
     var esFarmacia  = tipo === "farmacia";
     var esOtorgado  = tipo === "otorgado";
+    document.getElementById("wrapPrestadorFijo").style.display = esOtorgado ? "block" : "none";
     document.getElementById("wrapServicio").style.display    = esFarmacia ? "none" : "block";
     document.getElementById("wrapChipsInsumo").style.display = esFarmacia ? "block" : "none";
     document.getElementById("labelServicio").textContent = esOtorgado ? "Servicio que recibe el préstamo" : "Servicio prestador";
@@ -323,16 +329,13 @@
   }
 
   function abrirLista() {
-    var lugar = document.getElementById("lugar").value;
-    if (!lugar) { mostrarToast("Selecciona primero el lugar que recibe.", "warn"); return; }
-    if (!itemsData.length) cargarItemsDeLugar(lugar);
     listaAbierta = true;
     filtrarItems();
     document.getElementById("itemLista").style.display = "block";
   }
 
-  function cargarItemsDeLugar(lugar) {
-    jsonp(SCRIPT_URL + "?accion=itemsPorLugar&lugar=" + encodeURIComponent(lugar), function(data, err) {
+  function cargarCatalogoInsumos() {
+    jsonp(SCRIPT_URL + "?accion=items", function(data, err) {
       if (!err && data && data.status === "ok") itemsData = data.items || [];
     });
   }
