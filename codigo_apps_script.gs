@@ -98,24 +98,44 @@ function asegurarHojaPrestamos_(ss) {
   return prSheet;
 }
 
+// Determina la bodega central que corresponde a un insumo según su
+// clasificación en la hoja INSUMOS (columna F: CLINICOS / NO CLINICOS).
+// Se usa para "Prestar a otro servicio", donde ya no se pide elegir el
+// lugar manualmente — se deduce del insumo elegido.
+function bodegaPorCodigoInsumo_(ss, codigo) {
+  var sheet = ss.getSheetByName(SHEET_ITEMS);
+  if (!sheet) return "BODEGA INSUMOS CLINICOS";
+  var datos = sheet.getDataRange().getValues();
+  var ini = String(datos[0] && datos[0][0] || "").toUpperCase().indexOf("COD") === 0 ? 1 : 0;
+  for (var i = ini; i < datos.length; i++) {
+    if (String(datos[i][0]||"").trim() === codigo) {
+      var tipo = String(datos[i][5]||"").trim().toUpperCase();
+      return tipo === "NO CLINICOS" ? "BODEGA INSUMOS NO CLINICOS" : "BODEGA INSUMOS CLINICOS";
+    }
+  }
+  return "BODEGA INSUMOS CLINICOS";
+}
+
 // ── Préstamo OTORGADO a otro servicio ─────────────────────────
 // Nosotros prestamos un insumo a otro servicio (ej. Cirugía, Otorrino):
 // sale de nuestro stock (EGRESO, con el mismo tope de "no bajar de 0" que
 // usa el resto del sistema) y queda pendiente hasta que ese servicio nos
-// lo devuelva.
+// lo devuelva. La bodega de origen se detecta automáticamente según la
+// clasificación del insumo — no se pide elegir el lugar.
 function registrarPrestamoOtorgado(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const p  = e.parameter || {};
     const servicio = String(p.servicio || "").trim();
-    const lugar    = String(p.lugar    || "").trim();
     const codigo   = String(p.codigo   || "").trim();
     const descr    = String(p.descripcion || "").trim();
     let   cantidad = parseFloat(p.cantidad || 0) || 0;
     const fecha    = String(p.fecha || "").trim();
     const vencimiento = String(p.vencimiento || "").trim();
     const usuario  = String(p.usuario || "").trim();
-    if (!servicio || !lugar || !codigo || cantidad <= 0) throw new Error("Faltan datos del préstamo.");
+    if (!servicio || !codigo || cantidad <= 0) throw new Error("Faltan datos del préstamo.");
+
+    const lugar = bodegaPorCodigoInsumo_(ss, codigo);
 
     const stockMapa = obtenerStockMapa(ss, lugar);
     const disponible = (stockMapa[codigo] == null || stockMapa[codigo] < 0) ? 0 : stockMapa[codigo];
@@ -134,23 +154,25 @@ function registrarPrestamoOtorgado(e) {
     const prSheet = asegurarHojaPrestamos_(ss);
     prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento, "OTORGADO"]);
 
-    return { status: "ok", cantidadAplicada: cantidad, limitada: limitada, disponiblePrevio: disponible };
+    return { status: "ok", cantidadAplicada: cantidad, limitada: limitada, disponiblePrevio: disponible, lugar: lugar };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
 }
 
-// ── Consultar stock disponible de un ítem en un lugar (para mostrar tope) ──
+// ── Consultar stock disponible de un ítem (para mostrar tope) ──
+// Si no se indica lugar, se detecta automáticamente según la
+// clasificación del insumo (ver bodegaPorCodigoInsumo_).
 function stockItemLugar(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const p  = e.parameter || {};
-    const lugar  = String(p.lugar  || "").trim();
     const codigo = String(p.codigo || "").trim();
-    if (!lugar || !codigo) throw new Error("Faltan datos.");
+    if (!codigo) throw new Error("Faltan datos.");
+    const lugar = String(p.lugar || "").trim() || bodegaPorCodigoInsumo_(ss, codigo);
     const stockMapa = obtenerStockMapa(ss, lugar);
     const disponible = (stockMapa[codigo] == null || stockMapa[codigo] < 0) ? 0 : stockMapa[codigo];
-    return { status: "ok", disponible: disponible };
+    return { status: "ok", disponible: disponible, lugar: lugar };
   } catch(err) {
     return { status: "error", mensaje: err.toString() };
   }
