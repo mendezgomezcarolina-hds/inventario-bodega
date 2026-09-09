@@ -137,7 +137,7 @@
 
     <div class="field" id="wrapPrestadorFijo" style="display:none;">
       <label>Servicio prestador</label>
-      <div style="background:#EEEDFE;border:1.5px solid #CECBF6;border-radius:8px;padding:9px 14px;font-size:.9rem;font-weight:600;color:var(--dk);">🏥 Servicio de Dermatología (fijo)</div>
+      <div style="background:#EEEDFE;border:1.5px solid #CECBF6;border-radius:8px;padding:9px 14px;font-size:.9rem;font-weight:600;color:var(--dk);">🏥 Servicio de Dermatología</div>
     </div>
     <div class="field" id="wrapServicio">
       <label id="labelServicio">Servicio prestador</label>
@@ -239,7 +239,7 @@
     document.getElementById("wrapServicio").style.display    = esFarmacia ? "none" : "block";
     document.getElementById("wrapChipsInsumo").style.display = esFarmacia ? "block" : "none";
     document.getElementById("labelServicio").textContent = esOtorgado ? "Servicio que recibe el préstamo" : "Servicio prestador";
-    document.getElementById("labelLugar").textContent    = esOtorgado ? "Lugar que presta (dermatología)" : "Lugar que recibe (dermatología)";
+    document.getElementById("labelLugar").textContent    = esOtorgado ? "Lugar que presta" : "Lugar que recibe (dermatología)";
     if (esFarmacia)      { document.getElementById("tituloPanel").textContent = "Ingreso Farmacia Central"; document.getElementById("subtituloPanel").textContent = "Reposición de stock con receta · Dermatología HDS"; }
     else if (esOtorgado) { document.getElementById("tituloPanel").textContent = "Prestar a otro servicio"; document.getElementById("subtituloPanel").textContent = "Insumos que salen prestados a otro servicio · Dermatología HDS"; }
     else                 { document.getElementById("tituloPanel").textContent = "Préstamos entre servicios"; document.getElementById("subtituloPanel").textContent = "Insumos recibidos de otros servicios · Dermatología HDS"; }
