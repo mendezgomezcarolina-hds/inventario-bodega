@@ -128,20 +128,21 @@
   <div id="vistaReg">
     <div class="field">
       <label>Origen del insumo</label>
-      <div style="display:flex;gap:8px;">
-        <button type="button" class="origen-btn on" id="origBtnPrestamo" onclick="setOrigen('prestamo')" style="flex:1;">🔄 Préstamo de servicio</button>
-        <button type="button" class="origen-btn" id="origBtnFarmacia" onclick="setOrigen('farmacia')" style="flex:1;">💊 Farmacia Central</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="origen-btn on" id="origBtnPrestamo" onclick="setOrigen('prestamo')" style="flex:1;min-width:130px;">🔄 Préstamo de servicio</button>
+        <button type="button" class="origen-btn" id="origBtnOtorgado" onclick="setOrigen('otorgado')" style="flex:1;min-width:130px;">📤 Prestar a otro servicio</button>
+        <button type="button" class="origen-btn" id="origBtnFarmacia" onclick="setOrigen('farmacia')" style="flex:1;min-width:130px;">💊 Farmacia Central</button>
       </div>
     </div>
 
     <div class="field" id="wrapServicio">
-      <label>Servicio prestador</label>
+      <label id="labelServicio">Servicio prestador</label>
       <div id="serviciosChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
       <input type="text" id="servicio" placeholder="Escribe el servicio, o elige arriba…" oninput="marcarChipActivo(this.value)"/>
     </div>
     <div class="field">
-      <label>Lugar que recibe (dermatología)</label>
-      <select id="lugar"><option value="" disabled selected>Cargando lugares…</option></select>
+      <label id="labelLugar">Lugar que recibe (dermatología)</label>
+      <select id="lugar" onchange="limpiarItem(); itemsData = [];"><option value="" disabled selected>Cargando lugares…</option></select>
     </div>
     <div class="field" id="wrapChipsInsumo" style="display:none;">
       <label>Insumos frecuentes de Farmacia Central</label>
@@ -155,6 +156,7 @@
         <span id="itemBadgeNom"></span>
         <button onclick="limpiarItem()">✕ cambiar</button>
       </div>
+      <div id="dispBadge" style="display:none;font-size:.76rem;color:var(--warn);margin-top:6px;font-weight:600;"></div>
     </div>
     <div style="display:flex;gap:10px;">
       <div class="field" style="flex:1;">
@@ -224,15 +226,21 @@
   function setOrigen(tipo) {
     origenActual = tipo;
     document.getElementById("origBtnPrestamo").classList.toggle("on", tipo === "prestamo");
+    document.getElementById("origBtnOtorgado").classList.toggle("on", tipo === "otorgado");
     document.getElementById("origBtnFarmacia").classList.toggle("on", tipo === "farmacia");
-    var esFarmacia = tipo === "farmacia";
+    var esFarmacia  = tipo === "farmacia";
+    var esOtorgado  = tipo === "otorgado";
     document.getElementById("wrapServicio").style.display    = esFarmacia ? "none" : "block";
     document.getElementById("wrapChipsInsumo").style.display = esFarmacia ? "block" : "none";
-    document.getElementById("tituloPanel").textContent    = esFarmacia ? "Ingreso Farmacia Central" : "Préstamos entre servicios";
-    document.getElementById("subtituloPanel").textContent = esFarmacia ? "Reposición de stock con receta · Dermatología HDS" : "Insumos recibidos de otros servicios · Dermatología HDS";
+    document.getElementById("labelServicio").textContent = esOtorgado ? "Servicio que recibe el préstamo" : "Servicio prestador";
+    document.getElementById("labelLugar").textContent    = esOtorgado ? "Lugar que presta (dermatología)" : "Lugar que recibe (dermatología)";
+    if (esFarmacia)      { document.getElementById("tituloPanel").textContent = "Ingreso Farmacia Central"; document.getElementById("subtituloPanel").textContent = "Reposición de stock con receta · Dermatología HDS"; }
+    else if (esOtorgado) { document.getElementById("tituloPanel").textContent = "Prestar a otro servicio"; document.getElementById("subtituloPanel").textContent = "Insumos que salen prestados a otro servicio · Dermatología HDS"; }
+    else                 { document.getElementById("tituloPanel").textContent = "Préstamos entre servicios"; document.getElementById("subtituloPanel").textContent = "Insumos recibidos de otros servicios · Dermatología HDS"; }
     document.querySelector("#wrapFecha label").textContent = esFarmacia ? "Fecha de recepción" : "Fecha del préstamo";
-    document.getElementById("btnRegistrarTxt").textContent = esFarmacia ? "Registrar ingreso" : "Registrar préstamo";
+    document.getElementById("btnRegistrarTxt").textContent = esFarmacia ? "Registrar ingreso" : (esOtorgado ? "Registrar préstamo otorgado" : "Registrar préstamo");
     if (esFarmacia && !document.getElementById("insumosChips").children.length) renderChipsInsumoFarmacia();
+    limpiarItem();
   }
 
   function renderChipsInsumoFarmacia() {
@@ -366,22 +374,46 @@
     var badge = document.getElementById("itemBadge");
     badge.style.display = "flex";
     document.getElementById("itemBadgeNom").textContent = itemSelCodigo + " — " + itemSelDesc;
+    document.getElementById("dispBadge").style.display = "none";
+    if (origenActual === "otorgado") consultarDisponible();
+  }
+
+  function consultarDisponible() {
+    var lugar = document.getElementById("lugar").value;
+    if (!lugar || !itemSelCodigo) return;
+    var disp = document.getElementById("dispBadge");
+    disp.style.display = "block";
+    disp.textContent = "Consultando stock disponible…";
+    jsonp(SCRIPT_URL + "?accion=stockItemLugar&lugar=" + encodeURIComponent(lugar) + "&codigo=" + encodeURIComponent(itemSelCodigo), function(data, err) {
+      if (!data || err || data.status !== "ok") { disp.textContent = "No se pudo consultar el stock disponible."; return; }
+      var cant = document.getElementById("cantidad");
+      cant.max = data.disponible;
+      if (data.disponible <= 0) {
+        disp.style.color = "var(--error)";
+        disp.textContent = "⚠ Sin stock disponible de este insumo en " + lugar + ".";
+      } else {
+        disp.style.color = "var(--warn)";
+        disp.textContent = "Disponible en " + lugar + ": " + data.disponible + " unidades.";
+      }
+    });
   }
 
   function limpiarItem() {
     itemSelCodigo = ""; itemSelDesc = "";
     document.getElementById("itemBadge").style.display = "none";
+    document.getElementById("dispBadge").style.display = "none";
   }
 
   function registrarPrestamo() {
     var esFarmacia = origenActual === "farmacia";
+    var esOtorgado = origenActual === "otorgado";
     var servicio = document.getElementById("servicio").value.trim();
     var lugar    = document.getElementById("lugar").value;
     var cantidad = document.getElementById("cantidad").value;
     var fecha    = document.getElementById("fecha").value;
 
-    if (!esFarmacia && !servicio) { mostrarToast("Indica de qué servicio viene el préstamo.", "warn"); return; }
-    if (!lugar)          { mostrarToast("Selecciona el lugar que recibe el insumo.", "warn"); return; }
+    if (!esFarmacia && !servicio) { mostrarToast(esOtorgado ? "Indica a qué servicio se presta el insumo." : "Indica de qué servicio viene el préstamo.", "warn"); return; }
+    if (!lugar)          { mostrarToast("Selecciona el lugar.", "warn"); return; }
     if (!itemSelCodigo)  { mostrarToast("Selecciona un insumo.", "warn"); return; }
     if (!cantidad || Number(cantidad) < 1) { mostrarToast("Ingresa una cantidad mayor a 0.", "warn"); return; }
 
@@ -398,6 +430,16 @@
         "&cantidad="    + encodeURIComponent(cantidad) +
         "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
         "&usuario="     + encodeURIComponent(responsableSesion);
+    } else if (esOtorgado) {
+      url = SCRIPT_URL + "?accion=registrarPrestamoOtorgado" +
+        "&servicio="    + encodeURIComponent(servicio) +
+        "&lugar="       + encodeURIComponent(lugar) +
+        "&codigo="      + encodeURIComponent(itemSelCodigo) +
+        "&descripcion=" + encodeURIComponent(itemSelDesc) +
+        "&cantidad="    + encodeURIComponent(cantidad) +
+        "&fecha="       + encodeURIComponent(fecha) +
+        "&vencimiento=" + encodeURIComponent(document.getElementById("vencimiento").value || "") +
+        "&usuario="     + encodeURIComponent(responsableSesion);
     } else {
       url = SCRIPT_URL + "?accion=registrarPrestamo" +
         "&servicio="    + encodeURIComponent(servicio) +
@@ -412,12 +454,16 @@
 
     jsonp(url, function(data, err) {
       btn.disabled = false;
-      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;"><path d="M12 5v14M5 12h14"/></svg> <span id="btnRegistrarTxt">' + (esFarmacia ? "Registrar ingreso" : "Registrar préstamo") + '</span>';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;"><path d="M12 5v14M5 12h14"/></svg> <span id="btnRegistrarTxt">' + (esFarmacia ? "Registrar ingreso" : (esOtorgado ? "Registrar préstamo otorgado" : "Registrar préstamo")) + '</span>';
       if (!data || err || data.status !== "ok") {
         mostrarToast("Error al registrar: " + ((data && data.mensaje) || err || "desconocido"), "fail");
         return;
       }
-      mostrarToast(esFarmacia ? "✓ Ingreso de Farmacia Central registrado — se sumó al stock de " + lugar + "." : "✓ Préstamo registrado — se sumó al stock de " + lugar + ".", "ok");
+      var msg;
+      if (esFarmacia)      msg = "✓ Ingreso de Farmacia Central registrado — se sumó al stock de " + lugar + ".";
+      else if (esOtorgado) msg = "✓ Préstamo registrado — se descontó del stock de " + lugar + (data.limitada ? " (ajustado al máximo disponible: " + data.cantidadAplicada + ")" : "") + ".";
+      else                 msg = "✓ Préstamo registrado — se sumó al stock de " + lugar + ".";
+      mostrarToast(msg, "ok");
       document.getElementById("servicio").value = "";
       marcarChipActivo("");
       document.getElementById("cantidad").value = "";
@@ -443,11 +489,12 @@
   function renderPendientes() {
     var cont = document.getElementById("listaPend");
     if (!pendientesData.length) {
-      cont.innerHTML = '<div class="empty-msg">No hay préstamos pendientes de devolver.</div>';
+      cont.innerHTML = '<div class="empty-msg">No hay préstamos pendientes.</div>';
       return;
     }
     cont.innerHTML = "";
     pendientesData.forEach(function(p) {
+      var esOtorgado = p.direccion === "OTORGADO";
       var div = document.createElement("div");
       div.className = "prestamo-card";
       div.innerHTML =
@@ -456,33 +503,34 @@
             '<div class="prestamo-item">' + (p.descripcion||"—") + '</div>' +
             '<div class="prestamo-cod">Cód: ' + (p.codigo||"—") + '</div>' +
           '</div>' +
-          '<span class="prestamo-badge">' + p.servicio + '</span>' +
+          '<span class="prestamo-badge"' + (esOtorgado ? ' style="background:#fef3c7;color:#92400e;"' : '') + '>' + (esOtorgado ? '📤 Prestado a ' : '🔄 De ') + p.servicio + '</span>' +
         '</div>' +
-        '<div class="prestamo-meta">' + (p.lugar||"—") + ' · Prestado: ' + p.fecha + (p.vencimiento ? ' · Vence: ' + p.vencimiento : '') + ' · Pendiente: ' + p.cantidadPendiente + ' de ' + p.cantidad + '</div>' +
+        '<div class="prestamo-meta">' + (p.lugar||"—") + ' · ' + (esOtorgado ? 'Prestado' : 'Recibido') + ': ' + p.fecha + (p.vencimiento ? ' · Vence: ' + p.vencimiento : '') + ' · Pendiente: ' + p.cantidadPendiente + ' de ' + p.cantidad + '</div>' +
         '<div class="prestamo-foot">' +
           '<input type="number" min="1" max="' + p.cantidadPendiente + '" value="' + p.cantidadPendiente + '" id="dev-' + p.fila + '"/>' +
-          '<button class="btn-devolver" onclick="devolver(' + p.fila + ')">Marcar devuelto</button>' +
+          '<button class="btn-devolver" onclick="devolver(' + p.fila + ',\'' + p.direccion + '\')">' + (esOtorgado ? 'Marcar recibido' : 'Marcar devuelto') + '</button>' +
         '</div>';
       cont.appendChild(div);
     });
   }
 
-  function devolver(fila) {
+  function devolver(fila, direccion) {
     var input = document.getElementById("dev-" + fila);
     var cant  = input ? input.value : "";
-    if (!cant || Number(cant) < 1) { mostrarToast("Ingresa una cantidad válida a devolver.", "warn"); return; }
+    if (!cant || Number(cant) < 1) { mostrarToast("Ingresa una cantidad válida.", "warn"); return; }
 
-    var url = SCRIPT_URL + "?accion=devolverPrestamo" +
+    var esOtorgado = direccion === "OTORGADO";
+    var url = SCRIPT_URL + "?accion=" + (esOtorgado ? "devolverPrestamoOtorgado" : "devolverPrestamo") +
       "&fila="     + encodeURIComponent(fila) +
       "&cantidad=" + encodeURIComponent(cant) +
       "&usuario="  + encodeURIComponent(responsableSesion);
 
     jsonp(url, function(data, err) {
       if (!data || err || data.status !== "ok") {
-        mostrarToast("Error al devolver: " + ((data && data.mensaje) || err || "desconocido"), "fail");
+        mostrarToast("Error: " + ((data && data.mensaje) || err || "desconocido"), "fail");
         return;
       }
-      mostrarToast("✓ Devolución registrada.", "ok");
+      mostrarToast(esOtorgado ? "✓ Devolución recibida — se sumó al stock." : "✓ Devolución registrada.", "ok");
       cargarPendientes();
     });
   }
