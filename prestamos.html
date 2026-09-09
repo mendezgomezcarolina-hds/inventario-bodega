@@ -389,7 +389,11 @@
     disp.style.display = "block";
     disp.textContent = "Consultando stock disponible…";
     jsonp(SCRIPT_URL + "?accion=stockItemLugar&codigo=" + encodeURIComponent(itemSelCodigo), function(data, err) {
-      if (!data || err || data.status !== "ok") { disp.textContent = "No se pudo consultar el stock disponible."; return; }
+      if (!data || err || data.status !== "ok") {
+        disp.style.color = "var(--error)";
+        disp.textContent = "⚠ Error al consultar stock: " + ((data && data.mensaje) || err || "sin respuesta del servidor");
+        return;
+      }
       lugarDetectadoOtorgado = data.lugar || "";
       var cant = document.getElementById("cantidad");
       cant.max = data.disponible;
