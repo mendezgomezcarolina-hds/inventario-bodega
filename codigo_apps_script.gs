@@ -3192,6 +3192,66 @@ function actualizarTodoElStock() {
 
 // ── Funciones individuales por lugar (para el menú) ──────────
 function stockCuraciones()   { actualizarStockLugar("CURACIONES");   SpreadsheetApp.getUi().alert("✓ STOCK_CURACIONES actualizado."); }
+// ── CORRECCIÓN ÚNICA: pedido PABELLÓN triplicado (SOL-260910-092754) ──
+// El jueves 10-09-2026 este pedido se envió 4 veces (bug de reenvío por
+// timeout, ya corregido en escribirSolicitudLote/recepcionarSolicitudLote).
+// Bodega se descontó bien una sola vez, pero 3 de las 4 copias llegaron a
+// recepcionarse por separado, así que PABELLÓN quedó con el doble de más
+// en estos 22 insumos. Esta función resta ese excedente (EGRESO de ajuste,
+// mismo mecanismo "AJUSTE-" ya usado antes) y marca como RECHAZADO las
+// copias duplicadas que seguían PENDIENTE, para que nadie las apruebe de
+// nuevo. Ejecutar UNA SOLA VEZ desde el editor (Ejecutar → esta función).
+function corregirPabellonTriplicado_20260910() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var idSol = "SOL-260910-092754";
+  var items = [
+    ["2003467250","DELANTAL ESTÉRIL DESECHABLE TALLA M",30],
+    ["2003013013","BANDEJA DE CURACIÓN (2 PINZAS, 1 TIJERA INSUMOS)",10],
+    ["2002110330","ALCOHOL ETÍLICO 70 X 250 ML",2],
+    ["2002260046","POVIDONA YODADA 10% 50-100ML",4],
+    ["2002244455","SUTURA CUTÁNEA ADHESIVA 6X100MM",20],
+    ["3002160101","ANESTESIA DENTAL CON VASOCONTRICTOR CAJAX100",50],
+    ["3002160100","ANESTESIA DENTAL SIN VASOCONTRICTOR CAJAX100",50],
+    ["2003400004","LÁPIZ ELECTROQUIRÚRGICO TIPO VL2610",15],
+    ["2003408007","PLACA DESECHABLE P/ELECTROBISTURÍ TIPO VALLEYLAB",15],
+    ["2002220007","PUNZÓN DE TRANSFERENCIA PARA LÍQUIDOS ESTÉRILES",10],
+    ["3002180050","S.FISIOLÓGICO 0,9% 100 ML",10],
+    ["2002257518","APÓSITO TRANSPARENTE 6X7CM",20],
+    ["2002249954","VICRYL PLUS 2/0 C/A CT-1 (VCP345H)",36],
+    ["2002249787","PROLENE 5/0 C/A 2RB-1 (8554H)",24],
+    ["2002257235","GUANTE QUIRÚRGICO ESTÉRIL N°7,5",50],
+    ["2002257245","GUANTE PARA EXAMEN GRANDE",200],
+    ["2002257243","GUANTE PARA EXAMEN MEDIANO",100],
+    ["2002257754","CREMA DE MANOS UREA 10% 800 ML",1],
+    ["6603000006","CUBRE CALZADO DESECHABLE",100],
+    ["6201000120","CLORO GRANULADO SOBRE 4GRS",10],
+    ["6201000147","COMPRESA A GRANEL NO ESTÉRIL",30],
+    ["6603000008","MASCARILLA QUIRÚRGICA",50]
+  ];
+
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  var ahora = new Date().toLocaleString("es-CL");
+  var filas = items.map(function(it) {
+    return [ahora, "EGRESO", "AJUSTE-" + idSol, "", "PABELLÓN", it[0], it[1], -(it[2] * 2), "", "Carolina Mendez", ""];
+  });
+  movSheet.getRange(movSheet.getLastRow() + 1, 1, filas.length, filas[0].length).setValues(filas);
+
+  // Marca como RECHAZADO las copias duplicadas de este pedido que
+  // quedaron PENDIENTE (el pedido real ya fue recepcionado una vez).
+  var solSheet = ss.getSheetByName(SHEET_SOLICITUDES);
+  var datos = solSheet.getDataRange().getValues();
+  var marcados = 0;
+  for (var i = 1; i < datos.length; i++) {
+    if (String(datos[i][0]).trim() === idSol && String(datos[i][8]).trim().toUpperCase() === "PENDIENTE") {
+      solSheet.getRange(i + 1, 9).setValue("RECHAZADO");
+      solSheet.getRange(i + 1, 10).setValue(ahora + " (duplicado, ya recepcionado antes)");
+      marcados++;
+    }
+  }
+
+  SpreadsheetApp.getUi().alert("✓ Corrección aplicada: " + filas.length + " insumos ajustados en PABELLÓN, " + marcados + " filas duplicadas pendientes marcadas como RECHAZADO.");
+}
+
 function stockPabellon()     { actualizarStockLugar("PABELLON");     SpreadsheetApp.getUi().alert("✓ STOCK_PABELLON actualizado."); }
 function stockUnacess()      { actualizarStockLugar("UNACESS");      SpreadsheetApp.getUi().alert("✓ STOCK_UNACESS actualizado."); }
 function stockLaserterapia() { actualizarStockLugar("LASERTERAPIA"); SpreadsheetApp.getUi().alert("✓ STOCK_LASERTERAPIA actualizado."); }
