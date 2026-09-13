@@ -67,6 +67,7 @@ function registrarPrestamo(e) {
     if (movSheet.getLastRow() === 0)
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
     movSheet.appendRow([ahora, "PRESTAMO", "Préstamo de " + servicio, "", lugar, codigo, descr, cantidad, vencimiento, usuario, servicio]);
+    invalidarCacheStock_(lugar);
 
     let prSheet = asegurarHojaPrestamos_(ss);
     prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento, "RECIBIDO"]);
@@ -150,6 +151,7 @@ function registrarPrestamoOtorgado(e) {
     if (movSheet.getLastRow() === 0)
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
     movSheet.appendRow([ahora, "EGRESO", "Préstamo a " + servicio, "", lugar, codigo, descr, -cantidad, vencimiento, usuario, servicio]);
+    invalidarCacheStock_(lugar);
 
     const prSheet = asegurarHojaPrestamos_(ss);
     prSheet.appendRow([fecha || ahora, servicio, lugar, codigo, descr, cantidad, cantidad, "PENDIENTE", "", usuario, vencimiento, "OTORGADO"]);
@@ -203,6 +205,7 @@ function registrarIngresoFarmacia(e) {
     if (movSheet.getLastRow() === 0)
       movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
     movSheet.appendRow([ahora, "INGRESO", nSolTxt, "", lugar, codigo, descr, cantidad, vencimiento, usuario, "Farmacia Central"]);
+    invalidarCacheStock_(lugar);
 
     return { status: "ok" };
   } catch(err) {
@@ -270,6 +273,7 @@ function devolverPrestamo(e) {
     let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
     movSheet.appendRow([ahora, "EGRESO", "Devolución a " + servicio, "", lugar, codigo, descr, -aDevolver, "", usuario, servicio]);
+    invalidarCacheStock_(lugar);
 
     const nuevoPendiente = pendienteActual - aDevolver;
     sheet.getRange(fila, 7).setValue(nuevoPendiente);
@@ -316,6 +320,7 @@ function devolverPrestamoOtorgado(e) {
     let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
     if (!movSheet) movSheet = ss.insertSheet(SHEET_MOVIMIENTOS);
     movSheet.appendRow([ahora, "INGRESO", "Devolución de " + servicio, "", lugar, codigo, descr, aRecibir, "", usuario, servicio]);
+    invalidarCacheStock_(lugar);
 
     const nuevoPendiente = pendienteActual - aRecibir;
     sheet.getRange(fila, 7).setValue(nuevoPendiente);
@@ -330,7 +335,12 @@ function devolverPrestamoOtorgado(e) {
   }
 }
 
-function obtenerStockMapa(ss, lugar) {
+// Calcula el stock de un lugar sumando INVENTARIO (carga inicial) +
+// MOVIMIENTOS (todo el historial). Es la parte cara de la consulta —
+// MOVIMIENTOS ya tiene miles de filas y se lee completa cada vez.
+// obtenerStockMapa() la envuelve con caché para no repetir este trabajo
+// en cada consulta seguida (ver más abajo).
+function calcularStockMapa_(ss, lugar) {
   var mapa = {}; // cod → cantidad
   var invSheet = ss.getSheetByName(SHEET_DATOS);
   var invDatos = invSheet ? invSheet.getDataRange().getValues() : [];
@@ -357,6 +367,32 @@ function obtenerStockMapa(ss, lugar) {
     }
   }
   return mapa;
+}
+
+// Cachea el resultado de calcularStockMapa_ por lugar durante 60 segundos
+// (CacheService.getScriptCache(), compartida por todos los usuarios).
+// Esto es lo que evita que varias personas usando el sistema al mismo
+// tiempo (ej. el jueves con pabellón) disparen la misma lectura completa
+// de MOVIMIENTOS una y otra vez en un lapso de segundos. La caché se
+// invalida explícitamente (ver invalidarCacheStock_) apenas se registra
+// un movimiento para ese lugar, así que 60s es solo un tope de seguridad,
+// no la vía normal de actualización.
+function obtenerStockMapa(ss, lugar) {
+  var cache = CacheService.getScriptCache();
+  var key = "stockmapa_" + lugar;
+  var cached = cache.get(key);
+  if (cached) {
+    try { return JSON.parse(cached); } catch(e) { /* caché corrupta, recalcular abajo */ }
+  }
+  var mapa = calcularStockMapa_(ss, lugar);
+  try { cache.put(key, JSON.stringify(mapa), 60); } catch(e) { /* si es muy grande para la caché (>100KB), seguimos sin cachear */ }
+  return mapa;
+}
+
+// Llamar después de escribir en MOVIMIENTOS para que la próxima consulta
+// de ese lugar recalcule en vez de servir la caché vieja.
+function invalidarCacheStock_(lugar) {
+  try { CacheService.getScriptCache().remove("stockmapa_" + lugar); } catch(e) {}
 }
 
 // ── Lotes de vencimiento con stock disponible por código, para un lugar ──
@@ -541,6 +577,7 @@ function corregirInventarioFantasma(e) {
       return [ahora, "AJUSTE-", "", "", it.lugar, it.codigo, it.descripcion || "", -Math.abs(parseFloat(it.cantidad)||0), "", usuario || "Limpieza inventario fantasma", ""];
     });
     movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+    filas.forEach(function(f) { invalidarCacheStock_(f[4]); });
 
     return { status: "ok", corregidos: filas.length };
   } catch(err) {
@@ -624,6 +661,7 @@ function corregirStockNegativo(e) {
       return [ahora, "AJUSTE+", "", "", it.lugar, it.codigo, it.descripcion, Math.abs(it.stockActual), "", "Corrección stock negativo", ""];
     });
     movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+    filas.forEach(function(f) { invalidarCacheStock_(f[4]); });
 
     return { status: "ok", corregidos: filas.length };
   } catch(err) {
@@ -1222,6 +1260,7 @@ function actualizarEstado(e) {
           }
         }
       }
+      invalidarCacheStock_(eBodega || "");
       try { actualizarStockLugar(eBodega || ""); } catch(ex) { Logger.log("Stock no actualizado: " + ex); }
     }
 
@@ -1364,6 +1403,7 @@ function actualizarEstadoLote(e) {
         movSheet.appendRow(["Fecha/Hora","Tipo","N° Sol","Mes","Lugar","Código","Descripción","Cantidad","Fecha Vencimiento","Responsable","ID"]);
       movSheet.getRange(movSheet.getLastRow()+1, 1, egresos.length, egresos[0].length).setValues(egresos);
     }
+    for (var bodegaInv in bodegasARecalcular) { invalidarCacheStock_(bodegaInv); }
 
     // Nota: ya no se recalcula STOCK_<bodega> aquí — esa hoja es solo un
     // respaldo visual que ningún panel de la app lee (el stock en vivo se
@@ -1549,6 +1589,7 @@ function actualizarRecepcionLote(e) {
     // Nota: STOCK_<lugar> ya no se recalcula en cada guardado (ver nota en
     // actualizarEstadoLote) — se actualiza manualmente desde el menú del Sheet.
     const lugares = Object.keys(lugaresARecalcular);
+    lugares.forEach(function(lg) { invalidarCacheStock_(lg); });
 
     return { status: "ok", procesados, lugaresRecalculados: lugares };
   } catch(err) {
@@ -1667,6 +1708,7 @@ function registrarCorreccion(e) {
     ]);
 
     // IMPORTANTE: actualizar el stock del lugar específico
+    invalidarCacheStock_(lugar);
     try { actualizarStockLugar(lugar); } catch(e) { Logger.log("Stock no actualizado: " + e); }
     return { status: "ok", diferencia: diferencia, tipo: tipo };
   } catch(err) {
@@ -2071,6 +2113,7 @@ function registrarEgreso(e) {
     movSheet.appendRow([
       new Date().toLocaleString("es-CL"), "EGRESO", nSol, "", lugar, cod, desc, -Math.abs(qty), fechaVenc, usuario, usuId
     ]);
+    invalidarCacheStock_(lugar);
     try { actualizarStockLugar(lugar); } catch(e2) { Logger.log("Stock no actualizado: " + e2); }
     return { status: "ok" };
   } catch(err) {
@@ -2125,6 +2168,7 @@ function registrarEgresoLote(e) {
     if (!filas.length) throw new Error("Ningún ítem tenía datos válidos o stock disponible.");
 
     movSheet.getRange(movSheet.getLastRow()+1, 1, filas.length, filas[0].length).setValues(filas);
+    invalidarCacheStock_(lugar);
     // Nota: STOCK_<lugar> ya no se recalcula aquí (ver nota en actualizarEstadoLote).
 
     return { status: "ok", registrados: filas.length, limitados: limitados };
@@ -2209,6 +2253,7 @@ function recepcionarSolicitud(e) {
 
       // INGRESO en el lugar que recepciona físicamente
       movSheet.appendRow([ahora, "INGRESO", nSol, "", lugar, cod, desc, Math.abs(qty), venc, "", ""]);
+      invalidarCacheStock_(lugar);
       // NOTA: el EGRESO de bodega ya fue registrado al momento de aprobar la solicitud
     }
     // Actualizar estado en SOLICITUDES (aquí, después de escribir movimientos)
@@ -2288,6 +2333,7 @@ function recepcionarSolicitudLote(e) {
     // Nota: STOCK_<lugar> ya no se recalcula en cada guardado (ver nota en
     // actualizarEstadoLote) — se actualiza manualmente desde el menú del Sheet.
     const lugares = Object.keys(lugaresARecalcular);
+    lugares.forEach(function(lg) { invalidarCacheStock_(lg); });
 
     return { status: "ok", procesados, lugaresRecalculados: lugares };
   } catch(err) {
