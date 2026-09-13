@@ -3300,6 +3300,106 @@ function corregirPabellonTriplicado_20260910() {
 
 function stockPabellon()     { actualizarStockLugar("PABELLON");     SpreadsheetApp.getUi().alert("✓ STOCK_PABELLON actualizado."); }
 
+// ── Archivar movimientos con más de 90 días de antigüedad ─────
+// MOVIMIENTOS crece con cada EGRESO/INGRESO/AJUSTE del sistema y ya tiene
+// miles de filas — eso es lo que hace lento el cálculo de stock (que suma
+// TODO el historial cada vez). Esta función:
+//   1) Mueve a una hoja MOVIMIENTOS_HISTORICO las filas de más de 90 días.
+//   2) Suma el efecto neto de esas filas archivadas como un nuevo renglón
+//      de "inventario inicial" por cada lugar+código en INVENTARIO — así
+//      el stock total calculado (INVENTARIO + MOVIMIENTOS vigentes) da
+//      exactamente lo mismo que antes de archivar, solo que sumando muchas
+//      menos filas.
+//   3) Deja en MOVIMIENTOS solo los movimientos de los últimos 90 días.
+//
+// IMPORTANTE — qué se pierde: el detalle de vencimiento por lote de
+// insumos con más de 90 días (si a esa fecha aún les quedaba stock) se
+// consolida en un solo renglón sin fecha de vencimiento específica. Por
+// eso se eligió una ventana de 90 días — suficiente para que casi todos
+// los lotes ya se hayan consumido antes del corte.
+//
+// Se recomienda hacer una copia de la planilla (Archivo → Hacer una copia)
+// antes de ejecutar esto por primera vez. Pensado para repetirse cada
+// cierto tiempo (ej. junto con el Ajuste trimestral). Ejecutar UNA VEZ por
+// corte desde el editor: seleccionar esta función → ▶ Ejecutar.
+function archivarMovimientosAntiguos() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  if (!movSheet) { SpreadsheetApp.getUi().alert("No existe la hoja MOVIMIENTOS."); return; }
+
+  var corte = new Date();
+  corte.setDate(corte.getDate() - 90);
+  corte.setHours(0, 0, 0, 0);
+
+  var datos = movSheet.getDataRange().getValues();
+  if (datos.length <= 1) { SpreadsheetApp.getUi().alert("No hay movimientos para archivar."); return; }
+
+  var header = datos[0];
+  var aArchivar = [];
+  var aMantener = [header];
+  var netoPorLugarCodigo = {}; // "lugar|codigo" → {lugar, codigo, descripcion, neto}
+
+  for (var i = 1; i < datos.length; i++) {
+    var f = datos[i];
+    var fecha = parseFechaSH_(f[0], false);
+    if (fecha && fecha.getTime() < corte.getTime()) {
+      aArchivar.push(f);
+      var lugar = String(f[4] || "").trim();
+      var cod   = String(f[5] || "").trim();
+      var desc  = String(f[6] || "").trim();
+      var qty   = parseFloat(f[7] || 0) || 0;
+      if (lugar && cod) {
+        var key = lugar + "|" + cod;
+        if (!netoPorLugarCodigo[key]) netoPorLugarCodigo[key] = { lugar: lugar, codigo: cod, descripcion: desc, neto: 0 };
+        netoPorLugarCodigo[key].neto += qty;
+      }
+    } else {
+      aMantener.push(f);
+    }
+  }
+
+  if (!aArchivar.length) {
+    SpreadsheetApp.getUi().alert("No hay movimientos anteriores a " + fmtDateSH_(corte) + " para archivar. Nada que hacer.");
+    return;
+  }
+
+  // 1) Copiar a MOVIMIENTOS_HISTORICO
+  var histSheet = ss.getSheetByName("MOVIMIENTOS_HISTORICO");
+  if (!histSheet) {
+    histSheet = ss.insertSheet("MOVIMIENTOS_HISTORICO");
+    histSheet.appendRow(header);
+  }
+  histSheet.getRange(histSheet.getLastRow() + 1, 1, aArchivar.length, aArchivar[0].length).setValues(aArchivar);
+
+  // 2) Consolidar el efecto neto en INVENTARIO
+  var invSheet = ss.getSheetByName(SHEET_DATOS);
+  var ahora = new Date().toLocaleString("es-CL");
+  var filasInv = [];
+  for (var key2 in netoPorLugarCodigo) {
+    var it = netoPorLugarCodigo[key2];
+    if (it.neto === 0) continue;
+    filasInv.push([it.lugar, it.codigo, it.descripcion, it.neto, "", ahora, "Sistema", "ARCHIVO-90D"]);
+  }
+  if (filasInv.length) {
+    invSheet.getRange(invSheet.getLastRow() + 1, 1, filasInv.length, filasInv[0].length).setValues(filasInv);
+  }
+
+  // 3) Dejar en MOVIMIENTOS solo lo vigente (últimos 90 días)
+  movSheet.clearContents();
+  movSheet.getRange(1, 1, aMantener.length, header.length).setValues(aMantener);
+
+  // Invalidar toda la caché de stock, ya que las cantidades por lugar no
+  // cambian pero el origen del cálculo sí.
+  for (var key3 in netoPorLugarCodigo) { invalidarCacheStock_(netoPorLugarCodigo[key3].lugar); }
+
+  SpreadsheetApp.getUi().alert(
+    "✓ Archivado completo:\n" +
+    "- " + aArchivar.length + " movimientos movidos a MOVIMIENTOS_HISTORICO\n" +
+    "- " + filasInv.length + " renglones de inventario inicial agregados (efecto neto)\n" +
+    "- MOVIMIENTOS quedó con " + (aMantener.length - 1) + " filas vigentes (antes " + (datos.length - 1) + ")"
+  );
+}
+
 // ── CORRECCIÓN ÚNICA: falta el ingreso del LÁPIZ ELECTROQUIRÚRGICO en el
 // pedido SOL-260910-092754 (al borrar a mano las copias duplicadas se
 // eliminaron las 3 filas de este insumo en vez de dejar 1). Agrega el
