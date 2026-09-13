@@ -3253,6 +3253,29 @@ function corregirPabellonTriplicado_20260910() {
 }
 
 function stockPabellon()     { actualizarStockLugar("PABELLON");     SpreadsheetApp.getUi().alert("✓ STOCK_PABELLON actualizado."); }
+
+// ── CORRECCIÓN ÚNICA: falta el ingreso del LÁPIZ ELECTROQUIRÚRGICO en el
+// pedido SOL-260910-092754 (al borrar a mano las copias duplicadas se
+// eliminaron las 3 filas de este insumo en vez de dejar 1). Agrega el
+// ingreso legítimo de 15 unidades a PABELLÓN. Ejecutar UNA SOLA VEZ.
+function agregarIngresoFaltante_LapizElectro_SOL260910092754() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  movSheet.appendRow([
+    "10-09-2026, 3:38:12 p. m.",
+    "INGRESO",
+    "SOL-260910-092754",
+    "",
+    "PABELLÓN",
+    "2003400004",
+    "LÁPIZ ELECTROQUIRÚRGICO TIPO VL2610",
+    15,
+    "",
+    "",
+    ""
+  ]);
+  SpreadsheetApp.getUi().alert("✓ Ingreso agregado: 15 unidades de LÁPIZ ELECTROQUIRÚRGICO TIPO VL2610 a PABELLÓN.");
+}
 function stockUnacess()      { actualizarStockLugar("UNACESS");      SpreadsheetApp.getUi().alert("✓ STOCK_UNACESS actualizado."); }
 function stockLaserterapia() { actualizarStockLugar("LASERTERAPIA"); SpreadsheetApp.getUi().alert("✓ STOCK_LASERTERAPIA actualizado."); }
 function stockTomaMuestras() { actualizarStockLugar("TOMA_MUESTRAS");SpreadsheetApp.getUi().alert("✓ STOCK_TOMA_MUESTRAS actualizado."); }
