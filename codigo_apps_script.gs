@@ -1013,6 +1013,13 @@ function escribirSolicitud(e) {
 // más los datos comunes de la solicitud (idSolicitud, lugar, usuario, etc.)
 // Escribe todas las filas de una vez con setValues, en vez de un appendRow
 // (y una llamada HTTP) por cada ítem.
+//
+// IDEMPOTENTE por idSolicitud: si el navegador da timeout (el sistema lento)
+// y la persona reenvía el mismo pedido, esta función ya NO lo duplica —
+// detecta que ese idSolicitud ya fue escrito y no vuelve a insertar filas.
+// Esto es lo que causó el pedido de pabellón triplicado: el envío SÍ se
+// guardaba en el servidor pese a la demora, pero el navegador lo daba por
+// fallido y la persona lo reenviaba.
 function escribirSolicitudLote(e) {
   try {
     const ss  = SpreadsheetApp.getActiveSpreadsheet();
@@ -1025,13 +1032,25 @@ function escribirSolicitudLote(e) {
     if (sheet.getLastRow() === 0)
       sheet.appendRow(["ID Solicitud","Lugar","Código","Insumo","Cantidad","Responsable","ID Responsable","Fecha Solicitud","Estado","Fecha Resolución","Bodega Origen"]);
 
+    const idSolicitud = String(p.idSolicitud || "").trim();
+    if (idSolicitud && sheet.getLastRow() > 1) {
+      const idsExistentes = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+      for (let i = 0; i < idsExistentes.length; i++) {
+        if (String(idsExistentes[i][0] || "").trim() === idSolicitud) {
+          // Ya se escribió este pedido antes (probable reenvío tras timeout)
+          // — no lo duplicamos, solo confirmamos que ya está guardado.
+          return { status: "ok", escritos: 0, yaExistia: true };
+        }
+      }
+    }
+
     const ahora = new Date().toLocaleString("es-CL");
     const filas = [];
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       if (!it.item || !it.cantidad) continue;
       filas.push([
-        p.idSolicitud  || "",
+        idSolicitud    || "",
         it.lugar       || p.lugar || "",
         it.codigo      || it.item || "",
         it.descripcion || it.item || "",
@@ -2233,6 +2252,12 @@ function recepcionarSolicitudLote(e) {
       const fila = parseInt(it.fila || "0");
       const est  = (it.estado || "").toUpperCase();
       if (!fila || !est) continue;
+
+      // Idempotencia: si esta fila ya quedó RECEPCIONADO o RECHAZADO (por
+      // ejemplo, por un reenvío tras timeout con el sistema lento), no se
+      // vuelve a procesar — evita duplicar el ingreso de stock.
+      const estadoActual = String(sheet.getRange(fila, 9).getValue() || "").trim().toUpperCase();
+      if (estadoActual === "RECEPCIONADO" || estadoActual === "RECHAZADO") continue;
 
       if (est !== "APROBADO") {
         sheet.getRange(fila, 9).setValue("RECHAZADO");
