@@ -2232,6 +2232,8 @@ function recepcionarSolicitud(e) {
       // Solo actualizar estado (RECHAZADO no genera movimientos)
       sheet.getRange(fila, 9).setValue("RECHAZADO");
       sheet.getRange(fila, 10).setValue(new Date().toLocaleString("es-CL"));
+      // La bodega ya descontó al aprobar: al rechazar en recepción, devolver las unidades.
+      reversarEgresosRechazo_(ss, [{ nSol: sheet.getRange(fila, 1).getValue(), cod: sheet.getRange(fila, 3).getValue() }]);
       return { status: "ok", fila: fila };
     }
     // APROBADO → registrar INGRESO en lugar + EGRESO en bodega origen
@@ -2285,6 +2287,7 @@ function recepcionarSolicitudLote(e) {
 
     const ahora = new Date().toLocaleString("es-CL");
     const ingresos = [];
+    const rechazadosParaReversa = [];
     const lugaresARecalcular = {};
     let procesados = 0;
     let movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
@@ -2307,6 +2310,7 @@ function recepcionarSolicitudLote(e) {
       if (est !== "APROBADO") {
         sheet.getRange(fila, 9).setValue("RECHAZADO");
         sheet.getRange(fila, 10).setValue(ahora);
+        rechazadosParaReversa.push({ nSol: sheet.getRange(fila, 1).getValue(), cod: sheet.getRange(fila, 3).getValue() });
         procesados++;
         continue;
       }
@@ -2329,6 +2333,8 @@ function recepcionarSolicitudLote(e) {
     if (ingresos.length) {
       movSheet.getRange(movSheet.getLastRow()+1, 1, ingresos.length, ingresos[0].length).setValues(ingresos);
     }
+    // Rechazos en recepción: devolver a la bodega lo que ya se había descontado al aprobar.
+    reversarEgresosRechazo_(ss, rechazadosParaReversa);
 
     // Nota: STOCK_<lugar> ya no se recalcula en cada guardado (ver nota en
     // actualizarEstadoLote) — se actualiza manualmente desde el menú del Sheet.
@@ -3955,4 +3961,74 @@ function fmtDateSH_(d) {
   var dd = String(d.getDate()).padStart(2, "0");
   var mm = String(d.getMonth()+1).padStart(2, "0");
   return dd + "-" + mm + "-" + d.getFullYear();
+}
+
+// ── Reversa de egresos cuando un lugar RECHAZA al recibir ─────────────────
+// Al aprobar, la bodega descuenta (EGRESO). Si luego el lugar rechaza la
+// entrega, esas unidades vuelven físicamente a la bodega: se registra un
+// AJUSTE+ por cada EGRESO de ese N° de solicitud + código (misma bodega y
+// mismo vencimiento). Es idempotente: si ya existe la reversa, no repite.
+// rechazos = [{nSol, cod}, ...]
+function reversarEgresosRechazo_(ss, rechazos) {
+  try {
+    if (!rechazos || !rechazos.length) return 0;
+    var mov = ss.getSheetByName(SHEET_MOVIMIENTOS);
+    if (!mov || mov.getLastRow() < 2) return 0;
+    var norm = function(c) { var n = Number(c); return isNaN(n) ? String(c).trim() : String(n); };
+    var quiero = {};
+    rechazos.forEach(function(r) { quiero[String(r.nSol).trim() + "|" + norm(r.cod)] = true; });
+    var d = mov.getDataRange().getValues();
+    var egresos = {}, yaRevertido = {};
+    for (var i = 1; i < d.length; i++) {
+      var nS = String(d[i][2] || "").trim();
+      var key = nS + "|" + norm(d[i][5]);
+      if (!quiero[key]) continue;
+      var tipo = String(d[i][1] || "").trim().toUpperCase();
+      var lugar = String(d[i][4] || "").trim();
+      if (lugar.indexOf("BODEGA") !== 0) continue;
+      if (tipo === "EGRESO") { (egresos[key] = egresos[key] || []).push(d[i]); }
+      else if (tipo === "AJUSTE+" && String(d[i][9] || "").trim() === "Reversa rechazo") { yaRevertido[key] = true; }
+    }
+    var ahora = new Date().toLocaleString("es-CL");
+    var filas = [], lugares = {};
+    Object.keys(egresos).forEach(function(key) {
+      if (yaRevertido[key]) return;
+      egresos[key].forEach(function(e) {
+        var q = Math.abs(Number(e[7]) || 0);
+        if (q <= 0) return;
+        filas.push([ahora, "AJUSTE+", e[2], "", e[4], e[5], e[6], q, e[8] || "", "Reversa rechazo", ""]);
+        lugares[String(e[4]).trim()] = true;
+      });
+    });
+    if (filas.length) {
+      mov.getRange(mov.getLastRow() + 1, 1, filas.length, 11).setValues(filas);
+      Object.keys(lugares).forEach(function(lg) { invalidarCacheStock_(lg); });
+    }
+    return filas.length;
+  } catch (err) {
+    Logger.log("reversarEgresosRechazo_ falló: " + err);
+    return 0;
+  }
+}
+
+// ── Corrección única (10-nov-2026): rechazos sin reversa + egreso duplicado ─
+// Ejecutar UNA vez desde el editor. Es idempotente (no repite si ya se aplicó).
+function corregirOctNov_20261110() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var nSol = "SOL-261105-075656"; // Curaciones, 9 líneas rechazadas al recibir
+  var codigos = [2002110330, 2002250013, 2002250015, 2002250140, 2002257243, 2002257245, 2003013013, 6201000102, 6201000147];
+  var n = reversarEgresosRechazo_(ss, codigos.map(function(c) { return { nSol: nSol, cod: c }; }));
+  Logger.log("Reversas por rechazo escritas: " + n + " (esperado 9; 0 = ya estaban aplicadas)");
+
+  // Egreso duplicado: SOL-261022-114924, guante mediano 200 descontado 2 veces (Curaciones recibió 200).
+  var mov = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  var marca = "Corrección egreso duplicado SOL-261022-114924";
+  var d = mov.getDataRange().getValues(), ya = false;
+  for (var i = 1; i < d.length; i++) { if (String(d[i][2] || "").trim() === marca) { ya = true; break; } }
+  if (ya) { Logger.log("Egreso duplicado: ya estaba corregido."); }
+  else {
+    mov.getRange(mov.getLastRow() + 1, 1, 1, 11).setValues([[new Date().toLocaleString("es-CL"), "AJUSTE+", marca, "", "BODEGA INSUMOS CLINICOS", 2002257243, "GUANTE PARA EXAMEN MEDIANO", 200, "", "Carolina Mendez", ""]]);
+    invalidarCacheStock_("BODEGA INSUMOS CLINICOS");
+    Logger.log("Egreso duplicado corregido: +200 guante mediano en BODEGA INSUMOS CLINICOS.");
+  }
 }
