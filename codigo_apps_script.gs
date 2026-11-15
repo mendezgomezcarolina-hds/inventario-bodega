@@ -411,31 +411,75 @@ function normalizarFechaVenc_(v) {
   return String(v || "").trim();
 }
 
+// Normaliza una fecha de vencimiento (Date real, "yyyy-mm-dd", "dd-mm-yyyy" o
+// "dd/mm/yyyy") a "yyyy-MM-dd". Devuelve "" si no es una fecha válida
+// (vacío, "no aplica", errores de celda, etc.).
+function fechaVencISO_(v) {
+  if (v instanceof Date) return isNaN(v.getTime()) ? "" : normalizarFechaVenc_(v);
+  var t = String(v || "").trim();
+  var m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[3]).slice(-2);
+  m = t.match(/^(\d{1,2})[\-\/](\d{1,2})[\-\/](\d{4})/);
+  if (m) return m[3] + "-" + ("0" + m[2]).slice(-2) + "-" + ("0" + m[1]).slice(-2);
+  return "";
+}
+
+// Lotes de vencimiento vigentes por código en un lugar.
+// Suma como lotes: el inventario inicial con fecha + los ingresos con fecha.
+// Resta: las salidas con fecha, de su propio lote. Las salidas SIN fecha
+// (ajustes negativos, egresos sin lote, archivo de movimientos antiguos) y
+// cualquier lote que quedó en negativo se descuentan primero del stock que
+// entró sin fecha (ajustes positivos) y, si falta, del lote que vence primero
+// hacia el que vence después. Así no quedan fechas de insumos que ya se
+// acabaron, y los lotes nuevos aparecen apenas se ingresan.
 function obtenerVencimientosLugar(ss, lugar) {
-  var mapa = {}; // cod → { fecha → cantidad }
-  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
-  if (!movSheet || movSheet.getLastRow() <= 1) return {};
-  var datos = movSheet.getDataRange().getValues();
-  var ini = String(datos[0][0]||"").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
-  for (var i = ini; i < datos.length; i++) {
-    var m = datos[i];
-    if (String(m[4]||"").trim() !== lugar) continue;
-    var cod = String(m[5]||"").trim();
-    var fechaVenc = normalizarFechaVenc_(m[8]);
-    if (!cod || !fechaVenc) continue;
-    var qty = parseFloat(m[7]||0) || 0;
-    if (!mapa[cod]) mapa[cod] = {};
-    mapa[cod][fechaVenc] = (mapa[cod][fechaVenc]||0) + qty;
+  var porCod = {}; // cod → { lotes: {fecha: cantidad}, libre: salida sin lote por descontar, sinFecha: stock que entró sin fecha }
+  function obtener(cod) { return porCod[cod] || (porCod[cod] = { lotes: {}, libre: 0, sinFecha: 0 }); }
+  function aplicar(cod, qty, fechaRaw) {
+    if (!cod || !qty) return;
+    var f = fechaVencISO_(fechaRaw);
+    var o = obtener(cod);
+    if (qty > 0) { if (f) o.lotes[f] = (o.lotes[f] || 0) + qty; else o.sinFecha += qty; } // entrada sin fecha: no forma lote
+    else { if (f) o.lotes[f] = (o.lotes[f] || 0) + qty; else o.libre += -qty; }
   }
-  var resultado = {};
-  for (var cod in mapa) {
-    var lotes = [];
-    for (var f in mapa[cod]) {
-      if (mapa[cod][f] > 0) lotes.push({ fecha: f, cantidad: mapa[cod][f] });
+
+  var invSheet = ss.getSheetByName(SHEET_DATOS);
+  if (invSheet && invSheet.getLastRow() > 1) {
+    var inv = invSheet.getDataRange().getValues();
+    var iIni = String(inv[0][0] || "").toUpperCase() === "LUGAR" ? 1 : 0;
+    for (var i = iIni; i < inv.length; i++) {
+      if (String(inv[i][0] || "").trim() !== lugar) continue;
+      aplicar(String(inv[i][1] || "").trim(), parseFloat(inv[i][3] || 0) || 0, inv[i][4]);
     }
-    if (!lotes.length) continue;
-    lotes.sort(function(a,b){ return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
-    resultado[cod] = lotes;
+  }
+  var movSheet = ss.getSheetByName(SHEET_MOVIMIENTOS);
+  if (movSheet && movSheet.getLastRow() > 1) {
+    var datos = movSheet.getDataRange().getValues();
+    var ini = String(datos[0][0] || "").toUpperCase().indexOf("FECHA") === 0 ? 1 : 0;
+    for (var j = ini; j < datos.length; j++) {
+      var m = datos[j];
+      if (String(m[4] || "").trim() !== lugar) continue;
+      aplicar(String(m[5] || "").trim(), parseFloat(m[7] || 0) || 0, m[8]);
+    }
+  }
+
+  var resultado = {};
+  for (var cod in porCod) {
+    var o = porCod[cod];
+    var fechas = Object.keys(o.lotes).sort();
+    // lotes en negativo (salida con una fecha que no tiene entrada) → pasan a descontarse por orden
+    fechas.forEach(function(f) { if (o.lotes[f] < 0) { o.libre += -o.lotes[f]; o.lotes[f] = 0; } });
+    var deSinFecha = Math.min(o.sinFecha, o.libre); // primero lo que entró sin fecha
+    o.libre -= deSinFecha;
+    for (var k = 0; k < fechas.length && o.libre > 0; k++) {
+      var f2 = fechas[k], disp = o.lotes[f2];
+      if (disp <= 0) continue;
+      var usa = Math.min(disp, o.libre);
+      o.lotes[f2] = disp - usa; o.libre -= usa;
+    }
+    var lotes = [];
+    fechas.forEach(function(f) { if (o.lotes[f] > 0) lotes.push({ fecha: f, cantidad: o.lotes[f] }); });
+    if (lotes.length) resultado[cod] = lotes;
   }
   return resultado;
 }
