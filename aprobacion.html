@@ -507,7 +507,12 @@
   function buildFechaVenc(i) {
     var mainEl    = document.getElementById('venc-main-'+i);
     var cantEl    = document.getElementById('cant-input-'+i);
-    var mainFecha = mainEl ? mainEl.value : (vencMain[i]||'');
+    var selEl     = document.getElementById('venc-main-sel-'+i);
+    // La fecha elegida en la lista manda; el campo de fecha oculto se vacía cada vez que
+    // se repinta el detalle (al aprobar/rechazar), por eso no se puede confiar solo en él.
+    var mainFecha = (selEl && selEl.value && selEl.value !== '__otro__') ? selEl.value
+                  : (mainEl && mainEl.value) ? mainEl.value
+                  : (selEl && selEl.value === '__otro__') ? '' : (vencMain[i]||'');
     var cantMain  = cantEl ? +(cantEl.value||0) : +(cantidades[i]||0);
     var extras    = vencExtras[i]||[];
     // Sin extras: fecha simple
@@ -532,6 +537,18 @@
       }
     }
     if (!pendientes.length) { toast("No hay cambios nuevos.", "warn"); return; }
+
+    // Un ítem aprobado que tiene lotes disponibles debe llevar fecha de vencimiento
+    for (var vi = 0; vi < pendientes.length; vi++) {
+      var pv = pendientes[vi];
+      if (pv.dec !== "APROBADO") continue;
+      var codV = String((pv.f.codigo || "")).trim();
+      if (!codV) { var mV = String(pv.f.item || "").match(/^\s*(\S+)/); codV = mV ? mV[1] : ""; }
+      if ((vencimientosMapa[codV] || []).length && !buildFechaVenc(pv.i)) {
+        toast("Falta elegir el vencimiento de: " + (pv.f.item || codV), "warn");
+        return;
+      }
+    }
 
     var btn = document.getElementById("btnGuardar");
     btn.disabled = true;
