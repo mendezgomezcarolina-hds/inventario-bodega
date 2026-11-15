@@ -41,6 +41,17 @@
     .badge-sesion .nombre{font-size:.88rem;font-weight:600;color:#15803d;}
     .badge-sesion .tag{font-size:.65rem;font-weight:700;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:99px;margin-left:auto;}
 
+    /* búsqueda y filtros */
+    .filtro-bar{position:sticky;top:0;z-index:5;background:var(--surface);padding:8px 0 10px;margin-bottom:6px;border-bottom:1px solid var(--border);}
+    .filtro-bar .buscar-wrap{position:relative;}
+    .filtro-bar input[type="text"]{padding-right:34px;}
+    .filtro-bar .limpiar{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:1.1rem;color:var(--muted);cursor:pointer;padding:4px 8px;display:none;}
+    .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+    .chip{font-family:'DM Sans',sans-serif;font-size:.74rem;font-weight:600;padding:5px 11px;border-radius:99px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;}
+    .chip.on{background:var(--dk);border-color:var(--dk);color:#fff;}
+    .contador{font-size:.72rem;color:var(--muted);margin-left:auto;}
+    .sin-resultados{padding:22px 10px;text-align:center;font-size:.85rem;color:var(--muted);display:none;}
+
     /* alerta info */
     .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:.82rem;color:#1e3a8a;line-height:1.5;}
     .info-box strong{display:block;margin-bottom:4px;font-size:.85rem;}
@@ -174,6 +185,20 @@
       <div class="resumen-item"><div class="num num-0" id="rSinDif">0</div><div class="lbl">Sin diferencia</div></div>
     </div>
 
+    <div class="filtro-bar">
+      <div class="buscar-wrap">
+        <input type="text" id="buscar" placeholder="Buscar insumo por nombre o código…" autocomplete="off" oninput="aplicarFiltro()"/>
+        <button class="limpiar" id="btnLimpiar" onclick="limpiarBusqueda()" title="Borrar búsqueda">&times;</button>
+      </div>
+      <div class="chips">
+        <button class="chip on" data-f="todos" onclick="setChip('todos')">Todos</button>
+        <button class="chip" data-f="sinContar" onclick="setChip('sinContar')">Sin contar</button>
+        <button class="chip" data-f="contados" onclick="setChip('contados')">Contados</button>
+        <button class="chip" data-f="difs" onclick="setChip('difs')">Con diferencia</button>
+        <span class="contador" id="contador"></span>
+      </div>
+    </div>
+
     <div class="tabla-header">
       <span>Insumo</span>
       <span>Sistema</span>
@@ -181,6 +206,7 @@
       <span>Diferencia</span>
     </div>
     <div class="tabla-body" id="tablaBody"></div>
+    <div class="sin-resultados" id="sinResultados">Ningún insumo coincide con la búsqueda.</div>
 
     <!-- Motivo -->
     <div class="motivo-wrap" style="margin-top:16px;">
@@ -277,6 +303,8 @@
     document.getElementById("tablaWrap").style.display       = "none";
     document.getElementById("resumen").style.display         = "none";
     document.getElementById("tablaBody").innerHTML           = "";
+    document.getElementById("buscar").value                  = "";
+    setChip("todos");
     document.getElementById("lugar").value = "";
   }
 
@@ -286,6 +314,8 @@
     items.forEach(function(it, idx) {
       var row = document.createElement("div");
       row.className = "item-row";
+      row.id = "row_" + idx;
+      row.setAttribute("data-q", normalizar(String(it.descripcion || "") + " " + String(it.codigo || "")));
       row.innerHTML =
         '<div><div class="item-desc">' + it.descripcion + '</div>' +
         '<div class="item-cod">' + it.codigo + '</div></div>' +
@@ -295,6 +325,56 @@
       body.appendChild(row);
     });
     actualizarResumen();
+    aplicarFiltro();
+  }
+
+  // ── Búsqueda y filtros ─────────────────────────────────────
+  // Las filas solo se ocultan (no se borran): lo que ya escribiste en "Real"
+  // se conserva y se envía aunque la fila esté oculta por el filtro.
+  var chipActual = "todos";
+
+  function normalizar(t) {
+    return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function setChip(f) {
+    chipActual = f;
+    var chips = document.querySelectorAll(".chip");
+    for (var i = 0; i < chips.length; i++) chips[i].classList.toggle("on", chips[i].getAttribute("data-f") === f);
+    aplicarFiltro();
+  }
+
+  function limpiarBusqueda() {
+    var b = document.getElementById("buscar");
+    b.value = "";
+    aplicarFiltro();
+    b.focus();
+  }
+
+  function aplicarFiltro() {
+    var q = normalizar(document.getElementById("buscar").value).split(/\s+/).filter(Boolean);
+    document.getElementById("btnLimpiar").style.display = q.length ? "block" : "none";
+    var visibles = 0;
+    itemsStock.forEach(function(it, idx) {
+      var row = document.getElementById("row_" + idx);
+      if (!row) return;
+      var txt = row.getAttribute("data-q") || "";
+      var ok = q.every(function(t) { return txt.indexOf(t) !== -1; });
+      if (ok && chipActual !== "todos") {
+        var realEl = document.getElementById("real_" + idx);
+        var tiene  = !!realEl && realEl.value.trim() !== "";
+        if (chipActual === "sinContar") ok = !tiene;
+        else if (chipActual === "contados") ok = tiene;
+        else if (chipActual === "difs") {
+          var calc = parseFloat(document.getElementById("calc_" + idx).textContent) || 0;
+          ok = tiene && (parseFloat(realEl.value) || 0) !== calc;
+        }
+      }
+      row.style.display = ok ? "" : "none";
+      if (ok) visibles++;
+    });
+    document.getElementById("contador").textContent = "Mostrando " + visibles + " de " + itemsStock.length;
+    document.getElementById("sinResultados").style.display = (visibles === 0 && itemsStock.length) ? "block" : "none";
   }
 
   function calcDiff(idx) {
